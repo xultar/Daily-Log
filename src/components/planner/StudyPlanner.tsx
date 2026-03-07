@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { startOfWeek, addWeeks, subWeeks, addDays, subDays, addMonths, subMonths, format } from "date-fns";
+import { startOfWeek, addWeeks, subWeeks, addMonths, subMonths, format } from "date-fns";
 import { WeekData, DayData, TodoItem, loadWeek, saveWeek } from "@/lib/planner-data";
 import WeeklyTodoSidebar from "./WeeklyTodoSidebar";
 import DayColumn from "./DayColumn";
 import DailyView from "./DailyView";
 import MonthlyView from "./MonthlyView";
 import ToolbarActions from "./ToolbarActions";
-import { ChevronLeft, ChevronRight, Printer, Calendar, LayoutGrid, CalendarDays, CalendarRange } from "lucide-react";
+import { ChevronLeft, ChevronRight, Printer, Calendar, CalendarDays, CalendarRange } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { calcWeekTotal, getWeekDates } from "@/lib/planner-data";
 
@@ -47,32 +47,18 @@ const StudyPlanner: React.FC = () => {
 
   const navigatePrev = () => {
     if (viewMode === "daily") {
-      if (selectedDayIndex > 0) {
-        setSelectedDayIndex(selectedDayIndex - 1);
-      } else {
-        setCurrentDate(subWeeks(currentDate, 1));
-        setSelectedDayIndex(6);
-      }
-    } else if (viewMode === "weekly") {
-      setCurrentDate(subWeeks(currentDate, 1));
-    } else {
-      setCurrentDate(subMonths(currentDate, 1));
-    }
+      if (selectedDayIndex > 0) setSelectedDayIndex(selectedDayIndex - 1);
+      else { setCurrentDate(subWeeks(currentDate, 1)); setSelectedDayIndex(6); }
+    } else if (viewMode === "weekly") setCurrentDate(subWeeks(currentDate, 1));
+    else setCurrentDate(subMonths(currentDate, 1));
   };
 
   const navigateNext = () => {
     if (viewMode === "daily") {
-      if (selectedDayIndex < 6) {
-        setSelectedDayIndex(selectedDayIndex + 1);
-      } else {
-        setCurrentDate(addWeeks(currentDate, 1));
-        setSelectedDayIndex(0);
-      }
-    } else if (viewMode === "weekly") {
-      setCurrentDate(addWeeks(currentDate, 1));
-    } else {
-      setCurrentDate(addMonths(currentDate, 1));
-    }
+      if (selectedDayIndex < 6) setSelectedDayIndex(selectedDayIndex + 1);
+      else { setCurrentDate(addWeeks(currentDate, 1)); setSelectedDayIndex(0); }
+    } else if (viewMode === "weekly") setCurrentDate(addWeeks(currentDate, 1));
+    else setCurrentDate(addMonths(currentDate, 1));
   };
 
   const dates = getWeekDates(currentDate);
@@ -80,10 +66,7 @@ const StudyPlanner: React.FC = () => {
 
   const getNavLabel = () => {
     if (viewMode === "monthly") return format(currentDate, "MMMM yyyy");
-    if (viewMode === "daily") {
-      const d = dates[selectedDayIndex];
-      return format(d, "EEEE, MMMM d, yyyy");
-    }
+    if (viewMode === "daily") return format(dates[selectedDayIndex], "EEEE, MMMM d, yyyy");
     return `${format(dates[0], "MMM d")} — ${format(dates[6], "MMM d, yyyy")}`;
   };
 
@@ -94,9 +77,9 @@ const StudyPlanner: React.FC = () => {
   ];
 
   return (
-    <div className="planner-container min-h-screen flex flex-col bg-background">
+    <div className="planner-container h-screen flex flex-col bg-background">
       {/* Top toolbar */}
-      <div className="no-print flex items-center justify-between px-3 py-1.5 bg-primary/30 border-b border-border">
+      <div className="no-print flex items-center justify-between px-3 py-1.5 bg-primary/30 border-b border-border shrink-0">
         <div className="flex items-center gap-1">
           <Button variant="ghost" size="icon" className="h-7 w-7" onClick={navigatePrev}>
             <ChevronLeft className="h-4 w-4" />
@@ -109,7 +92,6 @@ const StudyPlanner: React.FC = () => {
           </Button>
         </div>
 
-        {/* View mode tabs */}
         <div className="flex items-center gap-0.5 bg-background/50 rounded-md p-0.5">
           {viewButtons.map(({ mode, icon, label }) => (
             <button
@@ -139,27 +121,27 @@ const StudyPlanner: React.FC = () => {
         </div>
       </div>
 
-      {/* Goal / Review row (show in weekly/daily) */}
+      {/* Goal / Review row — taller textareas */}
       {viewMode !== "monthly" && (
-        <div className="no-print flex border-b border-border">
-          <div className="flex-1 flex items-center gap-1 px-2 py-1 border-r border-border">
-            <span className="text-[9px] font-semibold text-muted-foreground shrink-0">WEEKLY GOAL</span>
-            <input
-              type="text"
+        <div className="no-print flex border-b border-border shrink-0">
+          <div className="flex-1 flex flex-col gap-0.5 px-2 py-1.5 border-r border-border">
+            <span className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider">Weekly Goal</span>
+            <textarea
               value={weekData.weekGoal}
               onChange={(e) => updateField("weekGoal", e.target.value)}
-              className="flex-1 text-xs bg-transparent border-none outline-none text-foreground placeholder:text-muted-foreground/50"
-              placeholder="Set your weekly goal..."
+              className="flex-1 text-xs bg-transparent border border-campus-grid rounded px-1.5 py-1 outline-none resize-none min-h-[48px] text-foreground placeholder:text-muted-foreground/50"
+              placeholder="What do you want to achieve this week?"
+              rows={2}
             />
           </div>
-          <div className="flex-1 flex items-center gap-1 px-2 py-1">
-            <span className="text-[9px] font-semibold text-muted-foreground shrink-0">WEEK IN REVIEW</span>
-            <input
-              type="text"
+          <div className="flex-1 flex flex-col gap-0.5 px-2 py-1.5">
+            <span className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider">Week in Review</span>
+            <textarea
               value={weekData.weekReview}
               onChange={(e) => updateField("weekReview", e.target.value)}
-              className="flex-1 text-xs bg-transparent border-none outline-none text-foreground placeholder:text-muted-foreground/50"
-              placeholder="Reflect on your week..."
+              className="flex-1 text-xs bg-transparent border border-campus-grid rounded px-1.5 py-1 outline-none resize-none min-h-[48px] text-foreground placeholder:text-muted-foreground/50"
+              placeholder="How did the week go? What can you improve?"
+              rows={2}
             />
           </div>
         </div>
@@ -177,24 +159,12 @@ const StudyPlanner: React.FC = () => {
       )}
 
       {viewMode === "weekly" && (
-        <div className="flex overflow-x-auto border-t border-border">
+        <div className="flex flex-1 overflow-x-auto overflow-y-hidden border-t border-border min-h-0">
           <WeeklyTodoSidebar todos={weekData.weeklyTodos} onChange={updateTodos} />
           <div className="flex flex-1 min-w-0">
-            {weekData.days.slice(0, 3).map((day, i) => (
+            {weekData.days.map((day, i) => (
               <div key={i} className="flex-1 min-w-[120px]">
                 <DayColumn day={day} dayIndex={i} onChange={(d) => updateDay(i, d)} />
-              </div>
-            ))}
-          </div>
-          <div className="w-3 bg-muted border-x border-border flex flex-col items-center justify-center gap-3 shrink-0">
-            {Array.from({ length: 20 }, (_, i) => (
-              <div key={i} className="w-1.5 h-1.5 rounded-full bg-border" />
-            ))}
-          </div>
-          <div className="flex flex-1 min-w-0">
-            {weekData.days.slice(3).map((day, i) => (
-              <div key={i + 3} className="flex-1 min-w-[120px]">
-                <DayColumn day={day} dayIndex={i + 3} onChange={(d) => updateDay(i + 3, d)} />
               </div>
             ))}
           </div>
