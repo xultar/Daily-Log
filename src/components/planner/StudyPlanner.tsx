@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { startOfWeek, addWeeks, subWeeks, addDays, subDays, addMonths, subMonths, format } from "date-fns";
 import { WeekData, DayData, TodoItem, loadWeek, saveWeek } from "@/lib/planner-data";
-import PlannerHeader from "./PlannerHeader";
 import WeeklyTodoSidebar from "./WeeklyTodoSidebar";
 import DayColumn from "./DayColumn";
 import DailyView from "./DailyView";
