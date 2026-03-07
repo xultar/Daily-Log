@@ -6,7 +6,7 @@ import DayColumn from "./DayColumn";
 import DailyView from "./DailyView";
 import MonthlyView from "./MonthlyView";
 import ToolbarActions from "./ToolbarActions";
-import { ChevronLeft, ChevronRight, Printer, Calendar, CalendarDays, CalendarRange } from "lucide-react";
+import { ChevronLeft, ChevronRight, Printer, Calendar, CalendarDays, CalendarRange, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { calcWeekTotal, getWeekDates } from "@/lib/planner-data";
 
@@ -20,6 +20,9 @@ const StudyPlanner: React.FC = () => {
   const [viewMode, setViewMode] = useState<ViewMode>("weekly");
   const [selectedDayIndex, setSelectedDayIndex] = useState(0);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [showWeekends, setShowWeekends] = useState(() => {
+    return localStorage.getItem("planner-show-weekends") !== "false";
+  });
 
   useEffect(() => {
     setWeekData(loadWeek(currentDate));
@@ -29,6 +32,10 @@ const StudyPlanner: React.FC = () => {
     const timer = setTimeout(() => saveWeek(currentDate, weekData), 300);
     return () => clearTimeout(timer);
   }, [weekData, currentDate]);
+
+  useEffect(() => {
+    localStorage.setItem("planner-show-weekends", String(showWeekends));
+  }, [showWeekends]);
 
   const updateDay = useCallback((dayIndex: number, day: DayData) => {
     setWeekData((prev) => ({
@@ -63,11 +70,12 @@ const StudyPlanner: React.FC = () => {
 
   const dates = getWeekDates(currentDate);
   const total = calcWeekTotal(weekData);
+  const visibleDays = showWeekends ? weekData.days : weekData.days.slice(0, 5);
 
   const getNavLabel = () => {
     if (viewMode === "monthly") return format(currentDate, "MMMM yyyy");
     if (viewMode === "daily") return format(dates[selectedDayIndex], "EEEE, MMMM d, yyyy");
-    return `${format(dates[0], "MMM d")} — ${format(dates[6], "MMM d, yyyy")}`;
+    return `${format(dates[0], "MMM d")} — ${format(dates[showWeekends ? 6 : 4], "MMM d, yyyy")}`;
   };
 
   const viewButtons: { mode: ViewMode; icon: React.ReactNode; label: string }[] = [
@@ -77,7 +85,7 @@ const StudyPlanner: React.FC = () => {
   ];
 
   return (
-    <div className="planner-container h-screen flex flex-col bg-background">
+    <div className="planner-container h-screen flex flex-col bg-background overflow-hidden">
       {/* Top toolbar */}
       <div className="no-print flex items-center justify-between px-3 py-1.5 bg-primary/30 border-b border-border shrink-0">
         <div className="flex items-center gap-1">
@@ -92,21 +100,34 @@ const StudyPlanner: React.FC = () => {
           </Button>
         </div>
 
-        <div className="flex items-center gap-0.5 bg-background/50 rounded-md p-0.5">
-          {viewButtons.map(({ mode, icon, label }) => (
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-0.5 bg-background/50 rounded-md p-0.5">
+            {viewButtons.map(({ mode, icon, label }) => (
+              <button
+                key={mode}
+                onClick={() => setViewMode(mode)}
+                className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] font-medium transition-colors ${
+                  viewMode === mode
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {icon}
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {viewMode === "weekly" && (
             <button
-              key={mode}
-              onClick={() => setViewMode(mode)}
-              className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] font-medium transition-colors ${
-                viewMode === mode
-                  ? "bg-primary text-primary-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
+              onClick={() => setShowWeekends(!showWeekends)}
+              className="flex items-center gap-1 px-1.5 py-1 rounded text-[10px] font-medium text-muted-foreground hover:text-foreground transition-colors"
+              title={showWeekends ? "Hide weekends" : "Show weekends"}
             >
-              {icon}
-              {label}
+              {showWeekends ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+              {showWeekends ? "Hide" : "Show"} weekends
             </button>
-          ))}
+          )}
         </div>
 
         <div className="flex items-center gap-2">
@@ -121,27 +142,27 @@ const StudyPlanner: React.FC = () => {
         </div>
       </div>
 
-      {/* Goal / Review row — taller textareas */}
+      {/* Goal / Review row */}
       {viewMode !== "monthly" && (
         <div className="no-print flex border-b border-border shrink-0">
-          <div className="flex-1 flex flex-col gap-0.5 px-2 py-1.5 border-r border-border">
-            <span className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider">Weekly Goal</span>
-            <textarea
+          <div className="flex-1 flex items-center gap-1 px-2 py-1 border-r border-border">
+            <span className="text-[9px] font-semibold text-muted-foreground shrink-0 uppercase">Goal</span>
+            <input
+              type="text"
               value={weekData.weekGoal}
               onChange={(e) => updateField("weekGoal", e.target.value)}
-              className="flex-1 text-xs bg-transparent border border-campus-grid rounded px-1.5 py-1 outline-none resize-none min-h-[48px] text-foreground placeholder:text-muted-foreground/50"
+              className="flex-1 text-xs bg-transparent border-none outline-none text-foreground placeholder:text-muted-foreground/50"
               placeholder="What do you want to achieve this week?"
-              rows={2}
             />
           </div>
-          <div className="flex-1 flex flex-col gap-0.5 px-2 py-1.5">
-            <span className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider">Week in Review</span>
-            <textarea
+          <div className="flex-1 flex items-center gap-1 px-2 py-1">
+            <span className="text-[9px] font-semibold text-muted-foreground shrink-0 uppercase">Review</span>
+            <input
+              type="text"
               value={weekData.weekReview}
               onChange={(e) => updateField("weekReview", e.target.value)}
-              className="flex-1 text-xs bg-transparent border border-campus-grid rounded px-1.5 py-1 outline-none resize-none min-h-[48px] text-foreground placeholder:text-muted-foreground/50"
-              placeholder="How did the week go? What can you improve?"
-              rows={2}
+              className="flex-1 text-xs bg-transparent border-none outline-none text-foreground placeholder:text-muted-foreground/50"
+              placeholder="How did the week go?"
             />
           </div>
         </div>
@@ -149,7 +170,7 @@ const StudyPlanner: React.FC = () => {
 
       {/* View content */}
       {viewMode === "daily" && (
-        <div className="flex-1 overflow-auto">
+        <div className="flex-1 overflow-auto min-h-0">
           <DailyView
             day={weekData.days[selectedDayIndex]}
             dayIndex={selectedDayIndex}
@@ -159,20 +180,23 @@ const StudyPlanner: React.FC = () => {
       )}
 
       {viewMode === "weekly" && (
-        <div className="flex flex-1 overflow-x-auto overflow-y-hidden border-t border-border min-h-0">
+        <div className="flex flex-1 overflow-hidden border-t border-border min-h-0">
           <WeeklyTodoSidebar todos={weekData.weeklyTodos} onChange={updateTodos} />
-          <div className="flex flex-1 min-w-0 h-full">
-            {weekData.days.map((day, i) => (
-              <div key={i} className="flex-1 min-w-[120px] h-full">
-                <DayColumn day={day} dayIndex={i} onChange={(d) => updateDay(i, d)} />
-              </div>
-            ))}
+          <div className="flex flex-1 min-w-0 h-full overflow-x-auto">
+            {visibleDays.map((day, i) => {
+              const actualIndex = showWeekends ? i : i;
+              return (
+                <div key={actualIndex} className="flex-1 min-w-[100px] h-full">
+                  <DayColumn day={day} dayIndex={actualIndex} onChange={(d) => updateDay(actualIndex, d)} />
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
 
       {viewMode === "monthly" && (
-        <div className="flex-1 overflow-auto">
+        <div className="flex-1 overflow-auto min-h-0">
           <MonthlyView
             currentDate={currentDate}
             onSelectDay={(date) => {
