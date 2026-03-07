@@ -177,7 +177,7 @@ const StudyPlanner: React.FC = () => {
       )}
 
       {viewMode === "weekly" && (
-        <div className="flex flex-1 overflow-x-auto border-t border-border">
+        <div className="flex overflow-x-auto border-t border-border">
           <WeeklyTodoSidebar todos={weekData.weeklyTodos} onChange={updateTodos} />
           <div className="flex flex-1 min-w-0">
             {weekData.days.slice(0, 3).map((day, i) => (
