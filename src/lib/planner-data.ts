@@ -95,4 +95,4 @@ export function saveWeek(date: Date, data: WeekData): void {
 }
 
 export const HOUR_LABELS = HOURS;
-export const MINUTE_LABELS = [10, 20, 30, 40, 50];
+export const MINUTE_LABELS = [10, 20, 30, 40, 50, 60];
