@@ -25,7 +25,7 @@ export interface WeekData {
 }
 
 const HOURS = Array.from({ length: 19 }, (_, i) => i + 6); // 6 to 24
-const BLOCKS_PER_HOUR = 5; // 10-min blocks
+const BLOCKS_PER_HOUR = 6; // 10-min blocks (60 min per hour)
 
 export function getWeekKey(date: Date): string {
   const week = getISOWeek(date);
@@ -95,4 +95,4 @@ export function saveWeek(date: Date, data: WeekData): void {
 }
 
 export const HOUR_LABELS = HOURS;
-export const MINUTE_LABELS = [10, 20, 30, 40, 50];
+export const MINUTE_LABELS = [10, 20, 30, 40, 50, 60];

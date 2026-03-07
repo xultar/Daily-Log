@@ -24,7 +24,7 @@ const DayColumn: React.FC<DayColumnProps> = ({ day, dayIndex, onChange, compact 
   };
 
   return (
-    <div className="border-r border-border flex flex-col min-w-0">
+    <div className="border-r border-border flex flex-col min-w-0 h-full">
       {/* Date header */}
       <div className="bg-primary/40 px-1 py-0.5 text-center border-b border-border">
         <div className="text-[10px] font-medium text-primary-foreground/80">{DAY_NAMES[dayIndex]}</div>
@@ -72,12 +72,12 @@ const DayColumn: React.FC<DayColumnProps> = ({ day, dayIndex, onChange, compact 
         </span>
       </div>
 
-      {/* Memo — compact height */}
-      <div className="p-0.5">
+      {/* Memo — fills remaining height */}
+      <div className="flex-1 p-0.5 min-h-0">
         <textarea
           value={day.memo}
           onChange={(e) => onChange({ ...day, memo: e.target.value })}
-          className="w-full text-[8px] bg-transparent border-none outline-none resize-none h-6 text-foreground placeholder:text-muted-foreground/50"
+          className="w-full h-full text-[8px] bg-transparent border-none outline-none resize-none text-foreground placeholder:text-muted-foreground/50"
           placeholder="Memo..."
         />
       </div>
