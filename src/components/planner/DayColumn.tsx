@@ -7,11 +7,12 @@ interface DayColumnProps {
   day: DayData;
   dayIndex: number;
   onChange: (day: DayData) => void;
+  compact?: boolean;
 }
 
 const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
-const DayColumn: React.FC<DayColumnProps> = ({ day, dayIndex, onChange }) => {
+const DayColumn: React.FC<DayColumnProps> = ({ day, dayIndex, onChange, compact }) => {
   const dateObj = parse(day.date, "yyyy-MM-dd", new Date());
   const total = calcDayTotal(day);
 
@@ -57,7 +58,7 @@ const DayColumn: React.FC<DayColumnProps> = ({ day, dayIndex, onChange }) => {
       </div>
 
       {/* Time Grid */}
-      <div className="flex-1 border-b border-border">
+      <div className="border-b border-border">
         <TimeGrid
           timeBlocks={day.timeBlocks}
           onChange={(timeBlocks) => onChange({ ...day, timeBlocks })}
@@ -71,12 +72,12 @@ const DayColumn: React.FC<DayColumnProps> = ({ day, dayIndex, onChange }) => {
         </span>
       </div>
 
-      {/* Memo */}
+      {/* Memo — compact height */}
       <div className="p-0.5">
         <textarea
           value={day.memo}
           onChange={(e) => onChange({ ...day, memo: e.target.value })}
-          className="w-full text-[8px] bg-transparent border-none outline-none resize-none h-10 text-foreground placeholder:text-muted-foreground/50"
+          className="w-full text-[8px] bg-transparent border-none outline-none resize-none h-6 text-foreground placeholder:text-muted-foreground/50"
           placeholder="Memo..."
         />
       </div>
