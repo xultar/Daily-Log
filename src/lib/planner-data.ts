@@ -25,7 +25,7 @@ export interface WeekData {
 }
 
 const HOURS = Array.from({ length: 19 }, (_, i) => i + 6); // 6 to 24
-const BLOCKS_PER_HOUR = 5; // 10-min blocks
+const BLOCKS_PER_HOUR = 6; // 10-min blocks (60 min per hour)
 
 export function getWeekKey(date: Date): string {
   const week = getISOWeek(date);
