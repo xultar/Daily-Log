@@ -1,6 +1,6 @@
 import React from "react";
 import { format, parse } from "date-fns";
-import { DayData, calcDayTotal, HOUR_LABELS } from "@/lib/planner-data";
+import { DayData, calcDayTotal } from "@/lib/planner-data";
 import TimeGrid from "./TimeGrid";
 import { Plus, X } from "lucide-react";
 
@@ -46,11 +46,11 @@ const DailyView: React.FC<DailyViewProps> = ({ day, dayIndex, onChange }) => {
         </div>
       </div>
 
-      <div className="grid grid-cols-[1fr_1fr] gap-4">
+      <div className="grid grid-cols-[1fr_1fr] gap-6">
         {/* Left: Subjects + Memo */}
         <div className="flex flex-col">
           <div className="text-[10px] font-semibold text-muted-foreground mb-1 uppercase tracking-wider">Subjects / To Do</div>
-          <div className="border border-border rounded-md overflow-hidden mb-2">
+          <div className="border border-border rounded-md overflow-hidden mb-1">
             {day.subjects.map((s, idx) => (
               <div key={idx} className="flex items-center border-b border-campus-grid last:border-b-0 px-2 py-1.5 group">
                 <input
@@ -69,7 +69,6 @@ const DailyView: React.FC<DailyViewProps> = ({ day, dayIndex, onChange }) => {
                 <button
                   onClick={() => removeSubject(idx)}
                   className="opacity-0 group-hover:opacity-50 hover:!opacity-100 text-muted-foreground p-0.5 transition-opacity"
-                  title="Remove"
                 >
                   <X className="h-3 w-3" />
                 </button>
@@ -96,10 +95,11 @@ const DailyView: React.FC<DailyViewProps> = ({ day, dayIndex, onChange }) => {
         {/* Right: Time Grid — larger */}
         <div>
           <div className="text-[10px] font-semibold text-muted-foreground mb-1 uppercase tracking-wider">Time Log</div>
-          <div className="border border-border rounded-md overflow-hidden [&_div.flex-1]:h-[14px] [&_.w-6]:w-8 [&_.w-6]:text-[10px] [&_.text-\[7px\]]:text-[9px]">
+          <div className="border border-border rounded-md overflow-hidden">
             <TimeGrid
               timeBlocks={day.timeBlocks}
               onChange={(timeBlocks) => onChange({ ...day, timeBlocks })}
+              size="large"
             />
           </div>
         </div>
