@@ -24,7 +24,7 @@ const DayColumn: React.FC<DayColumnProps> = ({ day, dayIndex, onChange, compact 
   };
 
   return (
-    <div className="border-r border-border flex flex-col min-w-0">
+    <div className="border-r border-border flex flex-col min-w-0 h-full">
       {/* Date header */}
       <div className="bg-primary/40 px-1 py-0.5 text-center border-b border-border">
         <div className="text-[10px] font-medium text-primary-foreground/80">{DAY_NAMES[dayIndex]}</div>
