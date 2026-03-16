@@ -13,7 +13,7 @@ export interface SubjectRow {
 export interface DayData {
   date: string; // ISO date string
   subjects: SubjectRow[];
-  timeBlocks: boolean[][]; // [hour_index][minute_block_index] - 19 hours (6-24) x 5 blocks (10min each)
+  timeBlocks: number[][]; // [hour_index][minute_block_index] - 0=empty, 1-6=color index
   memo: string;
 }
 
@@ -42,7 +42,7 @@ export function createEmptyDay(date: Date): DayData {
   return {
     date: format(date, "yyyy-MM-dd"),
     subjects: Array.from({ length: 6 }, () => ({ subject: "", checked: false })),
-    timeBlocks: HOURS.map(() => Array(BLOCKS_PER_HOUR).fill(false)),
+    timeBlocks: HOURS.map(() => Array(BLOCKS_PER_HOUR).fill(0)),
     memo: "",
   };
 }
@@ -61,10 +61,17 @@ export function calcDayTotal(day: DayData): { hours: number; minutes: number } {
   let totalMinutes = 0;
   for (const hourBlocks of day.timeBlocks) {
     for (const block of hourBlocks) {
-      if (block) totalMinutes += 10;
+      if (block) totalMinutes += 10; // any non-zero value counts as filled
     }
   }
   return { hours: Math.floor(totalMinutes / 60), minutes: totalMinutes % 60 };
+}
+
+/** Migrate legacy boolean[][] timeBlocks to number[][] */
+export function migrateTimeBlocks(blocks: (boolean | number)[][]): number[][] {
+  return blocks.map((row) =>
+    row.map((v) => (v === true ? 1 : v === false ? 0 : (v as number)))
+  );
 }
 
 export function calcWeekTotal(week: WeekData): { hours: number; minutes: number } {
@@ -81,7 +88,12 @@ export function loadWeek(date: Date): WeekData {
   const stored = localStorage.getItem(`planner-${key}`);
   if (stored) {
     try {
-      return JSON.parse(stored);
+      const data: WeekData = JSON.parse(stored);
+      // Migrate legacy boolean[][] timeBlocks to number[][]
+      for (const day of data.days) {
+        day.timeBlocks = migrateTimeBlocks(day.timeBlocks);
+      }
+      return data;
     } catch {
       return createEmptyWeek(date);
     }
@@ -96,3 +108,35 @@ export function saveWeek(date: Date, data: WeekData): void {
 
 export const HOUR_LABELS = HOURS;
 export const MINUTE_LABELS = [10, 20, 30, 40, 50, 60];
+
+/** Block color palette — index 1-6 maps to these HSL values. Index 0 = empty. */
+export const BLOCK_COLORS = [
+  { id: 1, label: "Blue",     hsl: "213 60% 80%",  hslDark: "213 50% 40%" },
+  { id: 2, label: "Pink",     hsl: "340 55% 82%",  hslDark: "340 45% 42%" },
+  { id: 3, label: "Green",    hsl: "140 35% 75%",  hslDark: "140 30% 38%" },
+  { id: 4, label: "Lavender", hsl: "270 40% 80%",  hslDark: "270 35% 42%" },
+  { id: 5, label: "Orange",   hsl: "25 65% 78%",   hslDark: "25 55% 40%" },
+  { id: 6, label: "Gray",     hsl: "0 0% 78%",     hslDark: "0 0% 42%" },
+];
+
+export function getBlockColor(value: number, isDark: boolean): string | null {
+  if (value === 0) return null;
+  const color = BLOCK_COLORS[value - 1];
+  if (!color) return null;
+  return `hsl(${isDark ? color.hslDark : color.hsl})`;
+}
+
+const COLOR_LABELS_KEY = "planner-color-labels";
+
+export function loadColorLabels(): Record<number, string> {
+  try {
+    const stored = localStorage.getItem(COLOR_LABELS_KEY);
+    return stored ? JSON.parse(stored) : {};
+  } catch {
+    return {};
+  }
+}
+
+export function saveColorLabels(labels: Record<number, string>): void {
+  localStorage.setItem(COLOR_LABELS_KEY, JSON.stringify(labels));
+}

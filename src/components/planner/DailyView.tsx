@@ -1,6 +1,6 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { format, parse } from "date-fns";
-import { DayData, calcDayTotal } from "@/lib/planner-data";
+import { DayData, calcDayTotal, BLOCK_COLORS, loadColorLabels, saveColorLabels } from "@/lib/planner-data";
 import TimeGrid from "./TimeGrid";
 import { Plus, X } from "lucide-react";
 
@@ -15,6 +15,28 @@ const DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Satu
 const DailyView: React.FC<DailyViewProps> = ({ day, dayIndex, onChange }) => {
   const dateObj = parse(day.date, "yyyy-MM-dd", new Date());
   const total = calcDayTotal(day);
+  const [activeColor, setActiveColor] = useState(1);
+  const [colorLabels, setColorLabels] = useState<Record<number, string>>(() => loadColorLabels());
+
+  const isDark =
+    typeof window !== "undefined" &&
+    window.matchMedia("(prefers-color-scheme: dark)").matches;
+
+  // Count minutes per color
+  const colorMinutes: Record<number, number> = {};
+  for (const hourBlocks of day.timeBlocks) {
+    for (const block of hourBlocks) {
+      if (block) colorMinutes[block] = (colorMinutes[block] ?? 0) + 10;
+    }
+  }
+
+  useEffect(() => {
+    saveColorLabels(colorLabels);
+  }, [colorLabels]);
+
+  const updateLabel = (id: number, value: string) => {
+    setColorLabels((prev) => ({ ...prev, [id]: value }));
+  };
 
   const updateSubject = (idx: number, field: "subject" | "checked", value: string | boolean) => {
     const subjects = day.subjects.map((s, i) =>
@@ -92,7 +114,7 @@ const DailyView: React.FC<DailyViewProps> = ({ day, dayIndex, onChange }) => {
           />
         </div>
 
-        {/* Right: Time Grid — larger */}
+        {/* Right: Time Grid + Legend */}
         <div>
           <div className="text-[10px] font-semibold text-muted-foreground mb-1 uppercase tracking-wider">Time Log</div>
           <div className="border border-border rounded-md overflow-hidden">
@@ -100,7 +122,53 @@ const DailyView: React.FC<DailyViewProps> = ({ day, dayIndex, onChange }) => {
               timeBlocks={day.timeBlocks}
               onChange={(timeBlocks) => onChange({ ...day, timeBlocks })}
               size="large"
+              activeColor={activeColor}
+              onActiveColorChange={setActiveColor}
             />
+          </div>
+
+          {/* Editable Color Legend */}
+          <div className="mt-2 border border-border rounded-md overflow-hidden">
+            <div className="bg-muted/30 px-2 py-1 text-[9px] font-semibold text-muted-foreground uppercase tracking-wider border-b border-border">
+              Color Tags
+            </div>
+            <div className="grid grid-cols-2 gap-0">
+              {BLOCK_COLORS.map((c) => (
+                <button
+                  key={c.id}
+                  onClick={() => setActiveColor(c.id)}
+                  className={`flex items-center gap-1.5 px-2 py-1 border-b border-r border-border/50 transition-all ${
+                    activeColor === c.id
+                      ? "bg-muted/60 ring-1 ring-inset ring-foreground/10"
+                      : "hover:bg-muted/30"
+                  }`}
+                >
+                  <span
+                    className="inline-block w-3 h-3 rounded-sm border border-border/50 shrink-0"
+                    style={{ backgroundColor: `hsl(${isDark ? c.hslDark : c.hsl})` }}
+                  />
+                  <span className="text-[10px] font-medium text-foreground/50 w-3">{c.id}</span>
+                  <input
+                    type="text"
+                    value={colorLabels[c.id] ?? ""}
+                    onChange={(e) => updateLabel(c.id, e.target.value)}
+                    onClick={(e) => e.stopPropagation()}
+                    placeholder={c.label}
+                    className="flex-1 text-[11px] bg-transparent border-none outline-none min-w-0 text-foreground placeholder:text-muted-foreground/40"
+                  />
+                  {(colorMinutes[c.id] ?? 0) > 0 && (
+                    <span className="text-[10px] text-muted-foreground tabular-nums shrink-0">
+                      {Math.floor((colorMinutes[c.id] ?? 0) / 60) > 0
+                        ? `${Math.floor((colorMinutes[c.id] ?? 0) / 60)}h ${(colorMinutes[c.id] ?? 0) % 60 > 0 ? `${(colorMinutes[c.id] ?? 0) % 60}m` : ""}`
+                        : `${colorMinutes[c.id]}m`}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="text-[9px] text-muted-foreground/60 mt-1">
+            Press 1–6 to switch color &middot; Right-click block to pick color
           </div>
         </div>
       </div>
