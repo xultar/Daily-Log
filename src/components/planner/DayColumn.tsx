@@ -33,10 +33,10 @@ const DayColumn: React.FC<DayColumnProps> = ({ day, dayIndex, onChange, compact 
         </div>
       </div>
 
-      {/* Subject + To Do */}
+      {/* Priorities + Actions */}
       <div className="border-b border-border">
         <div className="bg-primary/20 text-[8px] font-medium text-center py-0.5 border-b border-campus-grid text-primary-foreground/70">
-          Subject / To Do
+          Priorities / Actions
         </div>
         {day.subjects.map((s, idx) => (
           <div key={idx} className="flex items-center border-b border-campus-grid last:border-b-0">

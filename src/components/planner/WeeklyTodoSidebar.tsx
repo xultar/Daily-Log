@@ -25,7 +25,7 @@ const WeeklyTodoSidebar: React.FC<WeeklyTodoSidebarProps> = ({ todos, onChange }
   return (
     <div className="border-r border-border flex flex-col w-32 shrink-0">
       <div className="bg-primary/40 text-[9px] font-semibold text-center py-1 border-b border-border text-primary-foreground">
-        Weekly To Do
+        Weekly Actions
       </div>
       <div className="flex-1 overflow-y-auto">
         {todos.map((todo, idx) => (

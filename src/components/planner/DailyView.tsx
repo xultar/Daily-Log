@@ -71,7 +71,7 @@ const DailyView: React.FC<DailyViewProps> = ({ day, dayIndex, onChange }) => {
       <div className="grid grid-cols-[1fr_1fr] gap-6">
         {/* Left: Subjects + Memo */}
         <div className="flex flex-col">
-          <div className="text-[10px] font-semibold text-muted-foreground mb-1 uppercase tracking-wider">Subjects / To Do</div>
+          <div className="text-[10px] font-semibold text-muted-foreground mb-1 uppercase tracking-wider">Priorities / Actions</div>
           <div className="border border-border rounded-md overflow-hidden mb-1">
             {day.subjects.map((s, idx) => (
               <div key={idx} className="flex items-center border-b border-campus-grid last:border-b-0 px-2 py-1.5 group">
@@ -86,7 +86,7 @@ const DailyView: React.FC<DailyViewProps> = ({ day, dayIndex, onChange }) => {
                   value={s.subject}
                   onChange={(e) => updateSubject(idx, "subject", e.target.value)}
                   className={`flex-1 text-sm bg-transparent border-none outline-none text-foreground placeholder:text-muted-foreground/50 ${s.checked ? "line-through text-muted-foreground" : ""}`}
-                  placeholder="Add subject..."
+                  placeholder="Add priority..."
                 />
                 <button
                   onClick={() => removeSubject(idx)}
@@ -102,7 +102,7 @@ const DailyView: React.FC<DailyViewProps> = ({ day, dayIndex, onChange }) => {
             className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors mb-4 self-start"
           >
             <Plus className="h-3 w-3" />
-            Add subject
+            Add priority
           </button>
 
           <div className="text-[10px] font-semibold text-muted-foreground mb-1 uppercase tracking-wider">Memo</div>
