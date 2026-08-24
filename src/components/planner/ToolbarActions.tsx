@@ -18,12 +18,12 @@ const ToolbarActions: React.FC<{ onDataImported: () => void }> = ({ onDataImport
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleExportJSON = () => {
-    downloadFile(exportAsJSON(), `study-planner-${new Date().toISOString().slice(0, 10)}.json`, "application/json");
+    downloadFile(exportAsJSON(), `daily-log-${new Date().toISOString().slice(0, 10)}.json`, "application/json");
     toast({ title: "Exported as JSON" });
   };
 
   const handleExportCSV = () => {
-    downloadFile(exportAsCSV(), `study-planner-${new Date().toISOString().slice(0, 10)}.csv`, "text/csv");
+    downloadFile(exportAsCSV(), `daily-log-${new Date().toISOString().slice(0, 10)}.csv`, "text/csv");
     toast({ title: "Exported as CSV" });
   };
 

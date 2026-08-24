@@ -1,6 +1,6 @@
-# Study Planner
+# Daily Log
 
-A minimal, offline-first weekly study planner that runs entirely in the browser. All data is saved to localStorage — no accounts, no servers, no tracking.
+A minimal, offline-first weekly planner that runs entirely in the browser. All data is saved to localStorage — no accounts, no servers, no tracking.
 
 ## Features
 
@@ -35,7 +35,7 @@ Go to your fork's **Settings > Pages** and set the source to **GitHub Actions**.
 That's it — the included workflow will automatically build and deploy on every push to `main`. Your planner will be live at:
 
 ```
-https://<your-username>.github.io/study-planner/
+https://xultar.github.io/Daily-Log/
 ```
 
 ### 3. (Optional) Rename the repo
@@ -49,8 +49,8 @@ base: "/my-planner/",
 ### Local Development
 
 ```sh
-git clone https://github.com/<your-username>/study-planner.git
-cd study-planner
+git clone https://github.com/xultar/Daily-Log.git
+cd Daily-Log
 npm install
 npm run dev
 ```
