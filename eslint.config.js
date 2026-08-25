@@ -5,7 +5,10 @@ import reactRefresh from "eslint-plugin-react-refresh";
 import tseslint from "typescript-eslint";
 
 export default tseslint.config(
-  { ignores: ["dist"] },
+  // .claude holds git worktrees for background tasks, which are full copies of
+  // the codebase. Linting them reports every warning twice and makes the
+  // "warnings stayed at 10" baseline check useless.
+  { ignores: ["dist", ".claude"] },
   {
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
     files: ["**/*.{ts,tsx}"],
