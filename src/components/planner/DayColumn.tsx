@@ -3,7 +3,6 @@ import { format, parse, isToday } from "date-fns";
 import { DayData, calcDayTotal, getBlockColor, getBlockTint } from "@/lib/planner-data";
 import TimeGrid from "./TimeGrid";
 import ColorPicker from "./ColorPicker";
-import { useIsDark } from "@/hooks/use-is-dark";
 import { Flag } from "lucide-react";
 
 interface DayColumnProps {
@@ -23,7 +22,6 @@ const DayColumn: React.FC<DayColumnProps> = ({ day, dayIndex, onChange, activeCo
   // date simply reads as not-today rather than taking the column down.
   const isCurrentDay = isToday(dateObj);
 
-  const isDark = useIsDark();
 
   const [rowPicker, setRowPicker] = useState<{ x: number; y: number; idx: number } | null>(null);
 
@@ -79,8 +77,8 @@ const DayColumn: React.FC<DayColumnProps> = ({ day, dayIndex, onChange, activeCo
           Priorities / Actions
         </div>
         {day.subjects.map((s, idx) => {
-          const tint = getBlockTint(s.colorId, isDark);
-          const stripe = getBlockColor(s.colorId, isDark);
+          const tint = getBlockTint(s.colorId);
+          const stripe = getBlockColor(s.colorId);
           return (
           <div
             key={idx}

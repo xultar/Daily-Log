@@ -1,6 +1,5 @@
 import React, { useMemo } from "react";
 import { getPaletteInDisplayOrder, loadColorLabels, formatMinutes } from "@/lib/planner-data";
-import { useIsDark } from "@/hooks/use-is-dark";
 
 interface WeeklyColorLegendProps {
   colorMinutes: Record<number, number>;
@@ -18,7 +17,6 @@ const WeeklyColorLegend: React.FC<WeeklyColorLegendProps> = ({ colorMinutes, act
   // would silently keep showing whatever labels existed at first mount.
   const labels = useMemo(() => loadColorLabels(), []);
 
-  const isDark = useIsDark();
 
   return (
     <div className="shrink-0 border-t border-border bg-muted/20 overflow-x-auto">
@@ -47,7 +45,7 @@ const WeeklyColorLegend: React.FC<WeeklyColorLegendProps> = ({ colorMinutes, act
             >
               <span
                 className="inline-block w-3 h-3 rounded-sm border border-border/50 shrink-0"
-                style={{ backgroundColor: `hsl(${isDark ? c.hslDark : c.hsl})` }}
+                style={{ backgroundColor: `hsl(var(--tag-${c.id}))` }}
               />
               <span className="text-[9px] font-medium text-foreground/50">{index + 1}</span>
               <span className="text-[10px] text-foreground whitespace-nowrap">{name}</span>

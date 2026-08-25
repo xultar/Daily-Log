@@ -3,7 +3,6 @@ import { format, parse } from "date-fns";
 import { DayData, calcDayTotal, calcDayColorMinutes, formatMinutes, getPaletteInDisplayOrder, loadColorLabels, saveColorLabels, getBlockColor, getBlockTint } from "@/lib/planner-data";
 import TimeGrid from "./TimeGrid";
 import { Flag, Plus, X } from "lucide-react";
-import { useIsDark } from "@/hooks/use-is-dark";
 import ColorPicker from "./ColorPicker";
 
 interface DailyViewProps {
@@ -22,7 +21,6 @@ const DailyView: React.FC<DailyViewProps> = ({ day, dayIndex, onChange, activeCo
   const [colorLabels, setColorLabels] = useState<Record<number, string>>(() => loadColorLabels());
   const [rowPicker, setRowPicker] = useState<{ x: number; y: number; idx: number } | null>(null);
 
-  const isDark = useIsDark();
 
   const colorMinutes = calcDayColorMinutes(day);
 
@@ -92,8 +90,8 @@ const DailyView: React.FC<DailyViewProps> = ({ day, dayIndex, onChange, activeCo
           <div className="text-[10px] font-semibold text-muted-foreground mb-1 uppercase tracking-wider">Priorities / Actions</div>
           <div className="border border-border rounded-md overflow-hidden mb-1">
             {day.subjects.map((s, idx) => {
-              const tint = getBlockTint(s.colorId, isDark);
-              const stripe = getBlockColor(s.colorId, isDark);
+              const tint = getBlockTint(s.colorId);
+              const stripe = getBlockColor(s.colorId);
               return (
               <div
                 key={idx}
@@ -211,7 +209,7 @@ const DailyView: React.FC<DailyViewProps> = ({ day, dayIndex, onChange, activeCo
                 >
                   <span
                     className="inline-block w-3 h-3 rounded-sm border border-border/50 shrink-0"
-                    style={{ backgroundColor: `hsl(${isDark ? c.hslDark : c.hsl})` }}
+                    style={{ backgroundColor: `hsl(var(--tag-${c.id}))` }}
                   />
                   <span className="text-[10px] font-medium text-foreground/50 w-3">{index + 1}</span>
                   <input

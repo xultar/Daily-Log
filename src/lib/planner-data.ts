@@ -372,26 +372,37 @@ export const BLOCK_COLORS: readonly BlockColor[] = [
 /** Row wash opacity. Spec-fixed at 16%, tuned to stay legible across 42 weekly rows. */
 const ROW_TINT_ALPHA = 0.16;
 
-/** Resolve a storage id to its bare HSL triple. 0, undefined and out-of-range yield null. */
-function blockHsl(value: number | undefined, isDark: boolean): string | null {
+/** Resolve a storage id to its CSS variable reference. 0, undefined and out-of-range yield null. */
+function blockVar(value: number | undefined): string | null {
   if (!value) return null;
   const color = BLOCK_COLORS[value - 1];
   if (!color) return null;
-  return isDark ? color.hslDark : color.hsl;
+  return `var(--tag-${color.id})`;
 }
 
-export function getBlockColor(value: number | undefined, isDark: boolean): string | null {
-  const hsl = blockHsl(value, isDark);
-  return hsl ? `hsl(${hsl})` : null;
+/**
+ * The block's paint colour, as a variable reference rather than a literal.
+ *
+ * The caller no longer says which scheme it wants, because the cascade decides:
+ * :root is light, .dark is dark, and @media print restores light. That is what
+ * stopped an OS-dark machine from sending dark values to the printer — this
+ * function used to take an isDark argument, and printing never changed it.
+ *
+ * The variable is keyed by storage id, because that is what a painted block
+ * holds. See tag-palette.ts for where the values come from.
+ */
+export function getBlockColor(value: number | undefined): string | null {
+  const ref = blockVar(value);
+  return ref ? `hsl(${ref})` : null;
 }
 
 /**
  * The faint background wash for a tagged row. Same storage-id contract as
  * getBlockColor: index 0 and out-of-range values yield null.
  */
-export function getBlockTint(value: number | undefined, isDark: boolean): string | null {
-  const hsl = blockHsl(value, isDark);
-  return hsl ? `hsl(${hsl} / ${ROW_TINT_ALPHA})` : null;
+export function getBlockTint(value: number | undefined): string | null {
+  const ref = blockVar(value);
+  return ref ? `hsl(${ref} / ${ROW_TINT_ALPHA})` : null;
 }
 
 /**

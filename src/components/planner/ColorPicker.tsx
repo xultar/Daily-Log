@@ -1,6 +1,5 @@
 import React, { useEffect, useRef } from "react";
 import { getPaletteInDisplayOrder, COLOR_IDS_IN_DISPLAY_ORDER } from "@/lib/planner-data";
-import { useIsDark } from "@/hooks/use-is-dark";
 
 interface ColorPickerProps {
   /** Raw client coordinates of the triggering event. Clamped internally. */
@@ -27,7 +26,6 @@ const PICKER_HEIGHT = SWATCH_PX + CHROME_PX;
 const EDGE_MARGIN = 10;
 
 const ColorPicker: React.FC<ColorPickerProps> = ({ x, y, onPick, onClear, onClose }) => {
-  const isDark = useIsDark();
 
   // Latched in a ref rather than depended on directly: callers pass inline
   // arrows, and depending on `onClose` would tear down and rebuild the
@@ -69,7 +67,7 @@ const ColorPicker: React.FC<ColorPickerProps> = ({ x, y, onPick, onClear, onClos
         <button
           key={c.id}
           className="w-6 h-6 rounded-sm border border-border/50 hover:scale-110 transition-transform flex items-center justify-center text-[9px] font-bold"
-          style={{ backgroundColor: `hsl(${isDark ? c.hslDark : c.hsl})` }}
+          style={{ backgroundColor: `hsl(var(--tag-${c.id}))` }}
           title={`${c.label} (${index + 1})`}
           aria-label={`${c.label} (${index + 1})`}
           onClick={() => onPick(c.id)}

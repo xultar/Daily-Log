@@ -61,27 +61,26 @@ describe("BLOCK_COLORS", () => {
 
 describe("getBlockColor", () => {
   it("returns null for an empty block", () => {
-    expect(getBlockColor(0, false)).toBeNull();
-    expect(getBlockColor(0, true)).toBeNull();
+    expect(getBlockColor(0)).toBeNull();
   });
 
-  it("resolves a storage id to its literal color", () => {
-    expect(getBlockColor(1, false)).toBe("hsl(213 60% 80%)");
-    expect(getBlockColor(6, true)).toBe("hsl(0 0% 46%)");
-    expect(getBlockColor(7, false)).toBe("hsl(50 70% 76%)");
+  it("resolves a storage id to its CSS variable", () => {
+    // The caller no longer says which scheme it wants. The cascade decides:
+    // :root is light, .dark is dark, and @media print restores light. That is
+    // what stopped an OS-dark machine sending dark values to the printer.
+    expect(getBlockColor(1)).toBe("hsl(var(--tag-1))");
+    expect(getBlockColor(6)).toBe("hsl(var(--tag-6))");
+    expect(getBlockColor(7)).toBe("hsl(var(--tag-7))");
   });
 
-  it("returns a different color per theme for every id", () => {
-    for (const c of BLOCK_COLORS) {
-      const light = getBlockColor(c.id, false);
-      expect(light).toMatch(/^hsl\(\d+ \d+% \d+%\)$/);
-      expect(getBlockColor(c.id, true)).not.toBe(light);
-    }
+  it("returns a distinct variable for every id", () => {
+    const seen = new Set(BLOCK_COLORS.map((c) => getBlockColor(c.id)));
+    expect(seen.size).toBe(BLOCK_COLORS.length);
   });
 
   it("returns null for an out-of-range value instead of throwing", () => {
-    expect(getBlockColor(BLOCK_COLORS.length + 1, false)).toBeNull();
-    expect(getBlockColor(99, true)).toBeNull();
+    expect(getBlockColor(BLOCK_COLORS.length + 1)).toBeNull();
+    expect(getBlockColor(99)).toBeNull();
   });
 });
 
@@ -229,29 +228,24 @@ describe("formatMinutes", () => {
 
 describe("getBlockTint", () => {
   it("returns null for an empty block", () => {
-    expect(getBlockTint(0, false)).toBeNull();
-    expect(getBlockTint(0, true)).toBeNull();
+    expect(getBlockTint(0)).toBeNull();
   });
 
   it("returns null for an out-of-range value", () => {
-    expect(getBlockTint(BLOCK_COLORS.length + 1, false)).toBeNull();
-    expect(getBlockTint(99, true)).toBeNull();
+    expect(getBlockTint(BLOCK_COLORS.length + 1)).toBeNull();
+    expect(getBlockTint(99)).toBeNull();
   });
 
-  it("returns the light colour at 16% alpha for every id", () => {
+  it("applies the 16% row wash to the same variable for every id", () => {
     for (const c of BLOCK_COLORS) {
-      expect(getBlockTint(c.id, false)).toBe(`hsl(${c.hsl} / 0.16)`);
-    }
-  });
-
-  it("returns the dark colour at 16% alpha for every id", () => {
-    for (const c of BLOCK_COLORS) {
-      expect(getBlockTint(c.id, true)).toBe(`hsl(${c.hslDark} / 0.16)`);
+      expect(getBlockTint(c.id)).toBe(`hsl(var(--tag-${c.id}) / 0.16)`);
     }
   });
 
   it("resolves a storage id, not a display position", () => {
-    expect(getBlockTint(6, false)).toBe("hsl(0 0% 78% / 0.16)");
+    // Gray is storage id 6 and display position 9. Keying the variable by
+    // display position would tint this row yellow.
+    expect(getBlockTint(6)).toBe("hsl(var(--tag-6) / 0.16)");
   });
 });
 
