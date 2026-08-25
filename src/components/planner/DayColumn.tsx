@@ -4,6 +4,7 @@ import { DayData, calcDayTotal, getBlockColor, getBlockTint } from "@/lib/planne
 import TimeGrid from "./TimeGrid";
 import ColorPicker from "./ColorPicker";
 import { useIsDark } from "@/hooks/use-is-dark";
+import { Flag } from "lucide-react";
 
 interface DayColumnProps {
   day: DayData;
@@ -42,6 +43,15 @@ const DayColumn: React.FC<DayColumnProps> = ({ day, dayIndex, onChange, compact,
   const toggleRowColor = (idx: number) => {
     const current = day.subjects[idx].colorId;
     setRowColor(idx, current === activeColor ? undefined : activeColor);
+  };
+
+  // The spread is what carries colorId and the row text through the change;
+  // listing fields here would drop them with no type error.
+  const toggleFlag = (idx: number) => {
+    const subjects = day.subjects.map((s, i) =>
+      i === idx ? { ...s, flagged: !s.flagged } : s
+    );
+    onChange({ ...day, subjects });
   };
 
   return (
@@ -95,6 +105,20 @@ const DayColumn: React.FC<DayColumnProps> = ({ day, dayIndex, onChange, compact,
               className="flex-1 self-center text-[9px] px-0.5 py-[1px] bg-transparent border-none outline-none min-w-0 text-foreground placeholder:text-muted-foreground/50"
               placeholder="—"
             />
+            <button
+              type="button"
+              onClick={() => toggleFlag(idx)}
+              aria-pressed={!!s.flagged}
+              aria-label={s.flagged ? "Remove priority flag" : "Flag as priority"}
+              title={s.flagged ? "Remove priority flag" : "Flag as priority"}
+              className={`shrink-0 self-center pr-0.5 transition-colors ${
+                s.flagged
+                  ? "text-foreground"
+                  : "text-muted-foreground/40 hover:text-muted-foreground"
+              }`}
+            >
+              <Flag className="h-2.5 w-2.5" fill={s.flagged ? "currentColor" : "none"} />
+            </button>
           </div>
           );
         })}

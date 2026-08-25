@@ -185,11 +185,36 @@ after recovering. `src/test/storage-failures.test.tsx` pins all three cases.
 `writeItem` reports success, so a refused write leaves the week where it was
 rather than dropping it.
 
+## Optional row fields are dropped unless repairSubject knows them
+
+`SubjectRow` carries two optional fields beyond the text and checkbox:
+`colorId` and `flagged`. Both are optional so that rows written before the
+field existed load without a migration — and both are therefore invisible to
+the compiler, because `strict` is off.
+
+`repairSubject` rebuilds every row from a fixed list of fields on load. **A
+field it does not list is silently dropped on the next read**, with no type
+error and no failing test unless one exists for that field specifically. Adding
+a third optional field means adding it there too. `src/test/priority-flag.test.tsx`
+guards `flagged` the way `src/test/daily-view.test.tsx` guards `colorId`.
+
+`flagged` is stored only when true; clearing a flag removes the field rather
+than storing `false`, so a never-flagged row and a cleared row are identical on
+disk.
+
+## The hour column's last row reads 00
+
+`HOURS` runs 6..24 and must keep doing so — those values size `timeBlocks` and
+drive `repairTimeBlocks`, so changing them is a stored-data change. `24` is not
+an hour that appears on a clock, so `formatHourLabel` renders that last row as
+`00`. It is presentation only, applied in `TimeGrid`; nothing else should read
+it.
+
 ## Traps that cost time to find
 
 **Do not rewrite `updateSubject`** in `DailyView.tsx` or `DayColumn.tsx`. Its
 `{ ...s, [field]: value }` spread is the only thing preserving a row's `colorId`
-through a keystroke. Replacing it with explicit setters that list fields drops
+**and `flagged`** through a keystroke. Replacing it with explicit setters that list fields drops
 the tag with no type error, because the field is optional and strict is off.
 `src/test/daily-view.test.tsx` guards this — do not delete it.
 
@@ -219,7 +244,7 @@ because mousedown would unmount the button before its click fires.
 
 ## Baselines
 
-- `npm test` — 136 tests across 13 files
+- `npm test` — 153 tests across 15 files
 - `npm run lint` — **0 errors, 10 warnings**. All ten are pre-existing
   `react-refresh/only-export-components` and `react-hooks/exhaustive-deps` in
   `src/components/ui/*`, `MonthlyView.tsx` and `theme-context.tsx`. Do not treat

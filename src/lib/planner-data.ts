@@ -18,6 +18,14 @@ export interface SubjectRow {
    * catch a dropped tag.
    */
   colorId?: number;
+  /**
+   * Whether this row is flagged as a priority. Optional on the same terms as
+   * colorId: rows saved before the field existed load unflagged, so there is no
+   * migration. repairSubject has to carry it explicitly — it rebuilds a row from
+   * a fixed list of fields, and anything missing from that list is dropped on
+   * load without a type error, because strict is off and the field is optional.
+   */
+  flagged?: boolean;
 }
 
 export interface DayData {
@@ -179,6 +187,10 @@ function repairSubject(value: unknown): SubjectRow {
   // applies the same storage-id contract used for timeBlocks.
   const colorId = repairBlockValue(raw.colorId);
   if (colorId !== 0) row.colorId = colorId;
+  // Only a real true survives; an unflagged row stays absent rather than
+  // storing false, which keeps rows written before the field existed identical
+  // to rows whose flag has been cleared.
+  if (raw.flagged === true) row.flagged = true;
   return row;
 }
 
@@ -326,6 +338,16 @@ export function saveWeek(date: Date, data: WeekData): boolean {
 }
 
 export const HOUR_LABELS = HOURS;
+
+/**
+ * How an hour is shown beside its row. The grid's last row runs from 24:00 to
+ * 25:00 — midnight to 1am — and 24 is not an hour that appears on a clock, so
+ * it reads as 00. Presentation only: HOURS still runs 6..24 because those
+ * values size timeBlocks and drive repairTimeBlocks.
+ */
+export function formatHourLabel(hour: number): string {
+  return hour === 24 ? "00" : String(hour);
+}
 export const MINUTE_LABELS = [10, 20, 30, 40, 50, 60];
 
 /**

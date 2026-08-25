@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   HOUR_LABELS,
+  formatHourLabel,
   getBlockColor,
   colorIdForDisplayPosition,
 } from "@/lib/planner-data";
@@ -127,7 +128,7 @@ const TimeGrid: React.FC<TimeGridProps> = ({
           <div
             className={`${large ? "w-9 text-[10px]" : "w-6 text-[8px]"} shrink-0 text-muted-foreground flex items-center justify-center border-r border-campus-grid`}
           >
-            {hour}
+            {formatHourLabel(hour)}
           </div>
           {[0, 1, 2, 3, 4, 5].map((blockIdx) => {
             const val = timeBlocks[hourIdx]?.[blockIdx] ?? 0;

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { format, parse } from "date-fns";
 import { DayData, calcDayTotal, calcDayColorMinutes, formatMinutes, getPaletteInDisplayOrder, loadColorLabels, saveColorLabels, getBlockColor, getBlockTint } from "@/lib/planner-data";
 import TimeGrid from "./TimeGrid";
-import { Plus, X } from "lucide-react";
+import { Flag, Plus, X } from "lucide-react";
 import { useIsDark } from "@/hooks/use-is-dark";
 import ColorPicker from "./ColorPicker";
 
@@ -52,6 +52,15 @@ const DailyView: React.FC<DailyViewProps> = ({ day, dayIndex, onChange, activeCo
   const toggleRowColor = (idx: number) => {
     const current = day.subjects[idx].colorId;
     setRowColor(idx, current === activeColor ? undefined : activeColor);
+  };
+
+  // The spread is what carries colorId and the row text through the change;
+  // listing fields here would drop them with no type error.
+  const toggleFlag = (idx: number) => {
+    const subjects = day.subjects.map((s, i) =>
+      i === idx ? { ...s, flagged: !s.flagged } : s
+    );
+    onChange({ ...day, subjects });
   };
 
   const addSubject = () => {
@@ -117,8 +126,22 @@ const DailyView: React.FC<DailyViewProps> = ({ day, dayIndex, onChange, activeCo
                   value={s.subject}
                   onChange={(e) => updateSubject(idx, "subject", e.target.value)}
                   className={`flex-1 text-sm bg-transparent border-none outline-none text-foreground placeholder:text-muted-foreground/50 ${s.checked ? "line-through text-muted-foreground" : ""}`}
-                  placeholder="Add priority..."
+                  placeholder="Add priority / action..."
                 />
+                <button
+                  type="button"
+                  onClick={() => toggleFlag(idx)}
+                  aria-pressed={!!s.flagged}
+                  aria-label={s.flagged ? "Remove priority flag" : "Flag as priority"}
+                  title={s.flagged ? "Remove priority flag" : "Flag as priority"}
+                  className={`shrink-0 p-0.5 transition-colors ${
+                    s.flagged
+                      ? "text-foreground"
+                      : "text-muted-foreground/40 hover:text-muted-foreground"
+                  }`}
+                >
+                  <Flag className="h-3.5 w-3.5" fill={s.flagged ? "currentColor" : "none"} />
+                </button>
                 <button
                   onClick={() => removeSubject(idx)}
                   className="opacity-0 group-hover:opacity-50 hover:!opacity-100 text-muted-foreground p-0.5 transition-opacity"
@@ -135,7 +158,7 @@ const DailyView: React.FC<DailyViewProps> = ({ day, dayIndex, onChange, activeCo
             className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors mb-4 self-start"
           >
             <Plus className="h-3 w-3" />
-            Add priority
+            Add priority / action
           </button>
 
           <div className="text-[10px] font-semibold text-muted-foreground mb-1 uppercase tracking-wider">Memo</div>

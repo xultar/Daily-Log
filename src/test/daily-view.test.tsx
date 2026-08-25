@@ -21,7 +21,7 @@ describe("DailyView row mutation", () => {
     // createEmptyDay seeds six subject rows and every row shares the same
     // placeholder attribute regardless of its current value, so the query
     // is ambiguous with getByPlaceholderText; the tagged row is first.
-    fireEvent.change(screen.getAllByPlaceholderText("Add priority...")[0],
+    fireEvent.change(screen.getAllByPlaceholderText("Add priority / action...")[0],
                      { target: { value: "Draft the proposal" } });
     expect(onChange.mock.calls[0][0].subjects[0])
       .toEqual({ subject: "Draft the proposal", checked: false, colorId: 7 });
