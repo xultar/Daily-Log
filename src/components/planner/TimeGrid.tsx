@@ -10,20 +10,19 @@ interface TimeGridProps {
   timeBlocks: number[][];
   onChange: (timeBlocks: number[][]) => void;
   size?: "compact" | "large";
-  activeColor?: number;
-  onActiveColorChange?: (color: number) => void;
+  activeColor: number;
+  onActiveColorChange: (color: number) => void;
 }
 
 const TimeGrid: React.FC<TimeGridProps> = ({
   timeBlocks,
   onChange,
   size = "compact",
-  activeColor: controlledColor,
-  onActiveColorChange,
+  activeColor,
+  onActiveColorChange: setActiveColor,
 }) => {
   const [isDragging, setIsDragging] = useState(false);
   const paintValueRef = useRef<number>(0);
-  const [internalColor, setInternalColor] = useState(1);
   const [contextMenu, setContextMenu] = useState<{
     x: number;
     y: number;
@@ -32,9 +31,6 @@ const TimeGrid: React.FC<TimeGridProps> = ({
   } | null>(null);
   const large = size === "large";
   const containerRef = useRef<HTMLDivElement>(null);
-
-  const activeColor = controlledColor ?? internalColor;
-  const setActiveColor = onActiveColorChange ?? setInternalColor;
 
   const isDark =
     typeof window !== "undefined" &&
