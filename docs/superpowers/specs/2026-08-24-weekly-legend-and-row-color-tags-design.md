@@ -112,12 +112,18 @@ across three review rounds. Reopening it to remove a non-issue is a bad trade.
 
 This is a deliberate decision, not an oversight.
 
-The collapse is better than "React batches identical updates" suggests. React 18's
-`dispatchSetState` bails eagerly when the fiber has no pending work, so pressing
-the digit for the already-armed color produces zero renders, not one; pressing a
-different digit produces exactly one. The seven handlers each run their full guard
-chain, including an ancestor walk for the menu selector, which is microseconds and
-was already happening before this change.
+The seven calls collapse, though not perfectly. Measured with `React.Profiler`
+over 40 alternating digit presses: seven callers cost 60 commits against 40 for a
+single caller — 1.5x, not 7x. A repeated identical digit settles to zero commits
+only after a one-press warm-up, and that warm-up appears with a single caller too,
+so it is inherent React behavior rather than a seven-caller cost. Each handler
+still runs its full guard chain including an ancestor walk for the menu selector,
+which is microseconds and predates this change.
+
+At keypress rate 1.5x of a cheap render is immaterial, and the paint path already
+commits more often than anyone can type. An earlier draft of this spec claimed
+zero and exactly-one renders; that was asserted from React internals and is wrong.
+These numbers are measured.
 
 This tradeoff is only cheap while the setter is passed by identity. See above.
 
@@ -134,7 +140,14 @@ sibling. The sidebar and columns keep their current sizing.
 
 Each entry shows, horizontally: the swatch, the display position, the label
 (custom if set, otherwise the palette's default), and the week's minutes for that
-color when non-zero. The armed entry is highlighted the same way the daily legend
+color when non-zero.
+
+Those minutes cover all seven days, including weekends hidden by the "Hide
+weekends" toggle. That toggle filters which columns are drawn, not which time
+exists. This matches the toolbar's existing "Week: Xh Ym" figure, which uses
+`calcWeekTotal(weekData)` over all seven days regardless of the toggle. A legend
+whose totals changed when you hid a column would disagree with the total sitting
+above it. The armed entry is highlighted the same way the daily legend
 highlights it. Clicking an entry arms that color.
 
 Entries iterate `getPaletteInDisplayOrder()`, so gray appears last and the
