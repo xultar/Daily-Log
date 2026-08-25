@@ -1,5 +1,4 @@
-import { WeekData, getWeekKey, loadWeek, createEmptyWeek } from "./planner-data";
-import { startOfWeek, addWeeks, format } from "date-fns";
+import { WeekData, weekKeyForStoredWeek } from "./planner-data";
 
 export interface ExportData {
   version: 1;
@@ -64,7 +63,11 @@ export function importFromJSON(jsonString: string): { success: boolean; weeksImp
     }
     let count = 0;
     for (const [weekKey, weekData] of Object.entries(data.weeks)) {
-      localStorage.setItem(`planner-${weekKey}`, JSON.stringify(weekData));
+      // A backup written before the week-key fix carries the old, colliding key.
+      // The week's own dates say where it belongs; fall back to the file's key
+      // only when it carries no readable date.
+      const key = weekKeyForStoredWeek(weekData) ?? weekKey;
+      localStorage.setItem(`planner-${key}`, JSON.stringify(weekData));
       count++;
     }
     return { success: true, weeksImported: count };

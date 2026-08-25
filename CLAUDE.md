@@ -74,6 +74,34 @@ under the new week's key. `src/test/autosave.test.tsx` pins all of this.
 Repair happens in memory only. Viewing a damaged week leaves storage untouched
 until the user actually changes something.
 
+## Week keys pair an ISO week with an ISO week-year
+
+`getWeekKey` uses `getISOWeek` with `getISOWeekYear`. Both must come from the
+ISO calendar. Pairing the ISO week number with the Monday's *calendar* year, as
+this once did, files a December week that is ISO week 1 under the current year's
+`W01` — the key that year's own first week already uses. Nine weeks between 2015
+and 2040 collided that way (2018-12-31, 2019-12-30, 2024-12-30, 2025-12-29,
+2029-12-31, 2030-12-30, 2031-12-29, 2035-12-31, 2036-12-29). Opening one showed
+January's plan, and editing it overwrote January.
+
+**A week's home is decided by the dates it carries, never by the key it was
+found under.** `weekKeyForStoredWeek` reads the first readable `days[].date` and
+returns the key that week belongs at, or null when no day carries a usable date.
+It is the single decision point, used by both callers below. Do not reintroduce
+a second one.
+
+- `migrateWeekKeys` refiles misplaced weeks and runs from `main.tsx` before the
+  app reads anything. It is idempotent — a week already at the right key is
+  skipped, so a second pass moves nothing — and it never throws, because a
+  failure there would white-screen the app before it renders. It refuses to
+  overwrite an occupied destination and reports it as a conflict instead.
+- `importFromJSON` routes every incoming week through the same function, so
+  restoring a backup written before the fix does not reintroduce the old keys.
+
+Where a December week and its January twin both held data, one had already
+overwritten the other before any of this ran. The migration files whichever
+survived; the other is not recoverable.
+
 ## Traps that cost time to find
 
 **Do not rewrite `updateSubject`** in `DailyView.tsx` or `DayColumn.tsx`. Its
@@ -108,7 +136,7 @@ because mousedown would unmount the button before its click fires.
 
 ## Baselines
 
-- `npm test` — 65 tests across 5 files
+- `npm test` — 81 tests across 7 files
 - `npm run lint` — **0 errors, 10 warnings**. All ten are pre-existing
   `react-refresh/only-export-components` and `react-hooks/exhaustive-deps` in
   `src/components/ui/*`, `MonthlyView.tsx` and `theme-context.tsx`. Do not treat
@@ -135,14 +163,6 @@ make the label field unreachable. The `stopPropagation` on that input is what ho
 it together for mouse users. Fixing it needs a real restructure.
 
 **`compact` on `DayColumn`** is declared and never used.
-
-**`getWeekKey` can give two different weeks the same key.** It pairs
-`getISOWeek` with `getYear(startOfWeek(...))`, and those disagree when a
-December Monday belongs to ISO week 1 of the next year. The week of
-2024-12-30 and the week of 2024-01-01 both key to `planner-2024-W01`; the next
-occurrence is 2029-12-31. Editing one silently overwrites the other. The fix is
-`getISOWeekYear`, but it relabels those December weeks, so it needs a migration
-rather than a one-line change.
 
 **CSV export always throws.** `exportAllData` treats every `planner-*` key as a
 week, and `planner-show-weekends` (written on every mount) and

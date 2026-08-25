@@ -1,4 +1,4 @@
-import { startOfWeek, addDays, format, parse, isValid, getISOWeek, getYear } from "date-fns";
+import { startOfWeek, addDays, format, parse, isValid, getISOWeek, getISOWeekYear } from "date-fns";
 
 export interface TodoItem {
   text: string;
@@ -44,10 +44,17 @@ const HOURS = Array.from({ length: 19 }, (_, i) => i + 6); // 6 to 24
 const BLOCKS_PER_HOUR = 6; // 10-min blocks (60 min per hour)
 const MINUTES_PER_BLOCK = 60 / BLOCKS_PER_HOUR;
 
+/**
+ * The storage key for a week: its ISO week number paired with the ISO week-year
+ * that number belongs to. The two must come from the same calendar or they
+ * disagree — pairing the week number with the Monday's *calendar* year, as this
+ * once did, filed every December week that is ISO week 1 under the current
+ * year's W01, which is the key that year's own first week already used. Nine
+ * weeks between 2015 and 2040 collided that way; migrateWeekKeys refiles them.
+ */
 export function getWeekKey(date: Date): string {
   const week = getISOWeek(date);
-  const year = getYear(startOfWeek(date, { weekStartsOn: 1 }));
-  return `${year}-W${String(week).padStart(2, "0")}`;
+  return `${getISOWeekYear(date)}-W${String(week).padStart(2, "0")}`;
 }
 
 export function getWeekDates(date: Date): Date[] {
@@ -239,6 +246,75 @@ export function loadWeek(date: Date): WeekData {
     }
     return createEmptyWeek(date);
   }
+}
+
+/** Entries that hold a week, as opposed to a setting. */
+const WEEK_ENTRY = /^planner-(\d{4}-W\d{2})$/;
+
+/**
+ * The key a stored week belongs under, decided by the dates it carries rather
+ * than by the key it was found at. Returns null when no day carries a readable
+ * date, in which case the caller has nothing better to go on and should leave
+ * the existing key alone.
+ */
+export function weekKeyForStoredWeek(week: unknown): string | null {
+  const days = asRecord(week).days;
+  if (!Array.isArray(days)) return null;
+  for (const day of days) {
+    const stored = asText(asRecord(day).date);
+    if (!ISO_DATE.test(stored)) continue;
+    const parsed = parse(stored, "yyyy-MM-dd", new Date());
+    if (isValid(parsed)) return getWeekKey(parsed);
+  }
+  return null;
+}
+
+/**
+ * Refile any week the old getWeekKey misplaced. Safe to run repeatedly: a week
+ * already sitting under the key its own dates imply is left alone, so a second
+ * pass moves nothing.
+ *
+ * Nothing is ever overwritten. If the destination is occupied the week stays
+ * put and is reported as a conflict — that cannot arise from the old key
+ * function, which never produced the destination key, but it can from a
+ * hand-edited store.
+ */
+export function migrateWeekKeys(): { moved: number; conflicts: string[] } {
+  const conflicts: string[] = [];
+  let moved = 0;
+  try {
+    // Snapshot first: the loop below adds and removes entries as it goes.
+    const entries: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && WEEK_ENTRY.test(key)) entries.push(key);
+    }
+
+    for (const entry of entries) {
+      const raw = localStorage.getItem(entry);
+      if (!raw) continue;
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(raw);
+      } catch {
+        continue; // Unreadable; loadWeek deals with it, and guessing here would be worse.
+      }
+      const current = entry.match(WEEK_ENTRY)![1];
+      const belongs = weekKeyForStoredWeek(parsed);
+      if (!belongs || belongs === current) continue;
+
+      if (localStorage.getItem(`planner-${belongs}`) !== null) {
+        conflicts.push(current);
+        continue;
+      }
+      localStorage.setItem(`planner-${belongs}`, raw);
+      localStorage.removeItem(entry);
+      moved++;
+    }
+  } catch {
+    // Storage unavailable. The app still works; the weeks stay where they are.
+  }
+  return { moved, conflicts };
 }
 
 export function saveWeek(date: Date, data: WeekData): void {
