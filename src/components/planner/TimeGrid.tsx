@@ -70,7 +70,12 @@ const TimeGrid: React.FC<TimeGridProps> = ({
     blockIdx: number
   ) => {
     e.preventDefault();
-    setContextMenu({ x: e.clientX, y: e.clientY, hourIdx, blockIdx });
+    setContextMenu({
+      x: Math.min(e.clientX, window.innerWidth - 300),
+      y: Math.min(e.clientY, window.innerHeight - 44),
+      hourIdx,
+      blockIdx,
+    });
   };
 
   const pickColor = (colorId: number) => {
@@ -92,8 +97,9 @@ const TimeGrid: React.FC<TimeGridProps> = ({
   // Number keys select by display position, not storage id
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
       const target = e.target as HTMLElement;
-      if (target.tagName === "INPUT" || target.tagName === "TEXTAREA") return;
+      if (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName)) return;
       const colorId = colorIdForDisplayPosition(parseInt(e.key));
       if (colorId !== null) {
         setActiveColor(colorId);
@@ -162,6 +168,7 @@ const TimeGrid: React.FC<TimeGridProps> = ({
               className="w-6 h-6 rounded-sm border border-border/50 hover:scale-110 transition-transform flex items-center justify-center text-[9px] font-bold"
               style={{ backgroundColor: `hsl(${isDark ? c.hslDark : c.hsl})` }}
               title={`${c.label} (${index + 1})`}
+              aria-label={`${c.label} (${index + 1})`}
               onClick={() => pickColor(c.id)}
             >
               {index + 1}
