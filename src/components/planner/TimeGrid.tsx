@@ -99,7 +99,13 @@ const TimeGrid: React.FC<TimeGridProps> = ({
     const handler = (e: KeyboardEvent) => {
       if (e.ctrlKey || e.metaKey || e.altKey) return;
       const target = e.target as HTMLElement;
-      if (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName)) return;
+      if (
+        target.isContentEditable ||
+        /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName) ||
+        target.closest?.('[role="menu"], [role="dialog"], [role="listbox"]')
+      ) {
+        return;
+      }
       const colorId = colorIdForDisplayPosition(parseInt(e.key));
       if (colorId !== null) {
         setActiveColor(colorId);
