@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from "react";
 import { getPaletteInDisplayOrder, COLOR_IDS_IN_DISPLAY_ORDER } from "@/lib/planner-data";
+import { useIsDark } from "@/hooks/use-is-dark";
 
 interface ColorPickerProps {
   /** Raw client coordinates of the triggering event. Clamped internally. */
@@ -26,9 +27,7 @@ const PICKER_HEIGHT = SWATCH_PX + CHROME_PX;
 const EDGE_MARGIN = 10;
 
 const ColorPicker: React.FC<ColorPickerProps> = ({ x, y, onPick, onClear, onClose }) => {
-  const isDark =
-    typeof window !== "undefined" &&
-    window.matchMedia("(prefers-color-scheme: dark)").matches;
+  const isDark = useIsDark();
 
   // Latched in a ref rather than depended on directly: callers pass inline
   // arrows, and depending on `onClose` would tear down and rebuild the

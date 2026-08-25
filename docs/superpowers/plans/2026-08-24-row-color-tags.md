@@ -191,6 +191,17 @@ No test step. This is a behavior-preserving refactor of code with no unit tests 
 
 - [ ] **Step 1: Create the component**
 
+> **Superseded in part.** The code block below is what this task originally
+> specified and what was committed first. Code review then found that a
+> secondary-button press never fires `click`, so this dismissal would leave two
+> pickers mounted at once as soon as Task 3 landed. The shipped component
+> dismisses on `mousedown` with `stopPropagation` for both `mousedown` and
+> `click`, latches `onClose` in a ref with empty deps, handles `Escape`, derives
+> `PICKER_WIDTH` from the palette length so appending a tenth colour cannot break
+> the clamp, adds a lower bound to the clamp, and takes `isDark` from the shared
+> `useIsDark` hook. Read the committed `ColorPicker.tsx` for current truth; this
+> block is kept as the record of what the task started from.
+
 Create `src/components/planner/ColorPicker.tsx` with exactly this content:
 
 ```tsx
@@ -340,6 +351,27 @@ existing test touches component code.
 
 Do NOT rewrite `updateSubject`. Task 3 Step 4 adds the test that guards it.
 
+**Use the shared `useIsDark` hook, do not write a fifth copy.** `isDark` via
+`matchMedia` was duplicated across four files and has been extracted to
+`src/hooks/use-is-dark.ts`. Both Task 3 and Task 4 must use
+`const isDark = useIsDark();` rather than reproducing the `matchMedia` call.
+
+**Do not add `role="menu"`, `role="dialog"` or `role="listbox"` anywhere.**
+`TimeGrid`'s keydown guard tests
+`closest?.('[role="menu"], [role="dialog"], [role="listbox"]')` in order to let
+Radix menus swallow digits. Adding any of those roles to the picker or to a row
+would silently stop the number keys from arming colours whenever focus sits inside
+that element. Correct ARIA and the digit shortcut are in tension here; it needs a
+deliberate decision, not a drive-by attribute.
+
+**Two pickers were mountable at once, and the fix changes how dismissal works.**
+Each of `TimeGrid`, `DailyView` and `DayColumn` owns its own picker state. A
+secondary-button press never fires `click`, so the old window `click` listener
+could not dismiss one picker when another opened. `ColorPicker` now dismisses on
+`mousedown` and stops propagation for both `mousedown` and `click` on its
+container. Task 5 must re-run every picker check and add one for the two-picker
+case.
+
 **jsdom v20 silently discards CSS Color 4 values.** This project pins
 `jsdom: ^20.0.3`, whose `cssstyle` predates space-separated `hsl()`. Measured in
 this project's own vitest environment, all three of these yield an empty string:
@@ -364,7 +396,14 @@ No test step; Task 5 verifies in a browser.
 
 - [ ] **Step 1: Add the imports and the row helpers**
 
-Add `getBlockTint` and `ColorPicker` to the imports. `getBlockColor` may already be imported; if not, add it.
+Add `getBlockTint` and `getBlockColor` to the `@/lib/planner-data` import, and add:
+
+```ts
+import ColorPicker from "./ColorPicker";
+import { useIsDark } from "@/hooks/use-is-dark";
+```
+
+Replace the file's existing inline `isDark` computation with `const isDark = useIsDark();`.
 
 Inside the component, alongside the existing state, add:
 
@@ -552,6 +591,7 @@ Add to the imports:
 import React, { useState } from "react";
 import { DayData, calcDayTotal, getBlockColor, getBlockTint } from "@/lib/planner-data";
 import ColorPicker from "./ColorPicker";
+import { useIsDark } from "@/hooks/use-is-dark";
 ```
 
 Keep `TimeGrid` and `date-fns` imports as they are.
@@ -561,9 +601,7 @@ Inside the component add:
 ```ts
   const [rowPicker, setRowPicker] = useState<{ x: number; y: number; idx: number } | null>(null);
 
-  const isDark =
-    typeof window !== "undefined" &&
-    window.matchMedia("(prefers-color-scheme: dark)").matches;
+  const isDark = useIsDark();
 
   // colorId is a storage id, matching activeColor and timeBlocks.
   const setRowColor = (idx: number, colorId: number | undefined) => {
@@ -723,6 +761,10 @@ This is the regression surface for the extraction. Confirm all of it:
 5. Clicking anywhere outside closes the picker without changing anything.
 6. Right-click a block in the rightmost weekly column, hard against the viewport edge. The whole picker including the clear button stays on screen.
 7. Press `Ctrl+9` — the armed colour must not change. The modifier guard lives in `TimeGrid` and must have survived the extraction.
+8. Press `Escape` with the picker open. It must close without changing anything.
+9. **The two-picker case.** Right-click a time block to open the picker, then without dismissing it, right-click a priority row's stripe. Exactly ONE picker may be visible. Before the dismissal fix this left both mounted, because a secondary-button press never fires `click`.
+10. Right-click one block, then another, without dismissing. The picker must MOVE to the second block rather than closing — the `mousedown` dismissal must not have broken repositioning.
+11. Click a swatch. It must apply. This is the check that the container's `onMouseDown` stopPropagation is present: without it, mousedown unmounts the button before its click fires and picking silently stops working.
 
 - [ ] **Step 4: Row tagging in the daily view**
 
