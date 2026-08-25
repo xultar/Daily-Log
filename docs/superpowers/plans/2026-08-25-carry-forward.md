@@ -358,18 +358,44 @@ Place `carriedWeeks` below `isUsableIsoDate`, which Task 1 extracted.
 
 **Use `isUsableIsoDate`, not `ISO_DATE.test`.** `ISO_DATE` is `/^\d{4}-\d{2}-\d{2}$/` — a shape check only, which `2026-02-31` passes. Task 1's review caught exactly this in `asOrigin`; do not reintroduce it here as a fourth hand-rolled spelling. `isUsableIsoDate` already combines the shape check with `isValid(parse(...))`, which is why this function no longer needs its own `isValid` guard.
 
-Add this case to the test block above:
+Place `carriedWeeks` **below `asOrigin`**, not between `isUsableIsoDate` and `asOrigin` — those two are a matched pair, a predicate and its one-line coercion, and should stay adjacent.
+
+Two lines of the doc comment need care. The contract is **not** "both arguments are Mondays": `repairTodo` and `repairSubject` accept any valid ISO date from storage, so a hand-edited or imported file can carry a Sunday `origin`. Say instead:
+
+> Both arguments are ISO dates. Weeks are Monday-based, so a non-Monday operand is counted from the Monday of its week.
+
+And the failure-policy line must mention both parameters — an unusable *viewed week* reports 0 too, not just an unusable origin.
+
+Add these three cases to the test block above:
 
 ```ts
   it("is zero for a date-shaped value that is not a real date", () => {
     expect(carriedWeeks("2026-02-31", "2026-08-24")).toBe(0);
   });
+
+  it("is zero when the viewed week is not a usable date", () => {
+    // Math.max does NOT backstop this: parse() of a bad date gives Invalid
+    // Date, differenceInCalendarWeeks gives NaN, and Math.max(0, NaN) is NaN,
+    // not 0. Without this guard the age marker renders the string "NaN".
+    expect(carriedWeeks("2026-08-10", "not a date")).toBe(0);
+  });
+
+  it("counts from the Monday of the week, not from Sunday", () => {
+    // Only observable with a non-Monday operand: with two Mondays an exact
+    // multiple of 7 days apart, every weekStartsOn value shifts both operands
+    // equally and cancels. Under date-fns' Sunday default this is 0.
+    expect(carriedWeeks("2026-08-23", "2026-08-24")).toBe(1);
+  });
 ```
+
+**Why those last two exist:** without them, deleting `{ weekStartsOn: 1 }` or dropping the `mondayISO` half of the guard leaves the whole suite green. Eight tests looked like thorough coverage of a six-line function; they were thorough coverage of one parameter and near-zero coverage of the other.
+
+The year-boundary case is worth keeping but deserves a comment saying what it is for: `2025-12-29 → 2026-01-05` is exactly 7 days, and `differenceInCalendarWeeks` is plain calendar arithmetic, so it kills no mutant the one-week case does not. It guards against a future reimplementation reaching for `getISOWeek`/`getISOWeekYear` — both already imported into this file, so the hazard is live.
 
 - [ ] **Step 4: Run the tests and verify they pass**
 
 Run: `npx vitest run src/test/carry-rules.test.ts`
-Expected: PASS, 8 tests.
+Expected: PASS, 10 tests.
 
 - [ ] **Step 5: Commit**
 
@@ -570,7 +596,7 @@ export function applyCarryForward(target: WeekData, chosen: CarryCandidate[]): W
 - [ ] **Step 4: Run the tests and verify they pass**
 
 Run: `npx vitest run src/test/carry-rules.test.ts`
-Expected: PASS, 20 tests.
+Expected: PASS, 22 tests.
 
 - [ ] **Step 5: Commit**
 
@@ -1333,7 +1359,7 @@ git commit -m "Show how many weeks an action has been slipping"
 - [ ] **Step 1: Run the whole suite**
 
 Run: `npm test`
-Expected: PASS. The count rises from 186 by the tests added here — 8 schema, 20 rules, 9 source, 18 bar, 4 marker.
+Expected: PASS. The count rises from 186 by the tests added here — 8 schema, 22 rules, 9 source, 18 bar, 4 marker.
 
 - [ ] **Step 2: Lint**
 
