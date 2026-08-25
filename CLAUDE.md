@@ -64,12 +64,31 @@ wrong. Two things follow, and both are easy to undo by accident:
   `planner-` prefix, and that overlap is what broke the exporter once; keep new
   entries out of it rather than relying on the shape match to sort them out.
 
-**Saving is gated on `dirtyRef` in `StudyPlanner`.** The autosave effect runs on
-mount and on every week change, not only on edit, so before the gate existed
-merely opening a week wrote it straight back — which is how an unreadable week
-became an empty one 300ms after it was viewed. The load effect clears the flag,
-which is also what stops a pending edit to the week just left from being written
-under the new week's key. `src/test/autosave.test.tsx` pins all of this.
+**Saving in `StudyPlanner` turns on two refs, and they answer different
+questions.** `dirtyRef` asks whether `weekData` holds a change the user made.
+The autosave effect runs on mount and on every week change, not only on edit, so
+without that gate merely opening a week wrote it straight back — which is how an
+unreadable week became an empty one 300ms after it was viewed.
+
+`pendingRef` asks whether a write is still waiting out the 300ms debounce, and
+**which week it belongs to**. Anything that ends the debounce early has to write
+it rather than drop it, and there are three such things:
+
+- **Leaving the week.** React runs the save effect's cleanup, clearing the
+  timer, *before* the load effect runs, and the load effect then clears
+  `dirtyRef` — so nothing rescheduled the write and the edit was simply lost.
+  The load effect now calls `flushPendingSave` first. The date comes from
+  `pendingRef`, not from `currentDate`, so it lands on the week it was made in.
+- **Unmounting**, covered by the cleanup of the `pagehide` effect. Effects clean
+  up in declaration order, so the debounce timer is already cleared by then.
+- **The tab closing.** React does not unmount for that, hence the `pagehide`
+  listener.
+
+`flushPendingSave` touches only refs, which is what makes it stable enough to
+list as an effect dependency without re-registering anything.
+`src/test/autosave.test.tsx` and `src/test/pending-save.test.tsx` pin all of it,
+including that flushing early does not defeat the debounce — a burst of typing
+must still collapse to one write.
 
 Repair happens in memory only. Viewing a damaged week leaves storage untouched
 until the user actually changes something.
@@ -200,7 +219,7 @@ because mousedown would unmount the button before its click fires.
 
 ## Baselines
 
-- `npm test` — 129 tests across 12 files
+- `npm test` — 136 tests across 13 files
 - `npm run lint` — **0 errors, 10 warnings**. All ten are pre-existing
   `react-refresh/only-export-components` and `react-hooks/exhaustive-deps` in
   `src/components/ui/*`, `MonthlyView.tsx` and `theme-context.tsx`. Do not treat
@@ -227,6 +246,13 @@ make the label field unreachable. The `stopPropagation` on that input is what ho
 it together for mouse users. Fixing it needs a real restructure.
 
 **`compact` on `DayColumn`** is declared and never used.
+
+**Two tabs overwrite each other.** Nothing listens for the `storage` event, and
+every edit serialises and writes the whole week from in-memory state. A second
+tab holding a stale copy therefore reverts the first tab's work on its next
+keystroke. Last writer wins, silently. Fixing it means either reloading on the
+`storage` event or merging per field; neither is obviously right for a planner
+that is normally open once.
 
 ## Design docs
 

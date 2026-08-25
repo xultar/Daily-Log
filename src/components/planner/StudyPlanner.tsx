@@ -29,43 +29,66 @@ const StudyPlanner: React.FC = () => {
   // Storage id of the armed color, shared by every view. Not a display position.
   const [activeColor, setActiveColor] = useState(1);
 
-  // Whether weekData holds a change the user made. The save effect below runs on
-  // mount and on every week change too, so without this gate merely opening a
-  // week wrote it straight back — which turned a week loadWeek could not read
-  // into an empty one 300ms after it was viewed.
+  // Two separate questions, both refs so that neither causes a render:
+  //   dirtyRef   — does weekData hold a change the user made? This gates saving
+  //                at all, so merely opening a week never writes it back.
+  //   pendingRef — is a write still waiting out the debounce, and which week
+  //                does it belong to? Anything that ends the debounce early has
+  //                to write this rather than drop it.
   const dirtyRef = useRef(false);
+  const pendingRef = useRef<{ date: Date; data: WeekData } | null>(null);
   const markDirty = useCallback(() => {
     dirtyRef.current = true;
   }, []);
-
-  useEffect(() => {
-    setWeekData(loadWeek(currentDate));
-    // A freshly loaded week has nothing unsaved. Clearing this here also stops a
-    // pending edit to the week just left from being written under the new key.
-    dirtyRef.current = false;
-  }, [currentDate, refreshKey]);
 
   // Whether the last autosave was refused. A storage failure persists, so
   // warning on every keystroke would bury the message under itself; warn on the
   // transition into failure instead, and again if it recurs after recovering.
   const saveFailedRef = useRef(false);
 
+  // Touches only refs, so it is stable and safe to list as an effect dependency.
+  const flushPendingSave = useCallback(() => {
+    const pending = pendingRef.current;
+    if (!pending) return;
+    pendingRef.current = null;
+    const saved = saveWeek(pending.date, pending.data);
+    if (!saved && !saveFailedRef.current) {
+      toast({
+        title: "Your changes are not being saved",
+        description:
+          "This browser's storage is full or unavailable. Export a backup before closing the tab.",
+        variant: "destructive",
+      });
+    }
+    saveFailedRef.current = !saved;
+  }, []);
+
+  useEffect(() => {
+    // React runs the save effect's cleanup — which clears the debounce timer —
+    // before this effect, so an edit made in the last 300ms is written here or
+    // not at all. It goes to the week it was made in, which pendingRef carries.
+    flushPendingSave();
+    setWeekData(loadWeek(currentDate));
+    // A freshly loaded week has nothing unsaved.
+    dirtyRef.current = false;
+  }, [currentDate, refreshKey, flushPendingSave]);
+
   useEffect(() => {
     if (!dirtyRef.current) return;
-    const timer = setTimeout(() => {
-      const saved = saveWeek(currentDate, weekData);
-      if (!saved && !saveFailedRef.current) {
-        toast({
-          title: "Your changes are not being saved",
-          description:
-            "This browser's storage is full or unavailable. Export a backup before closing the tab.",
-          variant: "destructive",
-        });
-      }
-      saveFailedRef.current = !saved;
-    }, 300);
+    pendingRef.current = { date: currentDate, data: weekData };
+    const timer = setTimeout(flushPendingSave, 300);
     return () => clearTimeout(timer);
-  }, [weekData, currentDate]);
+  }, [weekData, currentDate, flushPendingSave]);
+
+  // The other two ways the debounce ends early. React does not unmount when the
+  // tab closes, so pagehide covers that; this effect's cleanup covers unmount.
+  useEffect(() => {
+    window.addEventListener("pagehide", flushPendingSave);
+    return () => {
+      window.removeEventListener("pagehide", flushPendingSave);
+      flushPendingSave();
+    };
+  }, [flushPendingSave]);
 
   useEffect(() => {
     writeItem("planner-show-weekends", String(showWeekends));
