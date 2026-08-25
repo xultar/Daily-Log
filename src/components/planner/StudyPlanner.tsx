@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { startOfWeek, addWeeks, subWeeks, addMonths, subMonths, format } from "date-fns";
 import { WeekData, DayData, TodoItem, loadWeek, saveWeek } from "@/lib/planner-data";
 import WeeklyTodoSidebar from "./WeeklyTodoSidebar";
@@ -6,9 +6,10 @@ import DayColumn from "./DayColumn";
 import DailyView from "./DailyView";
 import MonthlyView from "./MonthlyView";
 import ToolbarActions from "./ToolbarActions";
+import WeeklyColorLegend from "./WeeklyColorLegend";
 import { ChevronLeft, ChevronRight, Printer, Calendar, CalendarDays, CalendarRange, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { calcWeekTotal, getWeekDates } from "@/lib/planner-data";
+import { calcWeekTotal, calcWeekColorMinutes, getWeekDates } from "@/lib/planner-data";
 
 type ViewMode = "daily" | "weekly" | "monthly";
 
@@ -23,6 +24,8 @@ const StudyPlanner: React.FC = () => {
   const [showWeekends, setShowWeekends] = useState(() => {
     return localStorage.getItem("planner-show-weekends") !== "false";
   });
+  // Storage id of the armed color, shared by every view. Not a display position.
+  const [activeColor, setActiveColor] = useState(1);
 
   useEffect(() => {
     setWeekData(loadWeek(currentDate));
@@ -69,7 +72,15 @@ const StudyPlanner: React.FC = () => {
   };
 
   const dates = getWeekDates(currentDate);
-  const total = calcWeekTotal(weekData);
+  // Both memos recompute on every weekData change, which includes every
+  // painted block, memo/priority edit, and goal/review keystroke — they do
+  // not save the drag-paint walk. What they save is re-running the ~798-cell
+  // walk on renders that don't touch weekData: armed-color changes, view-mode
+  // switches, and the weekend toggle.
+  const total = useMemo(() => calcWeekTotal(weekData), [weekData]);
+  const weekColorMinutes = useMemo(() => calcWeekColorMinutes(weekData), [weekData]);
+  // slice(0, 5) is a prefix slice (Mon-Fri are days 0-4), so index i below
+  // always equals the real day index in weekData.days for both branches.
   const visibleDays = showWeekends ? weekData.days : weekData.days.slice(0, 5);
 
   const getNavLabel = () => {
@@ -175,23 +186,35 @@ const StudyPlanner: React.FC = () => {
             day={weekData.days[selectedDayIndex]}
             dayIndex={selectedDayIndex}
             onChange={(d) => updateDay(selectedDayIndex, d)}
+            activeColor={activeColor}
+            onActiveColorChange={setActiveColor}
           />
         </div>
       )}
 
       {viewMode === "weekly" && (
-        <div className="flex flex-1 overflow-hidden border-t border-border min-h-0">
-          <WeeklyTodoSidebar todos={weekData.weeklyTodos} onChange={updateTodos} />
-          <div className="flex flex-1 min-w-0 h-full overflow-x-auto">
-            {visibleDays.map((day, i) => {
-              const actualIndex = showWeekends ? i : i;
-              return (
-                <div key={actualIndex} className="flex-1 min-w-[100px] h-full">
-                  <DayColumn day={day} dayIndex={actualIndex} onChange={(d) => updateDay(actualIndex, d)} />
+        <div className="flex flex-col flex-1 overflow-hidden border-t border-border min-h-0">
+          <div className="flex flex-1 overflow-hidden min-h-0">
+            <WeeklyTodoSidebar todos={weekData.weeklyTodos} onChange={updateTodos} />
+            <div className="flex flex-1 min-w-0 h-full overflow-x-auto">
+              {visibleDays.map((day, i) => (
+                <div key={day.date} className="flex-1 min-w-[100px] h-full">
+                  <DayColumn
+                    day={day}
+                    dayIndex={i}
+                    onChange={(d) => updateDay(i, d)}
+                    activeColor={activeColor}
+                    onActiveColorChange={setActiveColor}
+                  />
                 </div>
-              );
-            })}
+              ))}
+            </div>
           </div>
+          <WeeklyColorLegend
+            colorMinutes={weekColorMinutes}
+            activeColor={activeColor}
+            onSelect={setActiveColor}
+          />
         </div>
       )}
 

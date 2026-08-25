@@ -33,6 +33,7 @@ export interface BlockColor {
 
 const HOURS = Array.from({ length: 19 }, (_, i) => i + 6); // 6 to 24
 const BLOCKS_PER_HOUR = 6; // 10-min blocks (60 min per hour)
+const MINUTES_PER_BLOCK = 60 / BLOCKS_PER_HOUR;
 
 export function getWeekKey(date: Date): string {
   const week = getISOWeek(date);
@@ -68,10 +69,42 @@ export function calcDayTotal(day: DayData): { hours: number; minutes: number } {
   let totalMinutes = 0;
   for (const hourBlocks of day.timeBlocks) {
     for (const block of hourBlocks) {
-      if (block) totalMinutes += 10; // any non-zero value counts as filled
+      if (block) totalMinutes += MINUTES_PER_BLOCK; // any non-zero value counts as filled
     }
   }
   return { hours: Math.floor(totalMinutes / 60), minutes: totalMinutes % 60 };
+}
+
+/** Minutes spent on each color in one day, keyed by storage id. */
+export function calcDayColorMinutes(day: DayData): Record<number, number> {
+  const minutes: Record<number, number> = {};
+  for (const hourBlocks of day.timeBlocks) {
+    for (const block of hourBlocks) {
+      if (block) minutes[block] = (minutes[block] ?? 0) + MINUTES_PER_BLOCK;
+    }
+  }
+  return minutes;
+}
+
+/** Minutes spent on each color across a whole week, keyed by storage id. */
+export function calcWeekColorMinutes(week: WeekData): Record<number, number> {
+  const minutes: Record<number, number> = {};
+  for (const day of week.days) {
+    for (const [id, mins] of Object.entries(calcDayColorMinutes(day))) {
+      const storageId = Number(id);
+      minutes[storageId] = (minutes[storageId] ?? 0) + mins;
+    }
+  }
+  return minutes;
+}
+
+/** Render a duration as "40m", "2h" or "2h 30m". */
+export function formatMinutes(totalMinutes: number): string {
+  const hours = Math.floor(totalMinutes / 60);
+  const mins = totalMinutes % 60;
+  if (hours === 0) return `${mins}m`;
+  if (mins === 0) return `${hours}h`;
+  return `${hours}h ${mins}m`;
 }
 
 /** Migrate legacy boolean[][] timeBlocks to number[][] */
