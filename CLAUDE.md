@@ -46,6 +46,34 @@ Consequences:
   `getBlockColor(null)` returns null so the block looks unpainted, and
   `calcDayTotal`'s truthiness check skips it so the totals look right.
 
+## A stored week is repaired, never replaced
+
+`loadWeek` runs everything it reads through `repairWeek`. The rule is that a
+stored week is the user's only copy, so damage is repaired *around* whatever
+survived — it is never swapped for an empty week just because one field is
+wrong. Two things follow, and both are easy to undo by accident:
+
+- **Rebuild only a list that is missing or empty.** `DailyView.removeSubject`
+  and `WeeklyTodoSidebar.removeTodo` both let a user delete rows down to one, so
+  padding every short list back up to its default length would resurrect rows
+  they deleted on purpose. `repairList` encodes this; do not "fix" it into an
+  unconditional pad.
+- **The unreadable-entry backup must not start with `planner-`.** When JSON
+  parsing fails outright, the raw text is copied to
+  `daily-log-unreadable-<weekKey>`. `exportAllData` treats *every* `planner-*`
+  key as a week, so parking the backup under that prefix would feed it straight
+  into the exporter (see the CSV bug below).
+
+**Saving is gated on `dirtyRef` in `StudyPlanner`.** The autosave effect runs on
+mount and on every week change, not only on edit, so before the gate existed
+merely opening a week wrote it straight back — which is how an unreadable week
+became an empty one 300ms after it was viewed. The load effect clears the flag,
+which is also what stops a pending edit to the week just left from being written
+under the new week's key. `src/test/autosave.test.tsx` pins all of this.
+
+Repair happens in memory only. Viewing a damaged week leaves storage untouched
+until the user actually changes something.
+
 ## Traps that cost time to find
 
 **Do not rewrite `updateSubject`** in `DailyView.tsx` or `DayColumn.tsx`. Its
@@ -80,7 +108,7 @@ because mousedown would unmount the button before its click fires.
 
 ## Baselines
 
-- `npm test` — 41 tests across 3 files
+- `npm test` — 65 tests across 5 files
 - `npm run lint` — **0 errors, 10 warnings**. All ten are pre-existing
   `react-refresh/only-export-components` and `react-hooks/exhaustive-deps` in
   `src/components/ui/*`, `MonthlyView.tsx` and `theme-context.tsx`. Do not treat
@@ -107,6 +135,25 @@ make the label field unreachable. The `stopPropagation` on that input is what ho
 it together for mouse users. Fixing it needs a real restructure.
 
 **`compact` on `DayColumn`** is declared and never used.
+
+**`getWeekKey` can give two different weeks the same key.** It pairs
+`getISOWeek` with `getYear(startOfWeek(...))`, and those disagree when a
+December Monday belongs to ISO week 1 of the next year. The week of
+2024-12-30 and the week of 2024-01-01 both key to `planner-2024-W01`; the next
+occurrence is 2029-12-31. Editing one silently overwrites the other. The fix is
+`getISOWeekYear`, but it relabels those December weeks, so it needs a migration
+rather than a one-line change.
+
+**CSV export always throws.** `exportAllData` treats every `planner-*` key as a
+week, and `planner-show-weekends` (written on every mount) and
+`planner-color-labels` both match, so `exportAsCSV` dies on `week.days is not
+iterable`. It also quietly pollutes the JSON export. Match the key shape
+instead of the prefix.
+
+**There is no error boundary.** A render-phase throw unmounts the whole app and
+leaves a white screen that survives reload, because the data that caused it is
+persisted. `repairWeek` closes the paths reachable through `loadWeek`, but
+`importFromJSON` still writes unvalidated objects straight to storage.
 
 ## Design docs
 

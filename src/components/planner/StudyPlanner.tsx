@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { startOfWeek, addWeeks, subWeeks, addMonths, subMonths, format } from "date-fns";
 import { WeekData, DayData, TodoItem, loadWeek, saveWeek } from "@/lib/planner-data";
 import WeeklyTodoSidebar from "./WeeklyTodoSidebar";
@@ -27,11 +27,24 @@ const StudyPlanner: React.FC = () => {
   // Storage id of the armed color, shared by every view. Not a display position.
   const [activeColor, setActiveColor] = useState(1);
 
+  // Whether weekData holds a change the user made. The save effect below runs on
+  // mount and on every week change too, so without this gate merely opening a
+  // week wrote it straight back — which turned a week loadWeek could not read
+  // into an empty one 300ms after it was viewed.
+  const dirtyRef = useRef(false);
+  const markDirty = useCallback(() => {
+    dirtyRef.current = true;
+  }, []);
+
   useEffect(() => {
     setWeekData(loadWeek(currentDate));
+    // A freshly loaded week has nothing unsaved. Clearing this here also stops a
+    // pending edit to the week just left from being written under the new key.
+    dirtyRef.current = false;
   }, [currentDate, refreshKey]);
 
   useEffect(() => {
+    if (!dirtyRef.current) return;
     const timer = setTimeout(() => saveWeek(currentDate, weekData), 300);
     return () => clearTimeout(timer);
   }, [weekData, currentDate]);
@@ -41,19 +54,22 @@ const StudyPlanner: React.FC = () => {
   }, [showWeekends]);
 
   const updateDay = useCallback((dayIndex: number, day: DayData) => {
+    markDirty();
     setWeekData((prev) => ({
       ...prev,
       days: prev.days.map((d, i) => (i === dayIndex ? day : d)),
     }));
-  }, []);
+  }, [markDirty]);
 
   const updateTodos = useCallback((todos: TodoItem[]) => {
+    markDirty();
     setWeekData((prev) => ({ ...prev, weeklyTodos: todos }));
-  }, []);
+  }, [markDirty]);
 
   const updateField = useCallback((field: "weekGoal" | "weekReview", value: string) => {
+    markDirty();
     setWeekData((prev) => ({ ...prev, [field]: value }));
-  }, []);
+  }, [markDirty]);
 
   const navigatePrev = () => {
     if (viewMode === "daily") {

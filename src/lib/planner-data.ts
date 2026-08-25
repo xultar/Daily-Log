@@ -1,4 +1,4 @@
-import { startOfWeek, addDays, format, parse, getISOWeek, getYear } from "date-fns";
+import { startOfWeek, addDays, format, parse, isValid, getISOWeek, getYear } from "date-fns";
 
 export interface TodoItem {
   text: string;
@@ -116,13 +116,6 @@ export function formatMinutes(totalMinutes: number): string {
   return `${hours}h ${mins}m`;
 }
 
-/** Migrate legacy boolean[][] timeBlocks to number[][] */
-export function migrateTimeBlocks(blocks: (boolean | number)[][]): number[][] {
-  return blocks.map((row) =>
-    row.map((v) => (v === true ? 1 : v === false ? 0 : (v as number)))
-  );
-}
-
 export function calcWeekTotal(week: WeekData): { hours: number; minutes: number } {
   let totalMinutes = 0;
   for (const day of week.days) {
@@ -132,22 +125,120 @@ export function calcWeekTotal(week: WeekData): { hours: number; minutes: number 
   return { hours: Math.floor(totalMinutes / 60), minutes: totalMinutes % 60 };
 }
 
+/**
+ * Where an unreadable entry is parked. Deliberately NOT under the `planner-`
+ * prefix: the exporter treats every `planner-*` key as a week, so a backup
+ * stored there would be scanned as one.
+ */
+const UNREADABLE_PREFIX = "daily-log-unreadable-";
+
+const DEFAULT_SUBJECT_ROWS = 6;
+const WEEKLY_TODO_ROWS = 8;
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+const asText = (value: unknown): string => (typeof value === "string" ? value : "");
+
+const asRecord = (value: unknown): Record<string, unknown> =>
+  value && typeof value === "object" ? (value as Record<string, unknown>) : {};
+
+/**
+ * A stored block value is a storage id, or 0 for empty. Legacy grids hold
+ * booleans. Everything else — null from a missing colorIdForDisplayPosition
+ * guard, an id past the end of the palette, a stringified number out of
+ * hand-edited JSON — is damage and clears to empty.
+ */
+function repairBlockValue(value: unknown): number {
+  if (value === true) return 1;
+  if (typeof value !== "number" || !Number.isInteger(value)) return 0;
+  return value >= 1 && value <= BLOCK_COLORS.length ? value : 0;
+}
+
+/** Always HOURS x BLOCKS_PER_HOUR, so painting can index without a guard. */
+function repairTimeBlocks(value: unknown): number[][] {
+  const rows = Array.isArray(value) ? value : [];
+  return HOURS.map((_, hourIdx) => {
+    const row = Array.isArray(rows[hourIdx]) ? rows[hourIdx] : [];
+    return Array.from({ length: BLOCKS_PER_HOUR }, (_, blockIdx) =>
+      repairBlockValue(row[blockIdx])
+    );
+  });
+}
+
+function repairSubject(value: unknown): SubjectRow {
+  const raw = asRecord(value);
+  const row: SubjectRow = { subject: asText(raw.subject), checked: raw.checked === true };
+  // A tag survives only if it names a real palette entry; repairBlockValue
+  // applies the same storage-id contract used for timeBlocks.
+  const colorId = repairBlockValue(raw.colorId);
+  if (colorId !== 0) row.colorId = colorId;
+  return row;
+}
+
+/**
+ * Rebuild only a list that is missing outright. Both views let a user delete
+ * rows down to one, so padding a short-but-real list would resurrect rows they
+ * removed on purpose.
+ */
+function repairList<T>(value: unknown, rebuiltLength: number, repairItem: (item: unknown) => T): T[] {
+  if (!Array.isArray(value) || value.length === 0) {
+    return Array.from({ length: rebuiltLength }, () => repairItem(undefined));
+  }
+  return value.map(repairItem);
+}
+
+function repairTodo(value: unknown): TodoItem {
+  const raw = asRecord(value);
+  return { text: asText(raw.text), checked: raw.checked === true };
+}
+
+function repairDay(value: unknown, fallbackDate: Date): DayData {
+  const raw = asRecord(value);
+  // Both day views feed this straight to date-fns parse() and then format(),
+  // which throws a RangeError on an unparseable date and unmounts the app.
+  const storedDate = asText(raw.date);
+  const usable =
+    ISO_DATE.test(storedDate) && isValid(parse(storedDate, "yyyy-MM-dd", new Date()));
+  return {
+    date: usable ? storedDate : format(fallbackDate, "yyyy-MM-dd"),
+    subjects: repairList(raw.subjects, DEFAULT_SUBJECT_ROWS, repairSubject),
+    timeBlocks: repairTimeBlocks(raw.timeBlocks),
+    memo: asText(raw.memo),
+  };
+}
+
+/**
+ * Coerce anything that came out of storage into a WeekData the app can render
+ * and write to. A stored week is the user's only copy, so damage is repaired
+ * around the surviving content rather than swapped for an empty week.
+ */
+export function repairWeek(value: unknown, date: Date): WeekData {
+  const raw = asRecord(value);
+  const storedDays = Array.isArray(raw.days) ? raw.days : [];
+  // Mapping the week's real dates both pads a short week and drops any extras.
+  return {
+    weekGoal: asText(raw.weekGoal),
+    weekReview: asText(raw.weekReview),
+    weeklyTodos: repairList(raw.weeklyTodos, WEEKLY_TODO_ROWS, repairTodo),
+    days: getWeekDates(date).map((d, i) => repairDay(storedDays[i], d)),
+  };
+}
+
 export function loadWeek(date: Date): WeekData {
   const key = getWeekKey(date);
   const stored = localStorage.getItem(`planner-${key}`);
-  if (stored) {
+  if (!stored) return createEmptyWeek(date);
+  try {
+    return repairWeek(JSON.parse(stored), date);
+  } catch {
+    // Not JSON at all. Keep the raw text before returning the empty week that
+    // the autosave will eventually write over this key.
     try {
-      const data: WeekData = JSON.parse(stored);
-      // Migrate legacy boolean[][] timeBlocks to number[][]
-      for (const day of data.days) {
-        day.timeBlocks = migrateTimeBlocks(day.timeBlocks);
-      }
-      return data;
+      localStorage.setItem(`${UNREADABLE_PREFIX}${key}`, stored);
     } catch {
-      return createEmptyWeek(date);
+      // Storage is full or unavailable; the empty week is still better than a throw.
     }
+    return createEmptyWeek(date);
   }
-  return createEmptyWeek(date);
 }
 
 export function saveWeek(date: Date, data: WeekData): void {
