@@ -22,15 +22,17 @@ the page renders blank.
 week-key migration, the export fix, the error boundary, import validation,
 storage guards and the autosave flush.
 
-`priority-flag-and-labels` was merged into `main` on 2026-08-25 — the priority
-flag with the `00` hour label, the Today button and today's-column marker, and
-the legend grid lines. **`main` is ahead of `origin/main` and has not been
-pushed**, because pushing deploys. Do not push unless asked.
+On 2026-08-25 three things merged into `main` and **deployed**: the priority
+flag branch, dark mode with the print fix, and a follow-up making native
+widgets follow the colour scheme. The live site was confirmed serving them.
 
-**`design/dark-mode-and-carry-forward` carries dark mode and the print fix.**
-Specs for both dark mode and carry-forward, the plan for dark mode, and the
-seven commits implementing it. Verified in a browser. Carry-forward is
-specified but not built.
+**Carry-forward is specified but not built.** The design is approved and sits
+in `docs/superpowers/specs/2026-08-25-carry-forward-design.md`; there is no
+implementation plan for it yet.
+
+Still open and untouched: the two-tab overwrite, the `<input>` inside
+`<button>` in the daily legend, and the cold-run timeout flake in
+`startup-migration.test.tsx`.
 
 ## The one rule that can corrupt user data
 
