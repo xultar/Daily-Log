@@ -252,6 +252,15 @@ export function loadWeek(date: Date): WeekData {
 const WEEK_ENTRY = /^planner-(\d{4}-W\d{2})$/;
 
 /**
+ * The week key inside a storage entry name, or null when the entry is not a
+ * week at all. Settings live under the same `planner-` prefix, so matching the
+ * prefix alone sweeps them up as if they were weeks.
+ */
+export function weekKeyFromEntryKey(entryKey: string): string | null {
+  return entryKey.match(WEEK_ENTRY)?.[1] ?? null;
+}
+
+/**
  * The key a stored week belongs under, decided by the dates it carries rather
  * than by the key it was found at. Returns null when no day carries a readable
  * date, in which case the caller has nothing better to go on and should leave
@@ -299,7 +308,7 @@ export function migrateWeekKeys(): { moved: number; conflicts: string[] } {
       } catch {
         continue; // Unreadable; loadWeek deals with it, and guessing here would be worse.
       }
-      const current = entry.match(WEEK_ENTRY)![1];
+      const current = weekKeyFromEntryKey(entry)!;
       const belongs = weekKeyForStoredWeek(parsed);
       if (!belongs || belongs === current) continue;
 

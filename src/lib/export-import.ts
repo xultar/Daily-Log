@@ -1,4 +1,4 @@
-import { WeekData, weekKeyForStoredWeek } from "./planner-data";
+import { WeekData, weekKeyForStoredWeek, weekKeyFromEntryKey } from "./planner-data";
 
 export interface ExportData {
   version: 1;
@@ -10,13 +10,15 @@ export function exportAllData(): ExportData {
   const weeks: Record<string, WeekData> = {};
   for (let i = 0; i < localStorage.length; i++) {
     const key = localStorage.key(i);
-    if (key?.startsWith("planner-") && !key.includes("theme")) {
-      try {
-        const weekKey = key.replace("planner-", "");
-        weeks[weekKey] = JSON.parse(localStorage.getItem(key)!);
-      } catch {
-        // Ignore entries that are not valid JSON
-      }
+    // Match the entry shape, not the prefix: planner-show-weekends and
+    // planner-color-labels are settings, and collecting them here exported them
+    // as weeks and then broke exportAsCSV on the first one it reached.
+    const weekKey = key && weekKeyFromEntryKey(key);
+    if (!weekKey) continue;
+    try {
+      weeks[weekKey] = JSON.parse(localStorage.getItem(key)!);
+    } catch {
+      // Ignore entries that are not valid JSON
     }
   }
   return {
@@ -30,25 +32,47 @@ export function exportAsJSON(): string {
   return JSON.stringify(exportAllData(), null, 2);
 }
 
+/** A CSV field: always quoted, with embedded quotes doubled per RFC 4180. */
+function csvField(value: unknown): string {
+  return `"${typeof value === "string" ? value.replace(/"/g, '""') : ""}"`;
+}
+
 export function exportAsCSV(): string {
   const data = exportAllData();
   const rows: string[] = ["Week,Day,Date,Subject,Checked,StudyMinutes,Memo"];
 
+  // Weeks are read straight from storage rather than through repairWeek, so
+  // every field here is shape-checked: an export must not be the one action a
+  // damaged week can still break.
   for (const [weekKey, week] of Object.entries(data.weeks)) {
-    for (const day of week.days) {
+    const days = Array.isArray(week?.days) ? week.days : [];
+    for (const day of days) {
+      if (!day || typeof day !== "object") continue;
+
       let totalMin = 0;
-      for (const hourBlocks of day.timeBlocks) {
+      const hours = Array.isArray(day.timeBlocks) ? day.timeBlocks : [];
+      for (const hourBlocks of hours) {
+        if (!Array.isArray(hourBlocks)) continue;
         for (const b of hourBlocks) if (b) totalMin += 10;
       }
-      for (const sub of day.subjects) {
-        if (sub.subject) {
-          rows.push(
-            `"${weekKey}","${day.date}","${day.date}","${sub.subject.replace(/"/g, '""')}",${sub.checked},${totalMin},"${day.memo.replace(/"/g, '""')}"`
-          );
-        }
-      }
-      if (!day.subjects.some((s) => s.subject)) {
-        rows.push(`"${weekKey}","${day.date}","${day.date}","",false,${totalMin},"${day.memo.replace(/"/g, '""')}"`);
+
+      const row = (subject: unknown, checked: unknown) =>
+        [
+          csvField(weekKey),
+          csvField(day.date),
+          csvField(day.date),
+          csvField(subject),
+          checked === true,
+          totalMin,
+          csvField(day.memo),
+        ].join(",");
+
+      const subjects = Array.isArray(day.subjects) ? day.subjects : [];
+      const named = subjects.filter((s) => s && typeof s.subject === "string" && s.subject);
+      if (named.length > 0) {
+        for (const sub of named) rows.push(row(sub.subject, sub.checked));
+      } else {
+        rows.push(row("", false));
       }
     }
   }

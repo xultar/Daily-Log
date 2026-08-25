@@ -58,11 +58,11 @@ wrong. Two things follow, and both are easy to undo by accident:
   padding every short list back up to its default length would resurrect rows
   they deleted on purpose. `repairList` encodes this; do not "fix" it into an
   unconditional pad.
-- **The unreadable-entry backup must not start with `planner-`.** When JSON
+- **The unreadable-entry backup stays off the `planner-` prefix.** When JSON
   parsing fails outright, the raw text is copied to
-  `daily-log-unreadable-<weekKey>`. `exportAllData` treats *every* `planner-*`
-  key as a week, so parking the backup under that prefix would feed it straight
-  into the exporter (see the CSV bug below).
+  `daily-log-unreadable-<weekKey>`. Settings and weeks already share the
+  `planner-` prefix, and that overlap is what broke the exporter once; keep new
+  entries out of it rather than relying on the shape match to sort them out.
 
 **Saving is gated on `dirtyRef` in `StudyPlanner`.** The autosave effect runs on
 mount and on every week change, not only on edit, so before the gate existed
@@ -97,6 +97,16 @@ a second one.
   overwrite an occupied destination and reports it as a conflict instead.
 - `importFromJSON` routes every incoming week through the same function, so
   restoring a backup written before the fix does not reintroduce the old keys.
+
+**Weeks and settings share the `planner-` prefix**, so an entry is identified by
+shape, not by prefix. `weekKeyFromEntryKey` matches `planner-YYYY-Www` and
+returns the week key inside it, or null for anything else —
+`planner-show-weekends`, `planner-color-labels` and `planner-theme` are all
+settings. `exportAllData` and `migrateWeekKeys` both use it. Matching the prefix
+instead is what made `exportAsCSV` export two settings as weeks and then die on
+`week.days is not iterable`, which broke CSV export for every user on every run
+until it was fixed. `exportAsCSV` additionally shape-checks each field, because
+it reads storage directly rather than through `repairWeek`.
 
 Where a December week and its January twin both held data, one had already
 overwritten the other before any of this ran. The migration files whichever
@@ -136,7 +146,7 @@ because mousedown would unmount the button before its click fires.
 
 ## Baselines
 
-- `npm test` — 81 tests across 7 files
+- `npm test` — 93 tests across 8 files
 - `npm run lint` — **0 errors, 10 warnings**. All ten are pre-existing
   `react-refresh/only-export-components` and `react-hooks/exhaustive-deps` in
   `src/components/ui/*`, `MonthlyView.tsx` and `theme-context.tsx`. Do not treat
@@ -163,12 +173,6 @@ make the label field unreachable. The `stopPropagation` on that input is what ho
 it together for mouse users. Fixing it needs a real restructure.
 
 **`compact` on `DayColumn`** is declared and never used.
-
-**CSV export always throws.** `exportAllData` treats every `planner-*` key as a
-week, and `planner-show-weekends` (written on every mount) and
-`planner-color-labels` both match, so `exportAsCSV` dies on `week.days is not
-iterable`. It also quietly pollutes the JSON export. Match the key shape
-instead of the prefix.
 
 **There is no error boundary.** A render-phase throw unmounts the whole app and
 leaves a white screen that survives reload, because the data that caused it is
