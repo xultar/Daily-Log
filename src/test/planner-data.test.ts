@@ -7,6 +7,7 @@ import {
   colorIdForDisplayPosition,
   createEmptyDay,
   createEmptyWeek,
+  calcDayTotal,
   calcDayColorMinutes,
   calcWeekColorMinutes,
   formatMinutes,
@@ -114,6 +115,23 @@ describe("colorIdForDisplayPosition", () => {
 
 const MONDAY = new Date(2026, 7, 24);
 
+describe("calcDayTotal", () => {
+  it("converts painted blocks into hours and minutes", () => {
+    const day = createEmptyDay(MONDAY);
+    day.timeBlocks[0][0] = 1;
+    day.timeBlocks[0][1] = 2;
+    day.timeBlocks[0][2] = 1;
+    expect(calcDayTotal(day)).toEqual({ hours: 0, minutes: 30 });
+  });
+
+  it("rolls sixty minutes into an hour", () => {
+    const day = createEmptyDay(MONDAY);
+    for (let i = 0; i < 6; i++) day.timeBlocks[0][i] = 1;
+    day.timeBlocks[1][0] = 1;
+    expect(calcDayTotal(day)).toEqual({ hours: 1, minutes: 10 });
+  });
+});
+
 describe("calcDayColorMinutes", () => {
   it("returns an empty record for a day with no painted blocks", () => {
     expect(calcDayColorMinutes(createEmptyDay(MONDAY))).toEqual({});
@@ -133,6 +151,12 @@ describe("calcDayColorMinutes", () => {
     const result = calcDayColorMinutes(day);
     expect(result[6]).toBe(10);
     expect(result[9]).toBeUndefined();
+  });
+
+  it("counts blocks in the last hour and the last block of an hour", () => {
+    const day = createEmptyDay(MONDAY);
+    day.timeBlocks[day.timeBlocks.length - 1][5] = 2;
+    expect(calcDayColorMinutes(day)).toEqual({ 2: 10 });
   });
 });
 
@@ -156,6 +180,13 @@ describe("calcWeekColorMinutes", () => {
     const result = calcWeekColorMinutes(week);
     expect(result).toEqual({ 6: 10, 7: 10 });
     expect(result[9]).toBeUndefined();
+  });
+
+  it("includes weekend days", () => {
+    const week = createEmptyWeek(MONDAY);
+    week.days[5].timeBlocks[0][0] = 4;
+    week.days[6].timeBlocks[0][0] = 4;
+    expect(calcWeekColorMinutes(week)).toEqual({ 4: 20 });
   });
 });
 

@@ -33,6 +33,7 @@ export interface BlockColor {
 
 const HOURS = Array.from({ length: 19 }, (_, i) => i + 6); // 6 to 24
 const BLOCKS_PER_HOUR = 6; // 10-min blocks (60 min per hour)
+const MINUTES_PER_BLOCK = 60 / BLOCKS_PER_HOUR;
 
 export function getWeekKey(date: Date): string {
   const week = getISOWeek(date);
@@ -68,7 +69,7 @@ export function calcDayTotal(day: DayData): { hours: number; minutes: number } {
   let totalMinutes = 0;
   for (const hourBlocks of day.timeBlocks) {
     for (const block of hourBlocks) {
-      if (block) totalMinutes += 10; // any non-zero value counts as filled
+      if (block) totalMinutes += MINUTES_PER_BLOCK; // any non-zero value counts as filled
     }
   }
   return { hours: Math.floor(totalMinutes / 60), minutes: totalMinutes % 60 };
@@ -79,7 +80,7 @@ export function calcDayColorMinutes(day: DayData): Record<number, number> {
   const minutes: Record<number, number> = {};
   for (const hourBlocks of day.timeBlocks) {
     for (const block of hourBlocks) {
-      if (block) minutes[block] = (minutes[block] ?? 0) + 10;
+      if (block) minutes[block] = (minutes[block] ?? 0) + MINUTES_PER_BLOCK;
     }
   }
   return minutes;
