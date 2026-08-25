@@ -141,8 +141,13 @@ In `src/lib/planner-data.ts`:
   implementation.
 - `calcWeekColorMinutes(week: WeekData): Record<number, number>` — the same
   across all seven days, summing the per-day results.
+- `formatMinutes(totalMinutes: number): string` — renders a duration as `40m`,
+  `2h` or `2h 30m`. Both legends display durations, and `DailyView` currently
+  does it with nested ternaries inline in the JSX. Extracting it avoids a second
+  copy in the strip. This corrects one visible detail: a whole-hour total
+  previously rendered as `2h ` with a trailing space and now renders as `2h`.
 
-Both key their result by storage id.
+The two minute functions key their result by storage id.
 
 ## Phase 2 — Priority row color tags
 
