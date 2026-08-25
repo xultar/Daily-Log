@@ -289,10 +289,11 @@ row tints come out as pale gray. Do not "fix" that.
 All five defects recorded here were fixed on 2026-08-25: placeholders no longer
 print, the four UI-only controls carry `no-print`, the view container's
 scrollbar is gone, the week's Goal and Review now print deliberately, and
-painted blocks carry their tag number. What remains unconfirmed is only
-whether the digit is legible in a **10-minute run on a real laser** — roughly
-6mm wide at A4. If it is not, the fallback is hatch patterns per tag, and that
-is a change to `.tag-run-start` in `index.css` and nothing else.
+painted blocks carry their tag number. **Confirmed on the laser on 2026-08-25:
+the sheets print correctly and the numbers are clear, including in a
+10-minute run** (roughly 6mm wide at A4). The hatch-pattern alternative was
+considered and is not needed; if it is ever revisited, it is a change to
+`.tag-run-start` in `index.css` and nothing else.
 
 **The printed number is the display position, not the storage id.** They differ
 for gray, yellow, teal and magenta, so printing the storage id labels a block 6
