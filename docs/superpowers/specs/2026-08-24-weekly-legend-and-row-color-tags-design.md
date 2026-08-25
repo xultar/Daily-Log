@@ -303,6 +303,12 @@ tags: paint, reload, and confirm the stored values are storage ids.
 - The `<input>` nested inside `<button>` in the daily legend, which is
   pre-existing and needs a real restructure.
 - The doubled bottom border on the daily legend's final row.
+- Adding `colorId` to the CSV export. `exportAsCSV` emits a fixed
+  `Week,Day,Date,Subject,Checked,StudyMinutes,Memo` header and would silently omit
+  the tag. This is a deliberate omission rather than an oversight: the CSV is
+  already lossy, collapsing `timeBlocks` to a single minutes total, and there is
+  no CSV import, so nothing round-trips badly. Worth revisiting if the CSV is ever
+  used for categorised analysis.
 
 ## Risks
 

@@ -8,6 +8,15 @@ export interface TodoItem {
 export interface SubjectRow {
   subject: string;
   checked: boolean;
+  /**
+   * Storage id of this row's colour tag — the same contract as timeBlocks,
+   * never a display position. Optional: rows saved before this field existed
+   * load as undefined and render untagged, so no load-time migration is needed.
+   * Code that rebuilds a row must spread the existing row rather than list
+   * fields: strict is off and the field is optional, so the compiler will not
+   * catch a dropped tag.
+   */
+  colorId?: number;
 }
 
 export interface DayData {
@@ -168,11 +177,29 @@ export const BLOCK_COLORS: readonly BlockColor[] = [
   { id: 9, label: "Magenta",  hsl: "305 40% 80%",  hslDark: "305 35% 42%" },
 ];
 
-export function getBlockColor(value: number, isDark: boolean): string | null {
-  if (value === 0) return null;
+/** Row wash opacity. Spec-fixed at 16%, tuned to stay legible across 42 weekly rows. */
+const ROW_TINT_ALPHA = 0.16;
+
+/** Resolve a storage id to its bare HSL triple. 0, undefined and out-of-range yield null. */
+function blockHsl(value: number | undefined, isDark: boolean): string | null {
+  if (!value) return null;
   const color = BLOCK_COLORS[value - 1];
   if (!color) return null;
-  return `hsl(${isDark ? color.hslDark : color.hsl})`;
+  return isDark ? color.hslDark : color.hsl;
+}
+
+export function getBlockColor(value: number | undefined, isDark: boolean): string | null {
+  const hsl = blockHsl(value, isDark);
+  return hsl ? `hsl(${hsl})` : null;
+}
+
+/**
+ * The faint background wash for a tagged row. Same storage-id contract as
+ * getBlockColor: index 0 and out-of-range values yield null.
+ */
+export function getBlockTint(value: number | undefined, isDark: boolean): string | null {
+  const hsl = blockHsl(value, isDark);
+  return hsl ? `hsl(${hsl} / ${ROW_TINT_ALPHA})` : null;
 }
 
 /**

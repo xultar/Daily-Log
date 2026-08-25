@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { format, parse } from "date-fns";
-import { DayData, calcDayTotal, calcDayColorMinutes, formatMinutes, getPaletteInDisplayOrder, loadColorLabels, saveColorLabels } from "@/lib/planner-data";
+import { DayData, calcDayTotal, calcDayColorMinutes, formatMinutes, getPaletteInDisplayOrder, loadColorLabels, saveColorLabels, getBlockColor, getBlockTint } from "@/lib/planner-data";
 import TimeGrid from "./TimeGrid";
 import { Plus, X } from "lucide-react";
+import { useIsDark } from "@/hooks/use-is-dark";
+import ColorPicker from "./ColorPicker";
 
 interface DailyViewProps {
   day: DayData;
@@ -18,10 +20,9 @@ const DailyView: React.FC<DailyViewProps> = ({ day, dayIndex, onChange, activeCo
   const dateObj = parse(day.date, "yyyy-MM-dd", new Date());
   const total = calcDayTotal(day);
   const [colorLabels, setColorLabels] = useState<Record<number, string>>(() => loadColorLabels());
+  const [rowPicker, setRowPicker] = useState<{ x: number; y: number; idx: number } | null>(null);
 
-  const isDark =
-    typeof window !== "undefined" &&
-    window.matchMedia("(prefers-color-scheme: dark)").matches;
+  const isDark = useIsDark();
 
   const colorMinutes = calcDayColorMinutes(day);
 
@@ -38,6 +39,19 @@ const DailyView: React.FC<DailyViewProps> = ({ day, dayIndex, onChange, activeCo
       i === idx ? { ...s, [field]: value } : s
     );
     onChange({ ...day, subjects });
+  };
+
+  // colorId is a storage id, matching activeColor and timeBlocks.
+  const setRowColor = (idx: number, colorId: number | undefined) => {
+    const subjects = day.subjects.map((s, i) => (i === idx ? { ...s, colorId } : s));
+    onChange({ ...day, subjects });
+  };
+
+  // Clicking a row already carrying the armed colour clears it, mirroring
+  // how clicking a filled time block clears it.
+  const toggleRowColor = (idx: number) => {
+    const current = day.subjects[idx].colorId;
+    setRowColor(idx, current === activeColor ? undefined : activeColor);
   };
 
   const addSubject = () => {
@@ -68,8 +82,27 @@ const DailyView: React.FC<DailyViewProps> = ({ day, dayIndex, onChange, activeCo
         <div className="flex flex-col">
           <div className="text-[10px] font-semibold text-muted-foreground mb-1 uppercase tracking-wider">Priorities / Actions</div>
           <div className="border border-border rounded-md overflow-hidden mb-1">
-            {day.subjects.map((s, idx) => (
-              <div key={idx} className="flex items-center border-b border-campus-grid last:border-b-0 px-2 py-1.5 group">
+            {day.subjects.map((s, idx) => {
+              const tint = getBlockTint(s.colorId, isDark);
+              const stripe = getBlockColor(s.colorId, isDark);
+              return (
+              <div
+                key={idx}
+                className="flex items-stretch border-b border-campus-grid last:border-b-0 group"
+                style={tint ? { backgroundColor: tint } : undefined}
+              >
+                <button
+                  type="button"
+                  onClick={() => toggleRowColor(idx)}
+                  onContextMenu={(e) => {
+                    e.preventDefault();
+                    setRowPicker({ x: e.clientX, y: e.clientY, idx });
+                  }}
+                  aria-label={s.colorId ? "Change row colour" : "Tag row with the armed colour"}
+                  className="w-[10px] shrink-0 cursor-pointer"
+                  style={{ borderLeft: `3px solid ${stripe ?? "transparent"}` }}
+                />
+                <div className="flex items-center flex-1 min-w-0 px-1 py-1.5">
                 <input
                   type="checkbox"
                   checked={s.checked}
@@ -89,8 +122,10 @@ const DailyView: React.FC<DailyViewProps> = ({ day, dayIndex, onChange, activeCo
                 >
                   <X className="h-3 w-3" />
                 </button>
+                </div>
               </div>
-            ))}
+              );
+            })}
           </div>
           <button
             onClick={addSubject}
@@ -167,6 +202,22 @@ const DailyView: React.FC<DailyViewProps> = ({ day, dayIndex, onChange, activeCo
           </div>
         </div>
       </div>
+      {rowPicker && (
+        <ColorPicker
+          x={rowPicker.x}
+          y={rowPicker.y}
+          onPick={(colorId) => {
+            setRowColor(rowPicker.idx, colorId);
+            onActiveColorChange(colorId);
+            setRowPicker(null);
+          }}
+          onClear={() => {
+            setRowColor(rowPicker.idx, undefined);
+            setRowPicker(null);
+          }}
+          onClose={() => setRowPicker(null)}
+        />
+      )}
     </div>
   );
 };

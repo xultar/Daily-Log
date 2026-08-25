@@ -2,9 +2,10 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   HOUR_LABELS,
   getBlockColor,
-  getPaletteInDisplayOrder,
   colorIdForDisplayPosition,
 } from "@/lib/planner-data";
+import ColorPicker from "./ColorPicker";
+import { useIsDark } from "@/hooks/use-is-dark";
 
 interface TimeGridProps {
   timeBlocks: number[][];
@@ -32,9 +33,7 @@ const TimeGrid: React.FC<TimeGridProps> = ({
   const large = size === "large";
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const isDark =
-    typeof window !== "undefined" &&
-    window.matchMedia("(prefers-color-scheme: dark)").matches;
+  const isDark = useIsDark();
 
   const setBlock = useCallback(
     (hourIdx: number, blockIdx: number, value: number) => {
@@ -67,8 +66,8 @@ const TimeGrid: React.FC<TimeGridProps> = ({
   ) => {
     e.preventDefault();
     setContextMenu({
-      x: Math.min(e.clientX, window.innerWidth - 300),
-      y: Math.min(e.clientY, window.innerHeight - 44),
+      x: e.clientX,
+      y: e.clientY,
       hourIdx,
       blockIdx,
     });
@@ -81,14 +80,6 @@ const TimeGrid: React.FC<TimeGridProps> = ({
     setActiveColor(colorId);
     setContextMenu(null);
   };
-
-  // Close context menu on outside click
-  useEffect(() => {
-    if (!contextMenu) return;
-    const close = () => setContextMenu(null);
-    window.addEventListener("click", close);
-    return () => window.removeEventListener("click", close);
-  }, [contextMenu]);
 
   // Number keys select by display position, not storage id
   useEffect(() => {
@@ -159,36 +150,16 @@ const TimeGrid: React.FC<TimeGridProps> = ({
 
       {/* Context menu for color picking */}
       {contextMenu && (
-        <div
-          className="fixed z-50 bg-popover border border-border rounded-md shadow-lg p-1.5 flex gap-1"
-          style={{ left: contextMenu.x, top: contextMenu.y }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          {getPaletteInDisplayOrder().map((c, index) => (
-            <button
-              key={c.id}
-              className="w-6 h-6 rounded-sm border border-border/50 hover:scale-110 transition-transform flex items-center justify-center text-[9px] font-bold"
-              style={{ backgroundColor: `hsl(${isDark ? c.hslDark : c.hsl})` }}
-              title={`${c.label} (${index + 1})`}
-              aria-label={`${c.label} (${index + 1})`}
-              onClick={() => pickColor(c.id)}
-            >
-              {index + 1}
-            </button>
-          ))}
-          <button
-            className="w-6 h-6 rounded-sm border border-border/50 hover:scale-110 transition-transform bg-background text-[9px] text-muted-foreground"
-            title="Clear"
-            onClick={() => {
-              if (contextMenu) {
-                setBlock(contextMenu.hourIdx, contextMenu.blockIdx, 0);
-              }
-              setContextMenu(null);
-            }}
-          >
-            &times;
-          </button>
-        </div>
+        <ColorPicker
+          x={contextMenu.x}
+          y={contextMenu.y}
+          onPick={pickColor}
+          onClear={() => {
+            setBlock(contextMenu.hourIdx, contextMenu.blockIdx, 0);
+            setContextMenu(null);
+          }}
+          onClose={() => setContextMenu(null)}
+        />
       )}
     </div>
   );
