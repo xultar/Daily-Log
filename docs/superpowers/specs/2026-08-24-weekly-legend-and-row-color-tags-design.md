@@ -160,6 +160,10 @@ occurs. Entries must not wrap: a legend that reflows to two rows changes the
 weekly view's height as labels are edited, and a one-line strip reads as a key
 rather than as content.
 
+The strip prints. A printed weekly page shows nine colors of block, and without a
+key it cannot be interpreted; the daily legend already prints, so suppressing this
+one would be inconsistent as well as unhelpful.
+
 This means the strip is its own horizontal scroll region, independent of the day
 columns' existing horizontal scroll. The two scroll separately and that is
 intended — scrolling the columns must not move the legend, since the legend is a

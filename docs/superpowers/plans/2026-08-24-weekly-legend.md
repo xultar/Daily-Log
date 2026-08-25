@@ -418,7 +418,7 @@ to:
 - [ ] **Step 6: Confirm it compiles and tests still pass**
 
 Run: `npx tsc --noEmit -p tsconfig.app.json` — expect no output.
-Run: `npm test` — expect 25 tests passing across 2 files.
+Run: `npm test` — expect 30 tests passing across 2 files.
 Run: `npm run lint` — expect 0 errors and 10 pre-existing warnings.
 
 - [ ] **Step 7: Commit**
@@ -576,7 +576,7 @@ The outer div gained `flex-col`, the sidebar and columns moved into a new `flex 
 - [ ] **Step 4: Confirm it compiles**
 
 Run: `npx tsc --noEmit -p tsconfig.app.json` — expect no output.
-Run: `npm test` — expect 25 tests passing across 2 files.
+Run: `npm test` — expect 30 tests passing across 2 files.
 Run: `npm run lint` — expect 0 errors and 10 pre-existing warnings. If a new warning appears in `WeeklyColorLegend.tsx`, fix it before committing.
 
 - [ ] **Step 5: Commit**
@@ -598,7 +598,7 @@ git commit -m "Add a color legend strip to the weekly view"
 npm test
 ```
 
-Expected: 25 tests passing across 2 files — 24 in `planner-data.test.ts` plus the placeholder in `example.test.ts`.
+Expected: 30 tests passing across 2 files — 29 in `planner-data.test.ts` plus the placeholder in `example.test.ts`. (Earlier drafts said 25; review follow-ups during Tasks 1 and 2 added five more tests. A verifier following the stale count would report a false failure.)
 
 ```bash
 npm run lint
@@ -628,6 +628,9 @@ In the weekly view, confirm:
 2. Each entry shows a swatch, its number, and its label. An entry with no painted time shows no duration.
 3. Clicking an entry highlights it, and the highlight matches the entry you clicked.
 4. Pressing `9` highlights the gray entry, and pressing `6` highlights yellow. This is the display-position mapping; if `6` highlights gray, a storage id is being compared against a display position somewhere.
+5. Focus a legend button in the strip and press a digit. The armed color must change. `TimeGrid`'s guard tests `tagName` against `INPUT|TEXTAREA|SELECT`, so `BUTTON` falls through — confirm rather than assume.
+6. Open the weekly print preview. The legend must appear: a printed weekly page shows nine colors of block and is uninterpretable without a key.
+7. The strip's swatches must agree with the block colors painted in the grid beside them. If the OS is in dark mode the app renders dark swatches on light chrome — that is a pre-existing bug and not a Task 3 regression, but a DISAGREEMENT between the strip and the grid would be a real defect.
 
 - [ ] **Step 4: Check the totals**
 
