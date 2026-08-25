@@ -325,6 +325,36 @@ git commit -m "Extract the colour picker so rows can reuse it"
 
 ---
 
+## Warnings carried forward from the Task 1 review
+
+Read these before writing Task 3 or Task 4.
+
+**The branch invites a regression that nothing would catch.** `colorId` survives a
+keystroke only because `updateSubject` in both components rebuilds the row with
+`{ ...s, [field]: value }`. Task 3 adds `setRowColor` as a sibling mutator, which
+makes the stringly-typed dispatcher look like the odd one out. The natural cleanup
+- replacing it with explicit setters that list fields - silently drops the tag on
+the next keystroke after a row is tagged. There is NO type error, because
+`colorId` is optional and `strict: false` removes any remaining pressure, and no
+existing test touches component code.
+
+Do NOT rewrite `updateSubject`. Task 3 Step 4 adds the test that guards it.
+
+**jsdom v20 silently discards CSS Color 4 values.** This project pins
+`jsdom: ^20.0.3`, whose `cssstyle` predates space-separated `hsl()`. Measured in
+this project's own vitest environment, all three of these yield an empty string:
+
+    el.style.backgroundColor = "hsl(213 60% 80% / 0.16)"
+    el.style.backgroundColor = "hsl(213 60% 80%)"
+    el.style.borderLeft = "3px solid hsl(213 60% 80%)"
+
+So a DOM assertion on a rendered style reads empty, and - worse - a negative
+assertion for an untagged row passes VACUOUSLY. Any component test must assert on
+the `onChange` payload or call `getBlockTint` directly. Never assert on a rendered
+style value in this project.
+
+---
+
 ## Task 3: Tag rows in the daily view
 
 **Files:**
@@ -369,7 +399,7 @@ and closes after the remove button. Change the opening to:
               <div
                 key={idx}
                 className="flex items-stretch border-b border-campus-grid last:border-b-0 group"
-                style={getBlockTint(s.colorId ?? 0, isDark) ? { backgroundColor: getBlockTint(s.colorId ?? 0, isDark)! } : undefined}
+                style={rowTint(s.colorId) ? { backgroundColor: rowTint(s.colorId)! } : undefined}
               >
                 <button
                   type="button"
@@ -433,12 +463,64 @@ Immediately before the component's final closing `</div>`, add:
 
 Picking from a row also arms that colour, matching what the time grid's picker does.
 
-- [ ] **Step 4: Verify and commit**
+- [ ] **Step 4: Add the test that guards the mutation path**
+
+This is the one test protecting against the regression described in the warnings
+above. Create `src/test/daily-view.test.tsx`:
+
+```tsx
+import { describe, it, expect, vi } from "vitest";
+import { render, screen, fireEvent } from "@testing-library/react";
+import DailyView from "@/components/planner/DailyView";
+import { createEmptyDay } from "@/lib/planner-data";
+
+const MONDAY = new Date(2026, 7, 24);
+
+const tagged = () => {
+  const day = createEmptyDay(MONDAY);
+  day.subjects[0] = { subject: "Draft", checked: false, colorId: 7 };
+  return day;
+};
+
+describe("DailyView row mutation", () => {
+  it("preserves a row colorId when the subject text changes", () => {
+    const onChange = vi.fn();
+    render(
+      <DailyView day={tagged()} dayIndex={0} onChange={onChange}
+                 activeColor={1} onActiveColorChange={() => {}} />
+    );
+    fireEvent.change(screen.getByPlaceholderText("Add priority..."),
+                     { target: { value: "Draft the proposal" } });
+    expect(onChange.mock.calls[0][0].subjects[0])
+      .toEqual({ subject: "Draft the proposal", checked: false, colorId: 7 });
+  });
+
+  it("preserves a row colorId when the checkbox toggles", () => {
+    const onChange = vi.fn();
+    const { container } = render(
+      <DailyView day={tagged()} dayIndex={0} onChange={onChange}
+                 activeColor={1} onActiveColorChange={() => {}} />
+    );
+    fireEvent.click(container.querySelector("input[type=checkbox]"));
+    expect(onChange.mock.calls[0][0].subjects[0])
+      .toEqual({ subject: "Draft", checked: true, colorId: 7 });
+  });
+});
+```
+
+Both assertions read the `onChange` payload, never a rendered style - see the
+jsdom warning above.
+
+Prove the tests catch the regression: temporarily rewrite `updateSubject` so it
+constructs the row by listing `subject` and `checked` explicitly instead of
+spreading `s`, confirm BOTH tests fail, then revert.
+
+- [ ] **Step 5: Verify and commit**
 
 Run `npx tsc --noEmit -p tsconfig.app.json`, `npm test`, `npm run lint`. All must be clean.
 
 ```bash
-git add src/components/planner/DailyView.tsx
+git add src/components/planner/DailyView.tsx src/test/daily-view.test.tsx
 git commit -m "Tag priority rows with a colour in the daily view"
 ```
 
@@ -504,7 +586,7 @@ with:
           <div
             key={idx}
             className="flex items-stretch border-b border-campus-grid last:border-b-0"
-            style={getBlockTint(s.colorId ?? 0, isDark) ? { backgroundColor: getBlockTint(s.colorId ?? 0, isDark)! } : undefined}
+            style={rowTint(s.colorId) ? { backgroundColor: rowTint(s.colorId)! } : undefined}
           >
             <button
               type="button"
@@ -634,6 +716,7 @@ This is the regression surface for the extraction. Confirm all of it:
 1. All of Step 4 works in a day column, where the stripe is 8px and the text is 9px.
 2. The checkbox and text input remain vertically centred in the row after the switch to `items-stretch`.
 3. With several rows tagged across several columns, the grid is still readable — the wash must not compete with the time blocks below it.
+4. Check the rows with the OS in DARK mode as well as light. `isDark` comes from `prefers-color-scheme`, but nothing in this app ever applies the `.dark` class, so `--background` stays white while the palette flips to `hslDark`. A 16% wash computed from a dark-ground triple and composited over white reads muddier than designed. That is the pre-existing `isDark` bug becoming newly visible, not a Phase 2 defect, but confirm it is merely duller rather than illegible.
 
 - [ ] **Step 6: Persistence — the check that matters most**
 
