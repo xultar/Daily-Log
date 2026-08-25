@@ -177,17 +177,28 @@ const isUsableIsoDate = (value: unknown): value is string =>
   isValid(parse(value, "yyyy-MM-dd", new Date()));
 
 /**
+ * An origin survives only if it is a real, parseable date; anything else
+ * degrades the item to age zero rather than rendering a broken marker.
+ */
+const asOrigin = (value: unknown): string | undefined =>
+  isUsableIsoDate(value) ? value : undefined;
+
+/**
  * How many weeks an item has been slipping: the gap between the week it was
- * first written in and the week being viewed. Both arguments are ISO dates of
- * Mondays.
+ * first written in and the week being viewed. Both arguments are ISO dates.
+ * Weeks are Monday-based, so a non-Monday operand is counted from the Monday
+ * of its week.
  *
- * weekStartsOn is stated rather than left to the default of Sunday. Both
- * operands are Mondays so the two agree today, but this planner is
- * Monday-based everywhere else and an implicit Sunday boundary here would be a
- * quiet inconsistency waiting for the first caller that passes a non-Monday.
+ * weekStartsOn is stated rather than left to the default of Sunday. This
+ * planner is Monday-based everywhere else, and an implicit Sunday boundary
+ * here would be a quiet inconsistency waiting for the first caller that
+ * passes a non-Monday — which is reachable: repairTodo/repairSubject accept
+ * any valid ISO date from storage, so a hand-edited or imported file can
+ * carry a Sunday origin.
  *
- * Anything unusable — absent, unparseable, or in the future — reports 0, so a
- * damaged item renders as ordinary rather than as a broken marker.
+ * Anything unusable — an absent, unparseable, or future origin, or an
+ * unusable viewed week — reports 0, so a damaged item renders as ordinary
+ * rather than as a broken marker.
  */
 export function carriedWeeks(origin: string | undefined, mondayISO: string): number {
   if (!isUsableIsoDate(origin) || !isUsableIsoDate(mondayISO)) return 0;
@@ -195,13 +206,6 @@ export function carriedWeeks(origin: string | undefined, mondayISO: string): num
   const to = parse(mondayISO, "yyyy-MM-dd", new Date());
   return Math.max(0, differenceInCalendarWeeks(to, from, { weekStartsOn: 1 }));
 }
-
-/**
- * An origin survives only if it is a real, parseable date; anything else
- * degrades the item to age zero rather than rendering a broken marker.
- */
-const asOrigin = (value: unknown): string | undefined =>
-  isUsableIsoDate(value) ? value : undefined;
 
 const asRecord = (value: unknown): Record<string, unknown> =>
   value && typeof value === "object" ? (value as Record<string, unknown>) : {};
