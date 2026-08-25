@@ -112,6 +112,33 @@ Where a December week and its January twin both held data, one had already
 overwritten the other before any of this ran. The migration files whichever
 survived; the other is not recoverable.
 
+## A crash must not take the data with it
+
+`ErrorBoundary` wraps everything in `App.tsx`, **outside** the providers —
+`ThemeProvider` reads `localStorage` while rendering, so a storage failure has
+to be caught above it, not inside. A render-phase throw used to unmount the app
+and leave a blank page that survived reload, because the data causing it is
+persisted.
+
+The fallback offers a backup download as well as a reload. That is not
+decoration: the weeks live only in this browser, so while the app is down the
+fallback is the only route to the user's own data. Its handler swallows its own
+failures — if storage is what broke, there is nothing to hand over, and throwing
+on top of a crash would put the blank page back.
+
+Boundaries catch rendering, lifecycle and constructor errors only. Throws inside
+event handlers do not reach it; React 18 leaves those to `window`. `TimeGrid`'s
+paint path is an event handler, so a throw there still fails silently.
+
+**A week is importable only when its own days say which week it is.**
+`importFromJSON` stages and validates every week before writing any of them, so
+a file that turns out to be unusable leaves storage exactly as it was rather
+than half replaced. The date rule doubles as the shape check — anything that is
+not really a week carries no readable date, so it cannot displace a real one —
+and it is why the key always comes from the data rather than from the file. A
+week that cannot say which week it is gets skipped and counted, not written
+under whatever key the file claimed.
+
 ## Traps that cost time to find
 
 **Do not rewrite `updateSubject`** in `DailyView.tsx` or `DayColumn.tsx`. Its
@@ -146,7 +173,7 @@ because mousedown would unmount the button before its click fires.
 
 ## Baselines
 
-- `npm test` — 93 tests across 8 files
+- `npm test` — 109 tests across 10 files
 - `npm run lint` — **0 errors, 10 warnings**. All ten are pre-existing
   `react-refresh/only-export-components` and `react-hooks/exhaustive-deps` in
   `src/components/ui/*`, `MonthlyView.tsx` and `theme-context.tsx`. Do not treat
@@ -174,10 +201,14 @@ it together for mouse users. Fixing it needs a real restructure.
 
 **`compact` on `DayColumn`** is declared and never used.
 
-**There is no error boundary.** A render-phase throw unmounts the whole app and
-leaves a white screen that survives reload, because the data that caused it is
-persisted. `repairWeek` closes the paths reachable through `loadWeek`, but
-`importFromJSON` still writes unvalidated objects straight to storage.
+**`loadWeek` and `saveWeek` do not guard the storage call itself.**
+`localStorage.getItem` throws outright when storage is denied — a sandboxed
+frame, or Safari with cookies blocked — and `loadWeek` only wraps the JSON
+parse, so the throw escapes. `MonthlyView` calls `loadWeek` during render, so
+that surfaces as a caught crash rather than a blank page now that the boundary
+exists, but the app is still unusable in that state. `saveWeek` has the same gap
+on `QuotaExceededError`: the write throws inside the autosave timeout, nothing
+catches it, and the user gets no warning that saving has stopped.
 
 ## Design docs
 

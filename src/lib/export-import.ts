@@ -79,25 +79,66 @@ export function exportAsCSV(): string {
   return rows.join("\n");
 }
 
-export function importFromJSON(jsonString: string): { success: boolean; weeksImported: number; error?: string } {
+export interface ImportResult {
+  success: boolean;
+  weeksImported: number;
+  weeksSkipped: number;
+  error?: string;
+}
+
+const isPlainObject = (value: unknown): value is Record<string, unknown> =>
+  !!value && typeof value === "object" && !Array.isArray(value);
+
+/**
+ * Restore weeks from an export file.
+ *
+ * Import writes into the only copy of the user's data, so the whole file is
+ * checked before any of it lands: a file that turns out to be unusable leaves
+ * storage exactly as it was, rather than half replaced.
+ *
+ * A week is usable only when its own days say which week it is. That is the
+ * same rule the storage key follows, and it doubles as the shape check —
+ * anything that is not really a week carries no readable date, so it cannot
+ * displace a real one. It also means the key always comes from the data, so a
+ * backup written before the week-key fix is refiled rather than restored under
+ * its old, colliding key.
+ */
+export function importFromJSON(jsonString: string): ImportResult {
+  const refuse = (error: string, weeksSkipped = 0): ImportResult => ({
+    success: false,
+    weeksImported: 0,
+    weeksSkipped,
+    error,
+  });
+
+  let parsed: unknown;
   try {
-    const data: ExportData = JSON.parse(jsonString);
-    if (data.version !== 1 || !data.weeks) {
-      return { success: false, weeksImported: 0, error: "Invalid format" };
-    }
-    let count = 0;
-    for (const [weekKey, weekData] of Object.entries(data.weeks)) {
-      // A backup written before the week-key fix carries the old, colliding key.
-      // The week's own dates say where it belongs; fall back to the file's key
-      // only when it carries no readable date.
-      const key = weekKeyForStoredWeek(weekData) ?? weekKey;
-      localStorage.setItem(`planner-${key}`, JSON.stringify(weekData));
-      count++;
-    }
-    return { success: true, weeksImported: count };
-  } catch (e) {
-    return { success: false, weeksImported: 0, error: "Failed to parse JSON" };
+    parsed = JSON.parse(jsonString);
+  } catch {
+    return refuse("That file is not valid JSON.");
   }
+
+  if (!isPlainObject(parsed)) return refuse("That file is not a Daily Log export.");
+  if (parsed.version !== 1) return refuse("That file was written by an unsupported version.");
+  if (!isPlainObject(parsed.weeks)) return refuse("That file contains no weeks.");
+
+  const staged: [string, unknown][] = [];
+  let skipped = 0;
+  for (const week of Object.values(parsed.weeks)) {
+    const key = weekKeyForStoredWeek(week);
+    if (!key) {
+      skipped++;
+      continue;
+    }
+    staged.push([key, week]);
+  }
+
+  if (staged.length === 0) return refuse("That file contains no usable weeks.", skipped);
+
+  for (const [key, week] of staged) {
+    localStorage.setItem(`planner-${key}`, JSON.stringify(week));
+  }
+  return { success: true, weeksImported: staged.length, weeksSkipped: skipped };
 }
 
 export function downloadFile(content: string, filename: string, mimeType: string) {

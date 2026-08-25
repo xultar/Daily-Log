@@ -36,7 +36,8 @@ const ToolbarActions: React.FC<{ onDataImported: () => void }> = ({ onDataImport
     reader.onload = () => {
       const result = importFromJSON(reader.result as string);
       if (result.success) {
-        toast({ title: `Imported ${result.weeksImported} week(s)` });
+        const skipped = result.weeksSkipped ? `, ${result.weeksSkipped} skipped` : "";
+        toast({ title: `Imported ${result.weeksImported} week(s)${skipped}` });
         onDataImported();
       } else {
         toast({ title: "Import failed", description: result.error, variant: "destructive" });

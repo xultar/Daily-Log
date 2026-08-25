@@ -165,11 +165,15 @@ describe("importing a backup written before the fix", () => {
     );
   });
 
-  it("still honours the file's key when the week carries no usable date", () => {
+  // Superseded by import validation: a week that cannot say which week it is
+  // gets refused rather than written under whatever key the file claimed, so a
+  // junk entry cannot displace a real week.
+  it("refuses a week that carries no usable date instead of trusting the file's key", () => {
     const backup = { version: 1, exportedAt: "x", weeks: { "2026-W35": { days: [] } } };
 
-    importFromJSON(JSON.stringify(backup));
+    const result = importFromJSON(JSON.stringify(backup));
 
-    expect(localStorage.getItem("planner-2026-W35")).not.toBeNull();
+    expect(result.success).toBe(false);
+    expect(localStorage.getItem("planner-2026-W35")).toBeNull();
   });
 });
