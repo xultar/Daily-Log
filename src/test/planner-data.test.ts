@@ -5,6 +5,11 @@ import {
   COLOR_IDS_IN_DISPLAY_ORDER,
   getPaletteInDisplayOrder,
   colorIdForDisplayPosition,
+  createEmptyDay,
+  createEmptyWeek,
+  calcDayColorMinutes,
+  calcWeekColorMinutes,
+  formatMinutes,
 } from "@/lib/planner-data";
 
 describe("BLOCK_COLORS", () => {
@@ -104,5 +109,71 @@ describe("colorIdForDisplayPosition", () => {
     getPaletteInDisplayOrder().forEach((c, i) => {
       expect(colorIdForDisplayPosition(i + 1)).toBe(c.id);
     });
+  });
+});
+
+const MONDAY = new Date(2026, 7, 24);
+
+describe("calcDayColorMinutes", () => {
+  it("returns an empty record for a day with no painted blocks", () => {
+    expect(calcDayColorMinutes(createEmptyDay(MONDAY))).toEqual({});
+  });
+
+  it("counts ten minutes per painted block, keyed by storage id", () => {
+    const day = createEmptyDay(MONDAY);
+    day.timeBlocks[0][0] = 1;
+    day.timeBlocks[0][1] = 1;
+    day.timeBlocks[0][2] = 3;
+    expect(calcDayColorMinutes(day)).toEqual({ 1: 20, 3: 10 });
+  });
+
+  it("keys by storage id, not display position", () => {
+    const day = createEmptyDay(MONDAY);
+    day.timeBlocks[0][0] = 6;
+    const result = calcDayColorMinutes(day);
+    expect(result[6]).toBe(10);
+    expect(result[9]).toBeUndefined();
+  });
+});
+
+describe("calcWeekColorMinutes", () => {
+  it("returns an empty record for an untouched week", () => {
+    expect(calcWeekColorMinutes(createEmptyWeek(MONDAY))).toEqual({});
+  });
+
+  it("sums one color across several days", () => {
+    const week = createEmptyWeek(MONDAY);
+    week.days[0].timeBlocks[0][0] = 3;
+    week.days[2].timeBlocks[1][0] = 3;
+    week.days[2].timeBlocks[1][1] = 3;
+    expect(calcWeekColorMinutes(week)).toEqual({ 3: 30 });
+  });
+
+  it("keeps colors separate and omits colors with no blocks", () => {
+    const week = createEmptyWeek(MONDAY);
+    week.days[1].timeBlocks[0][0] = 7;
+    week.days[4].timeBlocks[0][0] = 6;
+    const result = calcWeekColorMinutes(week);
+    expect(result).toEqual({ 6: 10, 7: 10 });
+    expect(result[9]).toBeUndefined();
+  });
+});
+
+describe("formatMinutes", () => {
+  it("shows minutes alone under an hour", () => {
+    expect(formatMinutes(40)).toBe("40m");
+    expect(formatMinutes(10)).toBe("10m");
+  });
+
+  it("shows hours alone on a whole hour", () => {
+    expect(formatMinutes(120)).toBe("2h");
+  });
+
+  it("shows both when there is a remainder", () => {
+    expect(formatMinutes(150)).toBe("2h 30m");
+  });
+
+  it("shows zero as minutes", () => {
+    expect(formatMinutes(0)).toBe("0m");
   });
 });
