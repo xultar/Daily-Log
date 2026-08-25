@@ -74,7 +74,7 @@ Gray at id 6 sits awkwardly in the middle once three chromatic colors follow it.
 Rather than reorder the palette, which would corrupt saved data, the UI gets its
 own ordering that never touches storage.
 
-A `PALETTE_ORDER` constant lists color ids in the order they should appear:
+A `COLOR_IDS_IN_DISPLAY_ORDER` constant lists color ids in the order they should appear:
 
     [1, 2, 3, 4, 5, 7, 8, 9, 6]
 
@@ -114,9 +114,9 @@ Update two stale comments that name the old count:
 Add a comment on `BLOCK_COLORS` stating that entries may only be appended and
 never reordered, because stored block values are array positions. This is the
 documented guard referenced under Risks. The comment should point at
-`PALETTE_ORDER` as the supported way to change how the palette is presented.
+`COLOR_IDS_IN_DISPLAY_ORDER` as the supported way to change how the palette is presented.
 
-Add `PALETTE_ORDER`, the id list described above, and a helper that returns the
+Add `COLOR_IDS_IN_DISPLAY_ORDER`, the id list described above, and a helper that returns the
 palette entries in display order. Components consume the helper rather than
 sorting for themselves.
 
@@ -131,7 +131,7 @@ the data edit. This is the one structural fix in the change: the palette is
 defined in one place but its length is duplicated in another.
 
 The pressed number is now a display position, not an id. Key N selects the color
-at `PALETTE_ORDER[N - 1]`. Pressing 9 selects gray.
+at `COLOR_IDS_IN_DISPLAY_ORDER[N - 1]`. Pressing 9 selects gray.
 
 The right-click picker iterates the palette in display order and labels each
 swatch with its display position rather than its id.
@@ -178,7 +178,7 @@ change is a cheap place to add real tests, all against `src/lib/planner-data.ts`
   crashing the grid.
 - `BLOCK_COLORS` ids are unique and sequential starting at 1. This guards the
   id-to-index relationship that the storage format depends on.
-- `PALETTE_ORDER` is a permutation of the palette ids: same length, no
+- `COLOR_IDS_IN_DISPLAY_ORDER` is a permutation of the palette ids: same length, no
   duplicates, nothing missing. A typo here would drop a color from the UI or
   show one twice while leaving stored data untouched and the build green, so
   this is the one failure mode nothing else would catch.
@@ -196,7 +196,7 @@ change is a cheap place to add real tests, all against `src/lib/planner-data.ts`
 The main risk is a future contributor reordering `BLOCK_COLORS` for aesthetic
 reasons and silently corrupting saved weeks. The test asserting sequential ids
 does not catch reordering on its own, so the constraint is documented as a
-comment on the palette itself, pointing at `PALETTE_ORDER` as the supported
+comment on the palette itself, pointing at `COLOR_IDS_IN_DISPLAY_ORDER` as the supported
 alternative.
 
 The second risk is the two-identifier split. A component that reads `c.id` where

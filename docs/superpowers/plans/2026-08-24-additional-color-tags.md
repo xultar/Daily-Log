@@ -4,7 +4,7 @@
 
 **Goal:** Extend the planner's time-block palette from six color tags to nine, with a display order that puts gray last without changing any stored data.
 
-**Architecture:** `BLOCK_COLORS` stays append-only because a stored block value is an index into it. A separate `PALETTE_ORDER` list controls presentation, and two small helpers in `planner-data.ts` are the only place display position translates to storage id. Components consume the helpers and never sort or map ids by hand.
+**Architecture:** `BLOCK_COLORS` stays append-only because a stored block value is an index into it. A separate `COLOR_IDS_IN_DISPLAY_ORDER` list controls presentation, and two small helpers in `planner-data.ts` are the only place display position translates to storage id. Components consume the helpers and never sort or map ids by hand.
 
 **Tech Stack:** React 18, TypeScript, Vite, Tailwind, Vitest with jsdom.
 
@@ -17,7 +17,7 @@ Spec: `docs/superpowers/specs/2026-08-24-additional-color-tags-design.md`
 Two numbers identify a color and they are not the same. Getting this backwards writes wrong values into a user's saved weeks.
 
 - **Storage id** — the number written into `timeBlocks` and used as the key in `planner-color-labels`. It equals the entry's 1-based position in `BLOCK_COLORS`. It never changes.
-- **Display position** — the 1-based position in `PALETTE_ORDER`. This is the number the user sees beside a swatch and the number key that selects it.
+- **Display position** — the 1-based position in `COLOR_IDS_IN_DISPLAY_ORDER`. This is the number the user sees beside a swatch and the number key that selects it.
 
 For yellow, teal, magenta and gray the two differ. Yellow is storage id 7 and display position 6. Gray is storage id 6 and display position 9.
 
@@ -108,7 +108,7 @@ In `src/lib/planner-data.ts`, replace the `BLOCK_COLORS` block and its comment:
  * Block color palette. A stored block value is this array's 1-based index, so
  * entries may only be APPENDED — never reordered or removed, or every saved
  * week that used a moved color is silently repainted.
- * To change how the palette is presented, edit PALETTE_ORDER instead.
+ * To change how the palette is presented, edit COLOR_IDS_IN_DISPLAY_ORDER instead.
  * Index 0 = empty.
  */
 export const BLOCK_COLORS = [
@@ -167,7 +167,7 @@ Extend the import at the top of `src/test/planner-data.test.ts` to:
 import {
   BLOCK_COLORS,
   getBlockColor,
-  PALETTE_ORDER,
+  COLOR_IDS_IN_DISPLAY_ORDER,
   getPaletteInDisplayOrder,
   colorIdForDisplayPosition,
 } from "@/lib/planner-data";
@@ -176,23 +176,23 @@ import {
 Then append:
 
 ```ts
-describe("PALETTE_ORDER", () => {
+describe("COLOR_IDS_IN_DISPLAY_ORDER", () => {
   it("is a permutation of the palette ids", () => {
     const ids = BLOCK_COLORS.map((c) => c.id).sort((a, b) => a - b);
-    const ordered = [...PALETTE_ORDER].sort((a, b) => a - b);
+    const ordered = [...COLOR_IDS_IN_DISPLAY_ORDER].sort((a, b) => a - b);
     expect(ordered).toEqual(ids);
   });
 
   it("shows gray last", () => {
-    expect(PALETTE_ORDER[PALETTE_ORDER.length - 1]).toBe(6);
+    expect(COLOR_IDS_IN_DISPLAY_ORDER[COLOR_IDS_IN_DISPLAY_ORDER.length - 1]).toBe(6);
   });
 });
 
 describe("getPaletteInDisplayOrder", () => {
-  it("returns every entry, in PALETTE_ORDER sequence", () => {
+  it("returns every entry, in COLOR_IDS_IN_DISPLAY_ORDER sequence", () => {
     const shown = getPaletteInDisplayOrder();
     expect(shown).toHaveLength(BLOCK_COLORS.length);
-    expect(shown.map((c) => c.id)).toEqual(PALETTE_ORDER);
+    expect(shown.map((c) => c.id)).toEqual(COLOR_IDS_IN_DISPLAY_ORDER);
   });
 });
 
@@ -215,7 +215,7 @@ describe("colorIdForDisplayPosition", () => {
 
 Run: `npx vitest run src/test/planner-data.test.ts`
 
-Expected: FAIL at import — the file will not compile because `PALETTE_ORDER`, `getPaletteInDisplayOrder` and `colorIdForDisplayPosition` do not exist yet.
+Expected: FAIL at import — the file will not compile because `COLOR_IDS_IN_DISPLAY_ORDER`, `getPaletteInDisplayOrder` and `colorIdForDisplayPosition` do not exist yet.
 
 - [ ] **Step 3: Implement the display order and helpers**
 
@@ -227,11 +227,11 @@ In `src/lib/planner-data.ts`, immediately after the `getBlockColor` function, ad
  * Storage ids are positions in BLOCK_COLORS and must never move; reorder this
  * list instead. Gray sits last here while keeping storage id 6.
  */
-export const PALETTE_ORDER = [1, 2, 3, 4, 5, 7, 8, 9, 6];
+export const COLOR_IDS_IN_DISPLAY_ORDER = [1, 2, 3, 4, 5, 7, 8, 9, 6];
 
 /** The palette in the order it should be shown to the user. */
 export function getPaletteInDisplayOrder() {
-  return PALETTE_ORDER.map((id) => BLOCK_COLORS[id - 1]);
+  return COLOR_IDS_IN_DISPLAY_ORDER.map((id) => BLOCK_COLORS[id - 1]);
 }
 
 /**
@@ -239,7 +239,7 @@ export function getPaletteInDisplayOrder() {
  * storage id written to timeBlocks. Returns null for anything off the palette.
  */
 export function colorIdForDisplayPosition(position: number): number | null {
-  return PALETTE_ORDER[position - 1] ?? null;
+  return COLOR_IDS_IN_DISPLAY_ORDER[position - 1] ?? null;
 }
 ```
 
@@ -247,13 +247,13 @@ export function colorIdForDisplayPosition(position: number): number | null {
 
 Run: `npx vitest run src/test/planner-data.test.ts`
 
-Expected: PASS, 12 tests.
+Expected: PASS, 14 tests.
 
 - [ ] **Step 5: Commit**
 
 ```bash
 git add src/lib/planner-data.ts src/test/planner-data.test.ts
-git commit -m "Add PALETTE_ORDER to decouple display order from storage ids"
+git commit -m "Add COLOR_IDS_IN_DISPLAY_ORDER to decouple display order from storage ids"
 ```
 
 ---
@@ -479,7 +479,7 @@ git commit -m "Show the color legend in display order with position numbers"
 
 Run: `npm test`
 
-Expected: PASS. 13 tests across 2 files — 12 in `planner-data.test.ts` plus the existing placeholder in `example.test.ts`.
+Expected: PASS. 15 tests across 2 files — 14 in `planner-data.test.ts` plus the existing placeholder in `example.test.ts`.
 
 - [ ] **Step 2: Run lint**
 
@@ -509,6 +509,12 @@ Confirm each of these:
 2. Pressing `9` selects gray, and `6` selects yellow.
 3. Painting a block with each of the nine produces nine visibly different colors.
 4. Typing in a legend label field does not change the active color.
+4b. With the grid focused, press `0` and then a letter key. Neither may paint or
+   alter a block. This matters because `tsconfig.app.json` sets `strict: false`,
+   so the `number | null` return from `colorIdForDisplayPosition` is a
+   documentation promise the compiler does not enforce. A missing null guard
+   would write `null` into `timeBlocks`, which persists to localStorage and
+   degrades silently rather than crashing.
 5. Right-clicking a block shows ten buttons — nine numbered swatches plus clear.
 6. Reload the page. Painted blocks keep their colors and typed labels persist.
 
