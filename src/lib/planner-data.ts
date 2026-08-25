@@ -1,4 +1,4 @@
-import { startOfWeek, addDays, format, parse, isValid, getISOWeek, getISOWeekYear } from "date-fns";
+import { startOfWeek, addDays, format, parse, isValid, getISOWeek, getISOWeekYear, differenceInCalendarWeeks } from "date-fns";
 import { readItem, writeItem, removeItem, listKeys } from "./storage";
 
 export interface TodoItem {
@@ -175,6 +175,26 @@ const isUsableIsoDate = (value: unknown): value is string =>
   typeof value === "string" &&
   ISO_DATE.test(value) &&
   isValid(parse(value, "yyyy-MM-dd", new Date()));
+
+/**
+ * How many weeks an item has been slipping: the gap between the week it was
+ * first written in and the week being viewed. Both arguments are ISO dates of
+ * Mondays.
+ *
+ * weekStartsOn is stated rather than left to the default of Sunday. Both
+ * operands are Mondays so the two agree today, but this planner is
+ * Monday-based everywhere else and an implicit Sunday boundary here would be a
+ * quiet inconsistency waiting for the first caller that passes a non-Monday.
+ *
+ * Anything unusable — absent, unparseable, or in the future — reports 0, so a
+ * damaged item renders as ordinary rather than as a broken marker.
+ */
+export function carriedWeeks(origin: string | undefined, mondayISO: string): number {
+  if (!isUsableIsoDate(origin) || !isUsableIsoDate(mondayISO)) return 0;
+  const from = parse(origin, "yyyy-MM-dd", new Date());
+  const to = parse(mondayISO, "yyyy-MM-dd", new Date());
+  return Math.max(0, differenceInCalendarWeeks(to, from, { weekStartsOn: 1 }));
+}
 
 /**
  * An origin survives only if it is a real, parseable date; anything else
