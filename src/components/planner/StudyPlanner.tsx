@@ -10,6 +10,8 @@ import WeeklyColorLegend from "./WeeklyColorLegend";
 import { ChevronLeft, ChevronRight, Printer, Calendar, CalendarDays, CalendarRange, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { calcWeekTotal, calcWeekColorMinutes, getWeekDates } from "@/lib/planner-data";
+import { readItem, writeItem } from "@/lib/storage";
+import { toast } from "@/hooks/use-toast";
 
 type ViewMode = "daily" | "weekly" | "monthly";
 
@@ -22,7 +24,7 @@ const StudyPlanner: React.FC = () => {
   const [selectedDayIndex, setSelectedDayIndex] = useState(0);
   const [refreshKey, setRefreshKey] = useState(0);
   const [showWeekends, setShowWeekends] = useState(() => {
-    return localStorage.getItem("planner-show-weekends") !== "false";
+    return readItem("planner-show-weekends") !== "false";
   });
   // Storage id of the armed color, shared by every view. Not a display position.
   const [activeColor, setActiveColor] = useState(1);
@@ -43,14 +45,30 @@ const StudyPlanner: React.FC = () => {
     dirtyRef.current = false;
   }, [currentDate, refreshKey]);
 
+  // Whether the last autosave was refused. A storage failure persists, so
+  // warning on every keystroke would bury the message under itself; warn on the
+  // transition into failure instead, and again if it recurs after recovering.
+  const saveFailedRef = useRef(false);
+
   useEffect(() => {
     if (!dirtyRef.current) return;
-    const timer = setTimeout(() => saveWeek(currentDate, weekData), 300);
+    const timer = setTimeout(() => {
+      const saved = saveWeek(currentDate, weekData);
+      if (!saved && !saveFailedRef.current) {
+        toast({
+          title: "Your changes are not being saved",
+          description:
+            "This browser's storage is full or unavailable. Export a backup before closing the tab.",
+          variant: "destructive",
+        });
+      }
+      saveFailedRef.current = !saved;
+    }, 300);
     return () => clearTimeout(timer);
   }, [weekData, currentDate]);
 
   useEffect(() => {
-    localStorage.setItem("planner-show-weekends", String(showWeekends));
+    writeItem("planner-show-weekends", String(showWeekends));
   }, [showWeekends]);
 
   const updateDay = useCallback((dayIndex: number, day: DayData) => {

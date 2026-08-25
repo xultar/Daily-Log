@@ -139,6 +139,33 @@ and it is why the key always comes from the data rather than from the file. A
 week that cannot say which week it is gets skipped and counted, not written
 under whatever key the file claimed.
 
+## Nothing calls localStorage directly
+
+`src/lib/storage.ts` is the only module that touches it, and `grep localStorage
+src --include=*.ts --include=*.tsx` outside that file should stay empty.
+
+The reason is that storage does not fail by being empty — it throws. A
+sandboxed frame or a browser with cookies blocked raises a `SecurityError` from
+every call including reads, and a full quota raises `QuotaExceededError` from
+writes. Those throws used to escape from `loadWeek`, which wrapped only the JSON
+parse, and from the autosave timeout, where nothing caught them at all.
+
+- **Reads degrade to "nothing is there".** `readItem` and `listKeys` return null
+  and `[]`. Callers already handle an absent week, so no caller needed changing.
+- **Writes report whether they landed.** `writeItem`, `saveWeek` and
+  `saveColorLabels` return a boolean. `saveWeek`'s return value is not
+  decoration: it is what stops a save failure from being silent.
+
+**`StudyPlanner` warns once per failure episode, not once per keystroke.**
+`saveFailedRef` holds whether the last autosave was refused, and the toast fires
+only on the transition into failure — a storage failure persists, so warning
+every 300ms would bury the message under itself. It warns again if saving fails
+after recovering. `src/test/storage-failures.test.tsx` pins all three cases.
+
+`migrateWeekKeys` copies before it removes: `removeItem` runs only after
+`writeItem` reports success, so a refused write leaves the week where it was
+rather than dropping it.
+
 ## Traps that cost time to find
 
 **Do not rewrite `updateSubject`** in `DailyView.tsx` or `DayColumn.tsx`. Its
@@ -173,7 +200,7 @@ because mousedown would unmount the button before its click fires.
 
 ## Baselines
 
-- `npm test` — 109 tests across 10 files
+- `npm test` — 129 tests across 12 files
 - `npm run lint` — **0 errors, 10 warnings**. All ten are pre-existing
   `react-refresh/only-export-components` and `react-hooks/exhaustive-deps` in
   `src/components/ui/*`, `MonthlyView.tsx` and `theme-context.tsx`. Do not treat
@@ -200,15 +227,6 @@ make the label field unreachable. The `stopPropagation` on that input is what ho
 it together for mouse users. Fixing it needs a real restructure.
 
 **`compact` on `DayColumn`** is declared and never used.
-
-**`loadWeek` and `saveWeek` do not guard the storage call itself.**
-`localStorage.getItem` throws outright when storage is denied — a sandboxed
-frame, or Safari with cookies blocked — and `loadWeek` only wraps the JSON
-parse, so the throw escapes. `MonthlyView` calls `loadWeek` during render, so
-that surfaces as a caught crash rather than a blank page now that the boundary
-exists, but the app is still unusable in that state. `saveWeek` has the same gap
-on `QuotaExceededError`: the write throws inside the autosave timeout, nothing
-catches it, and the user gets no warning that saving has stopped.
 
 ## Design docs
 

@@ -1,4 +1,5 @@
 import { startOfWeek, addDays, format, parse, isValid, getISOWeek, getISOWeekYear } from "date-fns";
+import { readItem, writeItem, removeItem, listKeys } from "./storage";
 
 export interface TodoItem {
   text: string;
@@ -232,18 +233,14 @@ export function repairWeek(value: unknown, date: Date): WeekData {
 
 export function loadWeek(date: Date): WeekData {
   const key = getWeekKey(date);
-  const stored = localStorage.getItem(`planner-${key}`);
+  const stored = readItem(`planner-${key}`);
   if (!stored) return createEmptyWeek(date);
   try {
     return repairWeek(JSON.parse(stored), date);
   } catch {
     // Not JSON at all. Keep the raw text before returning the empty week that
     // the autosave will eventually write over this key.
-    try {
-      localStorage.setItem(`${UNREADABLE_PREFIX}${key}`, stored);
-    } catch {
-      // Storage is full or unavailable; the empty week is still better than a throw.
-    }
+    writeItem(`${UNREADABLE_PREFIX}${key}`, stored);
     return createEmptyWeek(date);
   }
 }
@@ -291,44 +288,41 @@ export function weekKeyForStoredWeek(week: unknown): string | null {
 export function migrateWeekKeys(): { moved: number; conflicts: string[] } {
   const conflicts: string[] = [];
   let moved = 0;
-  try {
-    // Snapshot first: the loop below adds and removes entries as it goes.
-    const entries: string[] = [];
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key && WEEK_ENTRY.test(key)) entries.push(key);
-    }
+  // Snapshot first: the loop below adds and removes entries as it goes.
+  const entries = listKeys().filter((key) => WEEK_ENTRY.test(key));
 
-    for (const entry of entries) {
-      const raw = localStorage.getItem(entry);
-      if (!raw) continue;
-      let parsed: unknown;
-      try {
-        parsed = JSON.parse(raw);
-      } catch {
-        continue; // Unreadable; loadWeek deals with it, and guessing here would be worse.
-      }
-      const current = weekKeyFromEntryKey(entry)!;
-      const belongs = weekKeyForStoredWeek(parsed);
-      if (!belongs || belongs === current) continue;
-
-      if (localStorage.getItem(`planner-${belongs}`) !== null) {
-        conflicts.push(current);
-        continue;
-      }
-      localStorage.setItem(`planner-${belongs}`, raw);
-      localStorage.removeItem(entry);
-      moved++;
+  for (const entry of entries) {
+    const raw = readItem(entry);
+    if (!raw) continue;
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      continue; // Unreadable; loadWeek deals with it, and guessing here would be worse.
     }
-  } catch {
-    // Storage unavailable. The app still works; the weeks stay where they are.
+    const current = weekKeyFromEntryKey(entry)!;
+    const belongs = weekKeyForStoredWeek(parsed);
+    if (!belongs || belongs === current) continue;
+
+    if (readItem(`planner-${belongs}`) !== null) {
+      conflicts.push(current);
+      continue;
+    }
+    // Drop the original only once the copy is safely in place.
+    if (!writeItem(`planner-${belongs}`, raw)) continue;
+    removeItem(entry);
+    moved++;
   }
   return { moved, conflicts };
 }
 
-export function saveWeek(date: Date, data: WeekData): void {
+/**
+ * Store a week. Returns whether the write landed, so a caller can warn rather
+ * than let the user go on typing into a planner that stopped saving.
+ */
+export function saveWeek(date: Date, data: WeekData): boolean {
   const key = getWeekKey(date);
-  localStorage.setItem(`planner-${key}`, JSON.stringify(data));
+  return writeItem(`planner-${key}`, JSON.stringify(data));
 }
 
 export const HOUR_LABELS = HOURS;
@@ -405,14 +399,15 @@ export function colorIdForDisplayPosition(position: number): number | null {
 const COLOR_LABELS_KEY = "planner-color-labels";
 
 export function loadColorLabels(): Record<number, string> {
+  const stored = readItem(COLOR_LABELS_KEY);
+  if (!stored) return {};
   try {
-    const stored = localStorage.getItem(COLOR_LABELS_KEY);
-    return stored ? JSON.parse(stored) : {};
+    return JSON.parse(stored);
   } catch {
     return {};
   }
 }
 
-export function saveColorLabels(labels: Record<number, string>): void {
-  localStorage.setItem(COLOR_LABELS_KEY, JSON.stringify(labels));
+export function saveColorLabels(labels: Record<number, string>): boolean {
+  return writeItem(COLOR_LABELS_KEY, JSON.stringify(labels));
 }

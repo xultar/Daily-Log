@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
+import { readItem, writeItem } from "./storage";
 
 export interface PlannerTheme {
   id: string;
@@ -95,7 +96,7 @@ export const useTheme = () => useContext(ThemeContext);
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [theme, setThemeState] = useState<PlannerTheme>(() => {
-    const stored = localStorage.getItem("planner-theme");
+    const stored = readItem("planner-theme");
     return THEMES.find((t) => t.id === stored) || THEMES[0];
   });
 
@@ -103,7 +104,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const found = THEMES.find((t) => t.id === themeId);
     if (found) {
       setThemeState(found);
-      localStorage.setItem("planner-theme", themeId);
+      writeItem("planner-theme", themeId);
     }
   }, []);
 

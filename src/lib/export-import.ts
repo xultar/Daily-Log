@@ -1,4 +1,5 @@
 import { WeekData, weekKeyForStoredWeek, weekKeyFromEntryKey } from "./planner-data";
+import { readItem, writeItem, listKeys } from "./storage";
 
 export interface ExportData {
   version: 1;
@@ -8,15 +9,16 @@ export interface ExportData {
 
 export function exportAllData(): ExportData {
   const weeks: Record<string, WeekData> = {};
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i);
+  for (const key of listKeys()) {
     // Match the entry shape, not the prefix: planner-show-weekends and
     // planner-color-labels are settings, and collecting them here exported them
     // as weeks and then broke exportAsCSV on the first one it reached.
-    const weekKey = key && weekKeyFromEntryKey(key);
+    const weekKey = weekKeyFromEntryKey(key);
     if (!weekKey) continue;
+    const raw = readItem(key);
+    if (raw === null) continue;
     try {
-      weeks[weekKey] = JSON.parse(localStorage.getItem(key)!);
+      weeks[weekKey] = JSON.parse(raw);
     } catch {
       // Ignore entries that are not valid JSON
     }
@@ -135,10 +137,19 @@ export function importFromJSON(jsonString: string): ImportResult {
 
   if (staged.length === 0) return refuse("That file contains no usable weeks.", skipped);
 
+  let written = 0;
   for (const [key, week] of staged) {
-    localStorage.setItem(`planner-${key}`, JSON.stringify(week));
+    if (writeItem(`planner-${key}`, JSON.stringify(week))) written++;
   }
-  return { success: true, weeksImported: staged.length, weeksSkipped: skipped };
+  if (written < staged.length) {
+    return {
+      success: false,
+      weeksImported: written,
+      weeksSkipped: skipped,
+      error: `Storage is full or unavailable \u2014 only ${written} of ${staged.length} weeks could be saved.`,
+    };
+  }
+  return { success: true, weeksImported: written, weeksSkipped: skipped };
 }
 
 export function downloadFile(content: string, filename: string, mimeType: string) {
