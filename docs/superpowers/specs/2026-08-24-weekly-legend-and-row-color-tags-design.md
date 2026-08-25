@@ -107,9 +107,16 @@ Entries iterate `getPaletteInDisplayOrder()`, so gray appears last and the
 displayed number is the display position. The value passed back on click is
 `c.id`, the storage id.
 
-The strip does not scroll. Nine entries at roughly 90px each is about 810px,
-which fits the layout's normal width; if the window is narrower the strip wraps
-rather than clipping, so no entry becomes unreachable.
+The strip stays on a single line and scrolls horizontally when it does not fit.
+Nine entries at roughly 90px each is about 810px, so at normal widths no scrolling
+occurs. Entries must not wrap: a legend that reflows to two rows changes the
+weekly view's height as labels are edited, and a one-line strip reads as a key
+rather than as content.
+
+This means the strip is its own horizontal scroll region, independent of the day
+columns' existing horizontal scroll. The two scroll separately and that is
+intended — scrolling the columns must not move the legend, since the legend is a
+fixed reference.
 
 ### Why not a shared legend component
 
