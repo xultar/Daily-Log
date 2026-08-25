@@ -1,7 +1,8 @@
 import React, { useRef } from "react";
 import { THEMES, useTheme } from "@/lib/theme-context";
 import { exportAsJSON, exportAsCSV, importFromJSON, downloadFile } from "@/lib/export-import";
-import { Download, Upload, Palette } from "lucide-react";
+import { Download, Upload, Palette, Sun, Moon, Monitor } from "lucide-react";
+import { ColorScheme } from "@/lib/color-scheme";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -14,7 +15,7 @@ import {
 import { toast } from "@/hooks/use-toast";
 
 const ToolbarActions: React.FC<{ onDataImported: () => void }> = ({ onDataImported }) => {
-  const { theme, setTheme } = useTheme();
+  const { theme, setTheme, colorScheme, setColorScheme } = useTheme();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleExportJSON = () => {
@@ -59,6 +60,29 @@ const ToolbarActions: React.FC<{ onDataImported: () => void }> = ({ onDataImport
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-44">
+          {/* Appearance and theme are independent axes: Sakura Pink dark is a
+              thing. Do not add role="menu"/"dialog"/"listbox" to anything here
+              — TimeGrid's keydown guard tests for exactly those so Radix menus
+              can swallow digits, and any of them would silently disable the
+              1-9 paint shortcuts whenever focus sits inside. */}
+          <DropdownMenuLabel className="text-[10px]">Appearance</DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          {([
+            { id: "light", name: "Light", Icon: Sun },
+            { id: "dark", name: "Dark", Icon: Moon },
+            { id: "system", name: "System", Icon: Monitor },
+          ] as { id: ColorScheme; name: string; Icon: typeof Sun }[]).map((m) => (
+            <DropdownMenuItem
+              key={m.id}
+              onClick={() => setColorScheme(m.id)}
+              className="text-xs gap-2"
+            >
+              <m.Icon className="w-3 h-3 shrink-0" />
+              {m.name}
+              {m.id === colorScheme && <span className="ml-auto text-[10px]">✓</span>}
+            </DropdownMenuItem>
+          ))}
+          <DropdownMenuSeparator />
           <DropdownMenuLabel className="text-[10px]">Theme</DropdownMenuLabel>
           <DropdownMenuSeparator />
           {THEMES.map((t) => (
