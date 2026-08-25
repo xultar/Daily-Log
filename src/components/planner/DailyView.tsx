@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { format, parse } from "date-fns";
-import { DayData, calcDayTotal, BLOCK_COLORS, loadColorLabels, saveColorLabels } from "@/lib/planner-data";
+import { DayData, calcDayTotal, getPaletteInDisplayOrder, loadColorLabels, saveColorLabels } from "@/lib/planner-data";
 import TimeGrid from "./TimeGrid";
 import { Plus, X } from "lucide-react";
 
@@ -133,11 +133,13 @@ const DailyView: React.FC<DailyViewProps> = ({ day, dayIndex, onChange }) => {
               Color Tags
             </div>
             <div className="grid grid-cols-2 gap-0">
-              {BLOCK_COLORS.map((c) => (
+              {getPaletteInDisplayOrder().map((c, index, shown) => (
                 <button
                   key={c.id}
                   onClick={() => setActiveColor(c.id)}
-                  className={`flex items-center gap-1.5 px-2 py-1 border-b border-r border-border/50 transition-all ${
+                  className={`flex items-center gap-1.5 px-2 py-1 border-b border-border/50 transition-all ${
+                    index === shown.length - 1 ? "" : "border-r"
+                  } ${
                     activeColor === c.id
                       ? "bg-muted/60 ring-1 ring-inset ring-foreground/10"
                       : "hover:bg-muted/30"
@@ -147,7 +149,7 @@ const DailyView: React.FC<DailyViewProps> = ({ day, dayIndex, onChange }) => {
                     className="inline-block w-3 h-3 rounded-sm border border-border/50 shrink-0"
                     style={{ backgroundColor: `hsl(${isDark ? c.hslDark : c.hsl})` }}
                   />
-                  <span className="text-[10px] font-medium text-foreground/50 w-3">{c.id}</span>
+                  <span className="text-[10px] font-medium text-foreground/50 w-3">{index + 1}</span>
                   <input
                     type="text"
                     value={colorLabels[c.id] ?? ""}
@@ -168,7 +170,7 @@ const DailyView: React.FC<DailyViewProps> = ({ day, dayIndex, onChange }) => {
             </div>
           </div>
           <div className="text-[9px] text-muted-foreground/60 mt-1">
-            Press 1–6 to switch color &middot; Right-click block to pick color
+            Press 1–9 to switch color &middot; Right-click block to pick color
           </div>
         </div>
       </div>
