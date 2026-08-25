@@ -24,6 +24,13 @@ export interface WeekData {
   days: DayData[];
 }
 
+export interface BlockColor {
+  id: number;
+  label: string;
+  hsl: string;
+  hslDark: string;
+}
+
 const HOURS = Array.from({ length: 19 }, (_, i) => i + 6); // 6 to 24
 const BLOCKS_PER_HOUR = 6; // 10-min blocks (60 min per hour)
 
@@ -116,7 +123,7 @@ export const MINUTE_LABELS = [10, 20, 30, 40, 50, 60];
  * To change how the palette is presented, edit PALETTE_ORDER instead.
  * Index 0 = empty.
  */
-export const BLOCK_COLORS = [
+export const BLOCK_COLORS: readonly BlockColor[] = [
   { id: 1, label: "Blue",     hsl: "213 60% 80%",  hslDark: "213 50% 40%" },
   { id: 2, label: "Pink",     hsl: "340 55% 82%",  hslDark: "340 45% 42%" },
   { id: 3, label: "Green",    hsl: "140 35% 75%",  hslDark: "140 30% 38%" },
@@ -133,6 +140,26 @@ export function getBlockColor(value: number, isDark: boolean): string | null {
   const color = BLOCK_COLORS[value - 1];
   if (!color) return null;
   return `hsl(${isDark ? color.hslDark : color.hsl})`;
+}
+
+/**
+ * Presentation order for the palette, listed by storage id.
+ * Storage ids are positions in BLOCK_COLORS and must never move; reorder this
+ * list instead. Gray sits last here while keeping storage id 6.
+ */
+export const PALETTE_ORDER = [1, 2, 3, 4, 5, 7, 8, 9, 6];
+
+/** The palette in the order it should be shown to the user. */
+export function getPaletteInDisplayOrder(): BlockColor[] {
+  return PALETTE_ORDER.map((id) => BLOCK_COLORS[id - 1]);
+}
+
+/**
+ * Translate a 1-based display position (what the user sees and types) into the
+ * storage id written to timeBlocks. Returns null for anything off the palette.
+ */
+export function colorIdForDisplayPosition(position: number): number | null {
+  return PALETTE_ORDER[position - 1] ?? null;
 }
 
 const COLOR_LABELS_KEY = "planner-color-labels";
