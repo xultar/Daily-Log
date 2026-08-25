@@ -22,11 +22,15 @@ the page renders blank.
 week-key migration, the export fix, the error boundary, import validation,
 storage guards and the autosave flush.
 
-**`priority-flag-and-labels` is pushed and unmerged.** Three commits on top of
-`main`: the priority flag with the `00` hour label and "Add priority / action";
-the Today button and today's-column marker; the legend grid lines and a dead
-prop. All verified in a browser. The merge is being held deliberately — do not
-merge it or push `main` unless asked.
+`priority-flag-and-labels` was merged into `main` on 2026-08-25 — the priority
+flag with the `00` hour label, the Today button and today's-column marker, and
+the legend grid lines. **`main` is ahead of `origin/main` and has not been
+pushed**, because pushing deploys. Do not push unless asked.
+
+**`design/dark-mode-and-carry-forward` carries dark mode and the print fix.**
+Specs for both dark mode and carry-forward, the plan for dark mode, and the
+seven commits implementing it. Verified in a browser. Carry-forward is
+specified but not built.
 
 ## The one rule that can corrupt user data
 
@@ -282,31 +286,76 @@ page, nothing clipped or reflowed. The month and day sheets land cleanly too.
 `print-color-adjust: exact` is already set, so backgrounds do print — the light
 row tints come out as pale gray. Do not "fix" that.
 
-What is wrong with it, roughly by how much it matters:
+All five defects recorded here were fixed on 2026-08-25: placeholders no longer
+print, the four UI-only controls carry `no-print`, the view container's
+scrollbar is gone, the week's Goal and Review now print deliberately, and
+painted blocks carry their tag number. What remains unconfirmed is only
+whether the digit is legible in a **10-minute run on a real laser** — roughly
+6mm wide at A4. If it is not, the fallback is hatch patterns per tag, and that
+is a change to `.tag-run-start` in `index.css` and nothing else.
 
-- **Painted time blocks lose all identity on paper.** Nine colour tags become
-  nine indistinguishable gray squares on a mono printer, and unlike the legend —
-  which prints position numbers and totals — the blocks in the grid carry no
-  number or pattern at all. A printed day holding nine hours of blocks cannot be
-  read back. The fix is a print-specific treatment rather than a colour change:
-  overlay each block's tag position, or give tags hatch/dot patterns in print.
-  Needs a design decision, and a check that whatever is chosen survives a
-  10-minute block at A4 size.
-- **Placeholder text prints as though it were content** — six rows of
-  "Add priority / action...", plus "Notes for the day...", "Memo..." and the
-  em-dash placeholders across the week.
-- **UI-only controls print**: "+ Add", "+ Add priority / action", "Press 1-9 to
-  switch color / Right-click block to pick color", and "Click on a day to switch
-  to daily view". None of them carry `no-print`.
-- **A scrollbar prints** down the right edge of the weekly sheet, from an
-  `overflow-auto` container.
-- **The week's Goal and Review never print**, because that row is `no-print`.
-  That reads as an accident rather than a decision — on a sheet that gets pinned
-  up, the goal is probably the thing you most want on it.
+**The printed number is the display position, not the storage id.** They differ
+for gray, yellow, teal and magenta, so printing the storage id labels a block 6
+that the legend calls 9. `displayPositionForColorId` is the translation, and it
+is the inverse of `colorIdForDisplayPosition` — the two must stay a pair.
+
+**Only the first block of a run prints its number.** `isTagRunStart` compares a
+block to the one before it within the same hour row, so a full hour of one tag
+prints one digit rather than six. Runs deliberately do not cross hour rows: each
+row renders separately, so a two-hour block prints one digit per hour, which is
+what you want when reading a sheet back.
+
+## Colour is decided by the cascade, not at paint time
+
+`getBlockColor` used to take an `isDark` argument read from
+`prefers-color-scheme`, and printing never changed it — which is why an OS-dark
+machine sent `hsl(213 50% 40%)` to a printer that the design expects to receive
+`hsl(213 60% 80%)`. **The near-black printed sheet was a palette bug, not the
+laser.**
+
+The nine tags are now CSS custom properties. `src/lib/tag-palette.ts` generates
+one stylesheet from `BLOCK_COLORS` and installs it in a `<style>` element:
+`:root` holds the light triplets, `.dark` the dark ones, and an `@media print`
+block restores light. `getBlockColor` returns `hsl(var(--tag-N))` and
+`getBlockTint` returns `hsl(var(--tag-N) / 0.16)`. `BLOCK_COLORS` stays the
+single source of truth and stays append-only; a test asserts every emitted value
+matches it, so the sheet cannot drift.
+
+**The print block must be emitted last.** `:root` and `.dark` have equal
+specificity (0,1,0), so order alone decides the winner. Emitting print before
+`.dark` sends dark values to the printer again, silently.
+`src/test/tag-palette.test.ts` pins the ordering for both the tag block and the
+theme block.
+
+**`ThemeProvider` must never write inline styles.** It used to call
+`root.style.setProperty` for its seven variables. Inline styles on `<html>`
+outrank class rules, so the six accent themes would clobber `.dark` — dark mode
+applying to backgrounds and text but not to headers, grid lines or filled cells
+— and `@media print` could not override them without `!important` on every
+property. It emits into the same generated stylesheet instead, and each theme
+carries a `dark` variant of its seven values.
+
+`planner-color-scheme` holds `light`, `dark` or `system`, defaulting to
+`system`. It is a setting, so `weekKeyFromEntryKey` already excludes it by
+shape; nothing needs adding to the exporter or the key migration. `main.tsx`
+installs the stylesheet **and** applies the `.dark` class before the first
+paint — doing either from an effect shows a frame of light mode on every load,
+because effects run after paint. `ThemeProvider` keeps both in sync afterwards,
+and registers the media listener only while the setting is `system`.
+
+`useIsDark` is deleted. Nothing should need the scheme at paint time again;
+`grep hslDark src --include=*.tsx` should stay empty.
 
 ## Baselines
 
-- `npm test` — 167 tests across 17 files
+- `npm test` — 186 tests across 20 files. One of them,
+  `startup-migration.test.tsx`, renders the whole app and can cross Vitest's
+  default 5s timeout on a **cold** run; it passes on a warm one. That is a
+  pre-existing flake, not a regression, and it will bite on a cold CI runner.
+- **`eslint` ignores `.claude`.** Background tasks create git worktrees at
+  `.claude/worktrees/<name>`, which are full copies of the codebase. Without
+  the ignore, lint reports all ten warnings twice, which reads exactly like a
+  change having introduced ten new ones.
 - `npm run lint` — **0 errors, 10 warnings**. All ten are pre-existing
   `react-refresh/only-export-components` and `react-hooks/exhaustive-deps` in
   `src/components/ui/*`, `MonthlyView.tsx` and `theme-context.tsx`. Do not treat
@@ -315,22 +364,6 @@ What is wrong with it, roughly by how much it matters:
 - `npm run dev` — serves at `http://localhost:8080/Daily-Log/`
 
 ## Known open issues
-
-**Dark mode is half-wired.** `tailwind.config.ts` sets `darkMode: ["class"]` but
-nothing in the app ever adds `.dark` to any element, so the `.dark` block in
-`index.css` is dead and the chrome is always light. Meanwhile `useIsDark` reads
-`prefers-color-scheme`. On an OS-dark machine the palette flips to `hslDark` while
-the background stays white, so swatches render dark-on-light and the 16% row wash
-reads muddier than designed. Not broken, but wrong. Fixing it means deciding
-whether the app should follow the OS, follow a class, or expose a toggle.
-There is already a theme picker in the toolbar, so adding light/dark/system to it
-answers that question rather than opening a new one.
-
-A printed sheet came back with near-black blocks. The black-and-white laser
-explains that on its own, but so would the palette having flipped: `hsl(213 60%
-80%)` cannot print near-black and `hsl(213 50% 40%)` can. Unresolved, and not
-worth theorising about — settle it in one line in the user's own browser with
-`matchMedia("(prefers-color-scheme: dark)").matches`.
 
 **The `<input>` inside `<button>`** in the daily legend is invalid HTML and
 pre-existing. Assistive tech commonly prunes children of `role="button"`, which can
@@ -349,13 +382,13 @@ that is normally open once.
 From a review of the app in August 2026, roughly by value. None of these are
 specified; each needs a design pass before any code.
 
-- **Carry unfinished work forward.** Every week is an island — an unchecked
-  priority simply disappears when the week turns, with no trace and no prompt.
-  This is the largest gap between what the app is and what a planner does. The
-  interesting design question is whether a carried item knows it has been
-  carried, so that "this has slipped three weeks" becomes visible. Much safer to
-  build now that weeks are correctly keyed and damaged data repairs rather than
-  vanishes.
+- **Carry unfinished work forward.** No longer open — designed and specified in
+  `docs/superpowers/specs/2026-08-25-carry-forward-design.md`, not yet built.
+  Copies rather than moves, prompts with a pick list rather than populating a
+  week on open, and derives an item's age from `origin`, the Monday of the week
+  it was first written in. Read the spec before touching it: the whole risk is
+  three optional fields across three repair functions, none of them visible to
+  the compiler.
 - **Search across weeks.** Months of memos and priorities are reachable only by
   clicking week by week. `exportAllData` already enumerates every stored week, so
   the data access is solved and this is mostly UI.
