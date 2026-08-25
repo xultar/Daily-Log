@@ -151,7 +151,7 @@ Then, immediately after `getBlockColor`, add:
  * The faint background wash for a tagged row. Same storage-id contract as
  * getBlockColor: index 0 and out-of-range values yield null.
  */
-export function getBlockTint(value: number, isDark: boolean): string | null {
+export function getBlockTint(value: number | undefined, isDark: boolean): string | null {
   if (value === 0) return null;
   const color = BLOCK_COLORS[value - 1];
   if (!color) return null;
@@ -395,11 +395,18 @@ Replace the row element. It currently reads:
 
 and closes after the remove button. Change the opening to:
 
+The map currently uses a concise arrow body, `{day.subjects.map((s, idx) => (`.
+Change it to a block body so the two colour values can be computed once per row:
+
 ```tsx
+            {day.subjects.map((s, idx) => {
+              const tint = getBlockTint(s.colorId, isDark);
+              const stripe = getBlockColor(s.colorId, isDark);
+              return (
               <div
                 key={idx}
                 className="flex items-stretch border-b border-campus-grid last:border-b-0 group"
-                style={rowTint(s.colorId) ? { backgroundColor: rowTint(s.colorId)! } : undefined}
+                style={tint ? { backgroundColor: tint } : undefined}
               >
                 <button
                   type="button"
@@ -410,7 +417,7 @@ and closes after the remove button. Change the opening to:
                   }}
                   aria-label={s.colorId ? "Change row colour" : "Tag row with the armed colour"}
                   className="w-[10px] shrink-0 cursor-pointer"
-                  style={{ borderLeft: `3px solid ${getBlockColor(s.colorId ?? 0, isDark) ?? "transparent"}` }}
+                  style={{ borderLeft: `3px solid ${stripe ?? "transparent"}` }}
                 />
                 <div className="flex items-center flex-1 min-w-0 px-1 py-1.5">
 ```
@@ -431,8 +438,12 @@ It must now close the new content wrapper first:
                 </button>
                 </div>
               </div>
-            ))}
+              );
+            })}
 ```
+
+Note the map's closing changed from `))}` to `);` plus `})}` because the arrow
+body is now a block.
 
 The checkbox, text input and remove button all move inside the new `<div className="flex items-center flex-1 min-w-0 px-1 py-1.5">` unchanged. Do not edit them.
 
@@ -582,11 +593,19 @@ Replace:
 
 with:
 
+As in Task 3, change the map from a concise arrow body to a block so the two
+colour values are computed once per row. The map opens
+`{day.subjects.map((s, idx) => (` and must become:
+
 ```tsx
+        {day.subjects.map((s, idx) => {
+          const tint = getBlockTint(s.colorId, isDark);
+          const stripe = getBlockColor(s.colorId, isDark);
+          return (
           <div
             key={idx}
             className="flex items-stretch border-b border-campus-grid last:border-b-0"
-            style={rowTint(s.colorId) ? { backgroundColor: rowTint(s.colorId)! } : undefined}
+            style={tint ? { backgroundColor: tint } : undefined}
           >
             <button
               type="button"
@@ -597,7 +616,7 @@ with:
               }}
               aria-label={s.colorId ? "Change row colour" : "Tag row with the armed colour"}
               className="w-[8px] shrink-0 cursor-pointer"
-              style={{ borderLeft: `3px solid ${getBlockColor(s.colorId ?? 0, isDark) ?? "transparent"}` }}
+              style={{ borderLeft: `3px solid ${stripe ?? "transparent"}` }}
             />
             <input
               type="checkbox"
@@ -622,6 +641,10 @@ to:
 ```tsx
               className="flex-1 self-center text-[9px] px-0.5 py-[1px] bg-transparent border-none outline-none min-w-0 text-foreground placeholder:text-muted-foreground/50"
 ```
+
+The map's closing must change from `))}` to `);` followed by `})}`, matching the
+block body. The existing row contents — checkbox and text input — move inside
+unchanged apart from the className edits described above.
 
 - [ ] **Step 3: Render the picker**
 
