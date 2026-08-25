@@ -391,6 +391,16 @@ export function loadWeek(date: Date): WeekData {
   }
 }
 
+/**
+ * Whether a week has ever been written. loadWeek cannot answer this — it
+ * returns an empty week for a missing key — and the carry scan needs the
+ * difference: a stored-but-empty week still means the user was there, and
+ * scanning past it would resurrect older items they had moved on from.
+ */
+export function hasStoredWeek(date: Date): boolean {
+  return readItem(`planner-${getWeekKey(date)}`) !== null;
+}
+
 /** Entries that hold a week, as opposed to a setting. */
 const WEEK_ENTRY = /^planner-(\d{4}-W\d{2})$/;
 
