@@ -13,7 +13,7 @@ export interface SubjectRow {
 export interface DayData {
   date: string; // ISO date string
   subjects: SubjectRow[];
-  timeBlocks: number[][]; // [hour_index][minute_block_index] - 0=empty, 1-6=color index
+  timeBlocks: number[][]; // [hour_index][minute_block_index] - 0=empty, else BLOCK_COLORS index
   memo: string;
 }
 
@@ -109,7 +109,13 @@ export function saveWeek(date: Date, data: WeekData): void {
 export const HOUR_LABELS = HOURS;
 export const MINUTE_LABELS = [10, 20, 30, 40, 50, 60];
 
-/** Block color palette — index 1-6 maps to these HSL values. Index 0 = empty. */
+/**
+ * Block color palette. A stored block value is this array's 1-based index, so
+ * entries may only be APPENDED — never reordered or removed, or every saved
+ * week that used a moved color is silently repainted.
+ * To change how the palette is presented, edit PALETTE_ORDER instead.
+ * Index 0 = empty.
+ */
 export const BLOCK_COLORS = [
   { id: 1, label: "Blue",     hsl: "213 60% 80%",  hslDark: "213 50% 40%" },
   { id: 2, label: "Pink",     hsl: "340 55% 82%",  hslDark: "340 45% 42%" },
@@ -117,6 +123,9 @@ export const BLOCK_COLORS = [
   { id: 4, label: "Lavender", hsl: "270 40% 80%",  hslDark: "270 35% 42%" },
   { id: 5, label: "Orange",   hsl: "25 65% 78%",   hslDark: "25 55% 40%" },
   { id: 6, label: "Gray",     hsl: "0 0% 78%",     hslDark: "0 0% 42%" },
+  { id: 7, label: "Yellow",   hsl: "50 70% 76%",   hslDark: "50 55% 38%" },
+  { id: 8, label: "Teal",     hsl: "178 40% 74%",  hslDark: "178 35% 36%" },
+  { id: 9, label: "Magenta",  hsl: "305 40% 80%",  hslDark: "305 35% 42%" },
 ];
 
 export function getBlockColor(value: number, isDark: boolean): string | null {
