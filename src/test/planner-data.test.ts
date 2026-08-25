@@ -130,6 +130,12 @@ describe("calcDayTotal", () => {
     day.timeBlocks[1][0] = 1;
     expect(calcDayTotal(day)).toEqual({ hours: 1, minutes: 10 });
   });
+
+  it("counts the final hour row", () => {
+    const day = createEmptyDay(MONDAY);
+    day.timeBlocks[day.timeBlocks.length - 1][5] = 1;
+    expect(calcDayTotal(day)).toEqual({ hours: 0, minutes: 10 });
+  });
 });
 
 describe("calcDayColorMinutes", () => {
