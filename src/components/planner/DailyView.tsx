@@ -153,7 +153,7 @@ const DailyView: React.FC<DailyViewProps> = ({ day, dayIndex, onChange, activeCo
           </div>
           <button
             onClick={addSubject}
-            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors mb-4 self-start"
+            className="no-print flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors mb-4 self-start"
           >
             <Plus className="h-3 w-3" />
             Add priority / action
@@ -230,7 +230,7 @@ const DailyView: React.FC<DailyViewProps> = ({ day, dayIndex, onChange, activeCo
               })}
             </div>
           </div>
-          <div className="text-[9px] text-muted-foreground/60 mt-1">
+          <div className="no-print text-[9px] text-muted-foreground/60 mt-1">
             Press 1–9 to switch color &middot; Right-click block to pick color
           </div>
         </div>

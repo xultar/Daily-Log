@@ -99,7 +99,7 @@ const MonthlyView: React.FC<MonthlyViewProps> = ({ currentDate, onSelectDay }) =
         )}
       </div>
 
-      <p className="text-[10px] text-muted-foreground text-center mt-2">
+      <p className="no-print text-[10px] text-muted-foreground text-center mt-2">
         Click on a day to switch to daily view
       </p>
     </div>

@@ -106,4 +106,26 @@
     padding: 0 !important;
     background: transparent !important;
   }
+  /* Placeholders are prompts, not content. Six rows of "Add priority /
+     action..." on a printed sheet read as though they were written there. */
+  ::placeholder {
+    color: transparent !important;
+  }
+  /* A scrollbar has no meaning on paper, and the weekly sheet printed one
+     down its right edge from the view container. */
+  .overflow-auto, .overflow-x-auto, .overflow-y-auto {
+    overflow: visible !important;
+  }
+  /* Nine colour tags arrive as nine indistinguishable grays on a mono laser.
+     The first block of each run carries its legend number so the sheet can be
+     read back. Print-only: on screen the block stays clean.
+     The tag colours themselves are restored to their light values by the
+     generated stylesheet's own print block, not here. */
+  .tag-run-start::after {
+    content: attr(data-tag);
+    font-size: 6pt;
+    line-height: 1;
+    font-weight: 700;
+    color: #000;
+  }
 }

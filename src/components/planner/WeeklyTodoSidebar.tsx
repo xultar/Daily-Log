@@ -55,7 +55,7 @@ const WeeklyTodoSidebar: React.FC<WeeklyTodoSidebarProps> = ({ todos, onChange }
       </div>
       <button
         onClick={addTodo}
-        className="flex items-center justify-center gap-0.5 py-1 text-[9px] text-muted-foreground hover:text-foreground border-t border-border transition-colors"
+        className="no-print flex items-center justify-center gap-0.5 py-1 text-[9px] text-muted-foreground hover:text-foreground border-t border-border transition-colors"
       >
         <Plus className="h-2.5 w-2.5" />
         Add

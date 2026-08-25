@@ -429,6 +429,33 @@ export function colorIdForDisplayPosition(position: number): number | null {
   return COLOR_IDS_IN_DISPLAY_ORDER[position - 1] ?? null;
 }
 
+/**
+ * The number to show the user for a storage id — the inverse of
+ * colorIdForDisplayPosition, and the other half of the same translation.
+ *
+ * Printing the storage id instead would label a block 6 that the legend calls
+ * 9, for the four colours where the two differ.
+ */
+export function displayPositionForColorId(id: number): number | null {
+  const index = COLOR_IDS_IN_DISPLAY_ORDER.indexOf(id);
+  return index === -1 ? null : index + 1;
+}
+
+/**
+ * Whether this block begins an unbroken run of one tag within its hour row.
+ *
+ * Only the first block of a run prints its number, so a full hour of one tag
+ * prints one digit rather than six. Runs do not cross hour rows, because each
+ * row is rendered separately — a two-hour block prints one digit per hour,
+ * which reads correctly on the sheet.
+ */
+export function isTagRunStart(hourBlocks: number[] | undefined, blockIdx: number): boolean {
+  const value = hourBlocks?.[blockIdx] ?? 0;
+  if (!value) return false;
+  const previous = blockIdx === 0 ? 0 : hourBlocks?.[blockIdx - 1] ?? 0;
+  return value !== previous;
+}
+
 const COLOR_LABELS_KEY = "planner-color-labels";
 
 export function loadColorLabels(): Record<number, string> {

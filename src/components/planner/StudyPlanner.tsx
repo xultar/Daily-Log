@@ -231,9 +231,11 @@ const StudyPlanner: React.FC = () => {
         </div>
       </div>
 
-      {/* Goal / Review row */}
+      {/* Goal / Review row. Prints deliberately: a sheet that gets pinned up
+          wants the week's goal on it, and this row carrying no-print read as
+          an accident of markup rather than a decision. */}
       {viewMode !== "monthly" && (
-        <div className="no-print flex border-b border-border shrink-0">
+        <div className="flex border-b border-border shrink-0">
           <div className="flex-1 flex items-center gap-1 px-2 py-1 border-r border-border">
             <span className="text-[9px] font-semibold text-muted-foreground shrink-0 uppercase">Goal</span>
             <input

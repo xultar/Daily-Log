@@ -3,6 +3,8 @@ import {
   HOUR_LABELS,
   formatHourLabel,
   getBlockColor,
+  isTagRunStart,
+  displayPositionForColorId,
   colorIdForDisplayPosition,
 } from "@/lib/planner-data";
 import ColorPicker from "./ColorPicker";
@@ -131,12 +133,19 @@ const TimeGrid: React.FC<TimeGridProps> = ({
           {[0, 1, 2, 3, 4, 5].map((blockIdx) => {
             const val = timeBlocks[hourIdx]?.[blockIdx] ?? 0;
             const bg = getBlockColor(val);
+            // Nine colour tags arrive as nine indistinguishable grays on a
+            // mono laser, so each run carries its legend number. Only the
+            // first block of a run does, or a full hour would print six
+            // identical digits. Invisible on screen; index.css reveals it in
+            // print only.
+            const runStart = isTagRunStart(timeBlocks[hourIdx], blockIdx);
             return (
               <div
                 key={blockIdx}
-                className={`flex-1 ${large ? "h-[16px]" : "h-[10px]"} border-l border-campus-grid cursor-pointer transition-colors ${
+                data-tag={runStart ? displayPositionForColorId(val) : undefined}
+                className={`flex-1 ${large ? "h-[16px]" : "h-[10px]"} border-l border-campus-grid cursor-pointer transition-colors flex items-center justify-center ${
                   val === 0 ? "hover:bg-campus-grid" : ""
-                }`}
+                } ${runStart ? "tag-run-start" : ""}`}
                 style={bg ? { backgroundColor: bg } : undefined}
                 onMouseDown={() => handleMouseDown(hourIdx, blockIdx)}
                 onMouseEnter={() => handleMouseEnter(hourIdx, blockIdx)}
