@@ -154,7 +154,7 @@ const TimeGrid: React.FC<TimeGridProps> = ({
         <ColorPicker
           x={contextMenu.x}
           y={contextMenu.y}
-          onPick={(colorId) => pickColor(colorId)}
+          onPick={pickColor}
           onClear={() => {
             setBlock(contextMenu.hourIdx, contextMenu.blockIdx, 0);
             setContextMenu(null);
