@@ -72,8 +72,15 @@ const StudyPlanner: React.FC = () => {
   };
 
   const dates = getWeekDates(currentDate);
-  const total = calcWeekTotal(weekData);
+  // Both memos recompute on every weekData change, which includes every
+  // painted block, memo/priority edit, and goal/review keystroke — they do
+  // not save the drag-paint walk. What they save is re-running the ~798-cell
+  // walk on renders that don't touch weekData: armed-color changes, view-mode
+  // switches, and the weekend toggle.
+  const total = useMemo(() => calcWeekTotal(weekData), [weekData]);
   const weekColorMinutes = useMemo(() => calcWeekColorMinutes(weekData), [weekData]);
+  // slice(0, 5) is a prefix slice (Mon-Fri are days 0-4), so index i below
+  // always equals the real day index in weekData.days for both branches.
   const visibleDays = showWeekends ? weekData.days : weekData.days.slice(0, 5);
 
   const getNavLabel = () => {
@@ -191,7 +198,7 @@ const StudyPlanner: React.FC = () => {
             <WeeklyTodoSidebar todos={weekData.weeklyTodos} onChange={updateTodos} />
             <div className="flex flex-1 min-w-0 h-full overflow-x-auto">
               {visibleDays.map((day, i) => (
-                <div key={i} className="flex-1 min-w-[100px] h-full">
+                <div key={day.date} className="flex-1 min-w-[100px] h-full">
                   <DayColumn
                     day={day}
                     dayIndex={i}
