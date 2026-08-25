@@ -1,7 +1,9 @@
-import React from "react";
+import React, { useState } from "react";
 import { format, parse } from "date-fns";
-import { DayData, calcDayTotal } from "@/lib/planner-data";
+import { DayData, calcDayTotal, getBlockColor, getBlockTint } from "@/lib/planner-data";
 import TimeGrid from "./TimeGrid";
+import ColorPicker from "./ColorPicker";
+import { useIsDark } from "@/hooks/use-is-dark";
 
 interface DayColumnProps {
   day: DayData;
@@ -18,11 +20,28 @@ const DayColumn: React.FC<DayColumnProps> = ({ day, dayIndex, onChange, compact,
   const dateObj = parse(day.date, "yyyy-MM-dd", new Date());
   const total = calcDayTotal(day);
 
+  const isDark = useIsDark();
+
+  const [rowPicker, setRowPicker] = useState<{ x: number; y: number; idx: number } | null>(null);
+
   const updateSubject = (idx: number, field: "subject" | "checked", value: string | boolean) => {
     const subjects = day.subjects.map((s, i) =>
       i === idx ? { ...s, [field]: value } : s
     );
     onChange({ ...day, subjects });
+  };
+
+  // colorId is a storage id, matching activeColor and timeBlocks.
+  const setRowColor = (idx: number, colorId: number | undefined) => {
+    const subjects = day.subjects.map((s, i) => (i === idx ? { ...s, colorId } : s));
+    onChange({ ...day, subjects });
+  };
+
+  // Clicking a row already carrying the armed colour clears it, mirroring
+  // how clicking a filled time block clears it.
+  const toggleRowColor = (idx: number) => {
+    const current = day.subjects[idx].colorId;
+    setRowColor(idx, current === activeColor ? undefined : activeColor);
   };
 
   return (
@@ -40,23 +59,42 @@ const DayColumn: React.FC<DayColumnProps> = ({ day, dayIndex, onChange, compact,
         <div className="bg-primary/20 text-[8px] font-medium text-center py-0.5 border-b border-campus-grid text-primary-foreground/70">
           Priorities / Actions
         </div>
-        {day.subjects.map((s, idx) => (
-          <div key={idx} className="flex items-center border-b border-campus-grid last:border-b-0">
+        {day.subjects.map((s, idx) => {
+          const tint = getBlockTint(s.colorId, isDark);
+          const stripe = getBlockColor(s.colorId, isDark);
+          return (
+          <div
+            key={idx}
+            className="flex items-stretch border-b border-campus-grid last:border-b-0"
+            style={tint ? { backgroundColor: tint } : undefined}
+          >
+            <button
+              type="button"
+              onClick={() => toggleRowColor(idx)}
+              onContextMenu={(e) => {
+                e.preventDefault();
+                setRowPicker({ x: e.clientX, y: e.clientY, idx });
+              }}
+              aria-label={s.colorId ? "Change row colour" : "Tag row with the armed colour"}
+              className="w-[8px] shrink-0 cursor-pointer"
+              style={{ borderLeft: `3px solid ${stripe ?? "transparent"}` }}
+            />
             <input
               type="checkbox"
               checked={s.checked}
               onChange={(e) => updateSubject(idx, "checked", e.target.checked)}
-              className="ml-0.5 h-3 w-3 shrink-0 accent-campus-blue-dark"
+              className="h-3 w-3 shrink-0 self-center accent-campus-blue-dark"
             />
             <input
               type="text"
               value={s.subject}
               onChange={(e) => updateSubject(idx, "subject", e.target.value)}
-              className="flex-1 text-[9px] px-0.5 py-[1px] bg-transparent border-none outline-none min-w-0 text-foreground placeholder:text-muted-foreground/50"
+              className="flex-1 self-center text-[9px] px-0.5 py-[1px] bg-transparent border-none outline-none min-w-0 text-foreground placeholder:text-muted-foreground/50"
               placeholder="—"
             />
           </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Time Grid */}
@@ -85,6 +123,22 @@ const DayColumn: React.FC<DayColumnProps> = ({ day, dayIndex, onChange, compact,
           placeholder="Memo..."
         />
       </div>
+      {rowPicker && (
+        <ColorPicker
+          x={rowPicker.x}
+          y={rowPicker.y}
+          onPick={(colorId) => {
+            setRowColor(rowPicker.idx, colorId);
+            onActiveColorChange(colorId);
+            setRowPicker(null);
+          }}
+          onClear={() => {
+            setRowColor(rowPicker.idx, undefined);
+            setRowPicker(null);
+          }}
+          onClose={() => setRowPicker(null)}
+        />
+      )}
     </div>
   );
 };
