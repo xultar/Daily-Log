@@ -169,4 +169,19 @@ describe("applyCarryForward", () => {
     expect(out.days).toHaveLength(7);
     expect(out.days[0].subjects.every((s) => s.subject === "")).toBe(true);
   });
+
+  it("trims and drops blanks in its own input, with no help from collectCarryForward", () => {
+    // Built as a literal on purpose. Every other test here feeds this function
+    // through collectCarryForward, which already trims and drops blanks — so
+    // nothing else would notice if applyCarryForward's own guards were deleted
+    // as redundant, and its independence would regress silently.
+    const target = createEmptyWeek(MONDAY);
+    target.weeklyTodos[0] = { text: "Book viva slot", checked: false };
+    const out = applyCarryForward(target, [
+      { text: "  Book viva slot  ", origin: SOURCE_MONDAY },
+      { text: "   ", origin: SOURCE_MONDAY },
+    ]);
+    expect(out.weeklyTodos.filter((t) => t.text.trim() === "Book viva slot")).toHaveLength(1);
+    expect(out.weeklyTodos.some((t) => t.origin !== undefined && t.text.trim() === "")).toBe(false);
+  });
 });
