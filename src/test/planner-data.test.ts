@@ -12,8 +12,26 @@ describe("BLOCK_COLORS", () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
-  it("keeps gray at storage id 6 so saved weeks are not repainted", () => {
-    expect(BLOCK_COLORS[5].label).toBe("Gray");
+  // Storage contract: a saved block value is this array's 1-based index.
+  // Changing a row below repaints every saved week that used that color.
+  // Adding a row at the END is the only safe edit — extend this table to match.
+  it("pins every entry to its storage position", () => {
+    expect(BLOCK_COLORS.map((c) => [c.id, c.label, c.hsl, c.hslDark])).toEqual([
+      [1, "Blue",     "213 60% 80%", "213 50% 40%"],
+      [2, "Pink",     "340 55% 82%", "340 45% 42%"],
+      [3, "Green",    "140 35% 75%", "140 30% 38%"],
+      [4, "Lavender", "270 40% 80%", "270 35% 42%"],
+      [5, "Orange",   "25 65% 78%",  "25 55% 40%"],
+      [6, "Gray",     "0 0% 78%",    "0 0% 42%"],
+      [7, "Yellow",   "50 70% 76%",  "50 55% 38%"],
+      [8, "Teal",     "178 40% 74%", "178 35% 36%"],
+      [9, "Magenta",  "305 40% 80%", "305 35% 42%"],
+    ]);
+  });
+
+  it("has no duplicate colors in either theme", () => {
+    expect(new Set(BLOCK_COLORS.map((c) => c.hsl)).size).toBe(BLOCK_COLORS.length);
+    expect(new Set(BLOCK_COLORS.map((c) => c.hslDark)).size).toBe(BLOCK_COLORS.length);
   });
 });
 
@@ -23,15 +41,17 @@ describe("getBlockColor", () => {
     expect(getBlockColor(0, true)).toBeNull();
   });
 
-  it("returns the light color for every id", () => {
-    for (const c of BLOCK_COLORS) {
-      expect(getBlockColor(c.id, false)).toBe(`hsl(${c.hsl})`);
-    }
+  it("resolves a storage id to its literal color", () => {
+    expect(getBlockColor(1, false)).toBe("hsl(213 60% 80%)");
+    expect(getBlockColor(6, true)).toBe("hsl(0 0% 42%)");
+    expect(getBlockColor(7, false)).toBe("hsl(50 70% 76%)");
   });
 
-  it("returns the dark color for every id", () => {
+  it("returns a different color per theme for every id", () => {
     for (const c of BLOCK_COLORS) {
-      expect(getBlockColor(c.id, true)).toBe(`hsl(${c.hslDark})`);
+      const light = getBlockColor(c.id, false);
+      expect(light).toMatch(/^hsl\(\d+ \d+% \d+%\)$/);
+      expect(getBlockColor(c.id, true)).not.toBe(light);
     }
   });
 
