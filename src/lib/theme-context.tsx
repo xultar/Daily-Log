@@ -1,5 +1,12 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { readItem, writeItem } from "./storage";
+import {
+  ColorScheme,
+  readColorScheme,
+  writeColorScheme,
+  resolveScheme,
+  applySchemeClass,
+} from "./color-scheme";
 
 export interface PlannerTheme {
   id: string;
@@ -85,11 +92,15 @@ export const THEMES: PlannerTheme[] = [
 interface ThemeContextValue {
   theme: PlannerTheme;
   setTheme: (themeId: string) => void;
+  colorScheme: ColorScheme;
+  setColorScheme: (scheme: ColorScheme) => void;
 }
 
 const ThemeContext = createContext<ThemeContextValue>({
   theme: THEMES[0],
   setTheme: () => {},
+  colorScheme: "system",
+  setColorScheme: () => {},
 });
 
 export const useTheme = () => useContext(ThemeContext);
@@ -108,6 +119,26 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, []);
 
+  const [colorScheme, setSchemeState] = useState<ColorScheme>(() => readColorScheme());
+
+  const setColorScheme = useCallback((scheme: ColorScheme) => {
+    setSchemeState(scheme);
+    writeColorScheme(scheme);
+  }, []);
+
+  // main.tsx applies the class before the first paint, so this effect is not
+  // what makes dark mode appear — it is what keeps it correct afterwards, when
+  // the setting changes or, on "system", when the OS does. The listener is
+  // only registered while the setting actually follows the OS.
+  useEffect(() => {
+    const mql = window.matchMedia("(prefers-color-scheme: dark)");
+    const apply = () => applySchemeClass(resolveScheme(colorScheme, mql.matches));
+    apply();
+    if (colorScheme !== "system") return;
+    mql.addEventListener("change", apply);
+    return () => mql.removeEventListener("change", apply);
+  }, [colorScheme]);
+
   // Apply CSS variables
   useEffect(() => {
     const root = document.documentElement;
@@ -122,7 +153,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [theme]);
 
   return (
-    <ThemeContext.Provider value={{ theme, setTheme }}>
+    <ThemeContext.Provider value={{ theme, setTheme, colorScheme, setColorScheme }}>
       {children}
     </ThemeContext.Provider>
   );
