@@ -4,6 +4,14 @@ import { readItem, writeItem, removeItem, listKeys } from "./storage";
 export interface TodoItem {
   text: string;
   checked: boolean;
+  /**
+   * ISO date of the Monday of the week this item was first written in.
+   * Absent means it originated in the week it is sitting in, so its age is
+   * zero. Age is derived from this and never stored: a counter could be
+   * double-incremented by a re-run or inflated by an import, with no way to
+   * detect it was wrong. A date can only be right or absent.
+   */
+  origin?: string;
 }
 
 export interface SubjectRow {
@@ -26,6 +34,8 @@ export interface SubjectRow {
    * load without a type error, because strict is off and the field is optional.
    */
   flagged?: boolean;
+  /** As TodoItem.origin. Optional on the same terms as colorId and flagged. */
+  origin?: string;
 }
 
 export interface DayData {
@@ -40,6 +50,12 @@ export interface WeekData {
   weekReview: string;
   weeklyTodos: TodoItem[];
   days: DayData[];
+  /**
+   * Whether the carry-forward bar has been answered for this week, either by
+   * bringing items forward or by dismissing it. Stored only when true, so a
+   * week written before the field existed is identical to an unresolved one.
+   */
+  carryResolved?: boolean;
 }
 
 export interface BlockColor {
@@ -154,6 +170,10 @@ const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 const asText = (value: unknown): string => (typeof value === "string" ? value : "");
 
+/** An origin survives only if it is a real ISO date; anything else degrades the item to age zero rather than rendering a broken marker. */
+const asOrigin = (value: unknown): string | undefined =>
+  typeof value === "string" && ISO_DATE.test(value) ? value : undefined;
+
 const asRecord = (value: unknown): Record<string, unknown> =>
   value && typeof value === "object" ? (value as Record<string, unknown>) : {};
 
@@ -191,6 +211,8 @@ function repairSubject(value: unknown): SubjectRow {
   // storing false, which keeps rows written before the field existed identical
   // to rows whose flag has been cleared.
   if (raw.flagged === true) row.flagged = true;
+  const origin = asOrigin(raw.origin);
+  if (origin) row.origin = origin;
   return row;
 }
 
@@ -208,7 +230,11 @@ function repairList<T>(value: unknown, rebuiltLength: number, repairItem: (item:
 
 function repairTodo(value: unknown): TodoItem {
   const raw = asRecord(value);
-  return { text: asText(raw.text), checked: raw.checked === true };
+  const todo: TodoItem = { text: asText(raw.text), checked: raw.checked === true };
+  // Assigned only when present, so a fresh item stays free of the field.
+  const origin = asOrigin(raw.origin);
+  if (origin) todo.origin = origin;
+  return todo;
 }
 
 function repairDay(value: unknown, fallbackDate: Date): DayData {
@@ -235,12 +261,14 @@ export function repairWeek(value: unknown, date: Date): WeekData {
   const raw = asRecord(value);
   const storedDays = Array.isArray(raw.days) ? raw.days : [];
   // Mapping the week's real dates both pads a short week and drops any extras.
-  return {
+  const week: WeekData = {
     weekGoal: asText(raw.weekGoal),
     weekReview: asText(raw.weekReview),
     weeklyTodos: repairList(raw.weeklyTodos, WEEKLY_TODO_ROWS, repairTodo),
     days: getWeekDates(date).map((d, i) => repairDay(storedDays[i], d)),
   };
+  if (raw.carryResolved === true) week.carryResolved = true;
+  return week;
 }
 
 export function loadWeek(date: Date): WeekData {
