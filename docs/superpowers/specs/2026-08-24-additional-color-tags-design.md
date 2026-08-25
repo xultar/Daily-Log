@@ -149,7 +149,11 @@ border on the last item in the list, so the lone ninth cell reads as intentional
 
 The legend iterates the palette in display order and shows the display position
 beside each swatch. The editable label input remains keyed by storage id, so
-labels a user has already typed stay attached to their color.
+labels a user has already typed stay attached to their color. The per-color
+minute totals are likewise keyed by storage id and need no change.
+
+The hint line below the legend reads `Press 1-6 to switch color` and must be
+updated to name the new range.
 
 ## Components that need no change
 
