@@ -6,6 +6,12 @@
 
 @layer base {
   :root {
+    /* Native widgets — checkboxes, scrollbars, the text caret, autofill — are
+       painted by the browser, not by our variables, and they follow this
+       property rather than the .dark class. Without it the row checkboxes
+       render as bright white squares on the dark grid, which is the loudest
+       thing on the screen and the one part of dark mode our CSS cannot reach. */
+    color-scheme: light;
     --background: 0 0% 100%;
     --foreground: 220 20% 20%;
     --card: 0 0% 100%;
@@ -41,6 +47,7 @@
   }
 
   .dark {
+    color-scheme: dark;
     --background: 222 30% 8%;
     --foreground: 210 20% 90%;
     --card: 222 30% 10%;
@@ -93,6 +100,13 @@
   body {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
+  }
+  /* Paper is a light medium, so native widgets print light too — otherwise a
+     dark-mode user's checkboxes arrive as dark boxes. This wins over the
+     .dark rule because that one sits in @layer base and this block does not:
+     unlayered styles beat layered ones regardless of specificity. */
+  :root {
+    color-scheme: light;
   }
   .no-print {
     display: none !important;
