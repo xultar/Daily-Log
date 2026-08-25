@@ -710,6 +710,41 @@ describe("isCurrentOrFutureWeek", () => {
 });
 ```
 
+Two more, both closing mutants the obvious tests leave alive:
+
+```ts
+  it("never returns the week being viewed, only earlier ones", () => {
+    // The current week is almost always stored — the user is editing it — so a
+    // scan starting at back = 0 would offer to carry a week's own items into
+    // itself. Nothing else here notices, because no other test stores data at
+    // the week it then scans from.
+    const w = createEmptyWeek(MONDAY);
+    w.weeklyTodos[0] = { text: "This week's own work", checked: false };
+    saveWeek(MONDAY, w);
+    expect(findCarrySource(MONDAY)).toBeNull();
+  });
+
+  it("puts the Sunday before a Monday in the previous week, not the current one", () => {
+    // Sunday is the only day where Monday-based and Sunday-based week starts
+    // disagree, so it is the only day that can observe weekStartsOn here.
+    // The clock is pinned deliberately: keyed to the real date, this would stop
+    // discriminating as soon as time moved past that week — a test that looks
+    // like coverage and is not.
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 7, 25)); // Tue 25 Aug 2026
+    try {
+      expect(isCurrentOrFutureWeek(new Date(2026, 7, 23))).toBe(false); // Sun 23 Aug
+      expect(isCurrentOrFutureWeek(new Date(2026, 7, 24))).toBe(true);  // Mon 24 Aug
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+```
+
+`try/finally` matters: the other `isCurrentOrFutureWeek` tests use the real clock, and a failure that leaked fake timers into them would produce confusing downstream failures.
+
+**Mutation-test this task's own tests before calling it done.** Six worth running: `MAX_WEEKS_BACK` 4→5; `continue`→`break`; `back = 1`→`back = 0`; `>=`→`>` in `isCurrentOrFutureWeek`; and dropping `{ weekStartsOn: 1 }` from each of the two `startOfWeek` calls. The third and sixth are the ones the obvious tests miss.
+
 - [ ] **Step 2: Run them and watch them fail**
 
 Run: `npx vitest run src/test/carry-source.test.ts`
@@ -780,7 +815,7 @@ export function isCurrentOrFutureWeek(weekDate: Date): boolean {
 - [ ] **Step 5: Run the tests and verify they pass**
 
 Run: `npx vitest run src/test/carry-source.test.ts`
-Expected: PASS, 9 tests.
+Expected: PASS, 14 tests.
 
 - [ ] **Step 6: Confirm the storage rule still holds**
 
@@ -1389,7 +1424,7 @@ git commit -m "Show how many weeks an action has been slipping"
 - [ ] **Step 1: Run the whole suite**
 
 Run: `npm test`
-Expected: PASS. The count rises from 186 by the tests added here — 8 schema, 24 rules, 9 source, 18 bar, 4 marker.
+Expected: PASS. The count rises from 186 by the tests added here — 8 schema, 24 rules, 14 source, 18 bar, 4 marker.
 
 - [ ] **Step 2: Lint**
 
