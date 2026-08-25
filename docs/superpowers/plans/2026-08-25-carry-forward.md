@@ -532,8 +532,6 @@ export interface CarryCandidate {
   text: string;
   /** ISO Monday of the week this item was first written in. */
   origin: string;
-  /** Where it came from, so the bar can say so. */
-  source: "todo" | "priority";
 }
 
 /**
@@ -547,20 +545,20 @@ export interface CarryCandidate {
  * Blank rows never carry — a default week is 8 empty todos and 42 empty
  * subject rows.
  */
-export function collectCarryForward(source: WeekData, sourceMonday: string): CarryCandidate[] {
+export function collectCarryForward(week: WeekData, sourceMonday: string): CarryCandidate[] {
   const out: CarryCandidate[] = [];
-  const take = (text: string, checked: boolean, origin: string | undefined, from: "todo" | "priority") => {
+  const take = (text: string, checked: boolean, origin: string | undefined) => {
     if (checked || text.trim() === "") return;
     // An existing origin wins, so carrying twice reports two weeks rather than
     // resetting to one. This is what makes a repeated carry idempotent.
-    out.push({ text: text.trim(), origin: origin ?? sourceMonday, source: from });
+    out.push({ text: text.trim(), origin: origin ?? sourceMonday });
   };
-  for (const todo of source.weeklyTodos ?? []) {
-    take(todo.text, todo.checked, todo.origin, "todo");
+  for (const todo of week.weeklyTodos) {
+    take(todo.text, todo.checked, todo.origin);
   }
-  for (const day of source.days ?? []) {
-    for (const row of day.subjects ?? []) {
-      if (row.flagged === true) take(row.subject, row.checked, row.origin, "priority");
+  for (const day of week.days) {
+    for (const row of day.subjects) {
+      if (row.flagged === true) take(row.subject, row.checked, row.origin);
     }
   }
   return out;
@@ -577,12 +575,17 @@ export function collectCarryForward(source: WeekData, sourceMonday: string): Car
  * one would be a guess. Its colorId does not survive — TodoItem has no colour.
  */
 export function applyCarryForward(target: WeekData, chosen: CarryCandidate[]): WeekData {
-  const todos = (target.weeklyTodos ?? []).map((t) => ({ ...t }));
+  const todos = target.weeklyTodos.map((t) => ({ ...t }));
   const present = new Set(todos.map((t) => t.text.trim()).filter((t) => t !== ""));
   for (const c of chosen) {
-    if (present.has(c.text)) continue;
-    present.add(c.text);
-    const landed = { text: c.text, checked: false, origin: c.origin };
+    // Trimmed here as well as in collectCarryForward, so this function is
+    // correct on its own rather than relying on where its input came from.
+    // Without it, an untrimmed candidate both lands as a duplicate AND seeds
+    // `present` untrimmed, so a later matching candidate lands a third time.
+    const text = c.text.trim();
+    if (text === "" || present.has(text)) continue;
+    present.add(text);
+    const landed = { text, checked: false, origin: c.origin };
     // Fill a blank row before appending: a fresh week starts with 8 empty rows
     // and appending past them would leave the list front-loaded with blanks.
     const blank = todos.findIndex((t) => t.text.trim() === "");
@@ -593,10 +596,37 @@ export function applyCarryForward(target: WeekData, chosen: CarryCandidate[]): W
 }
 ```
 
+**Both functions assume their week has already been through `repairWeek`**, which is what guarantees `weeklyTodos`, `days` and `subjects` are arrays and every text is a string. That matches how `calcDayTotal` and `calcWeekColorMinutes` treat repaired data — no `?? []` guards. Say so in each JSDoc rather than half-defending: a guard that protects the array access but still lets `text.trim()` throw on the same input is the worst of the three options.
+
+`applyCarryForward`'s JSDoc should also state that candidates must come from an **earlier** week. `findCarrySource` only ever scans backwards, so `origin` is always a strictly earlier Monday and therefore always meaningful — but this function cannot enforce that itself.
+
+Two more tests, both closing mutants that the original twelve left alive:
+
+```ts
+  it("does not mutate the source week", () => {
+    // "Carrying copies, never moves" is the sentence the feature rests on, and
+    // the target-side test alone does not pin it.
+    const w = sourceWeek();
+    const before = JSON.stringify(w);
+    collectCarryForward(w, SOURCE_MONDAY);
+    expect(JSON.stringify(w)).toBe(before);
+  });
+
+  it("lands only once when the same text is both a weekly action and a flagged row", () => {
+    // Reachable: a user can write "Draft methods" in Weekly Actions and also
+    // flag it on Tuesday. present.add is the only thing stopping both landing.
+    const w = createEmptyWeek(new Date(2026, 7, 17));
+    w.weeklyTodos[0] = { text: "Draft methods", checked: false };
+    w.days[1].subjects[0] = { subject: "Draft methods", checked: false, flagged: true };
+    const out = applyCarryForward(createEmptyWeek(MONDAY), collectCarryForward(w, SOURCE_MONDAY));
+    expect(out.weeklyTodos.filter((t) => t.text === "Draft methods")).toHaveLength(1);
+  });
+```
+
 - [ ] **Step 4: Run the tests and verify they pass**
 
 Run: `npx vitest run src/test/carry-rules.test.ts`
-Expected: PASS, 22 tests.
+Expected: PASS, 24 tests.
 
 - [ ] **Step 5: Commit**
 
@@ -783,9 +813,9 @@ import CarryForwardBar from "@/components/planner/CarryForwardBar";
 import { CarryCandidate } from "@/lib/planner-data";
 
 const CANDIDATES: CarryCandidate[] = [
-  { text: "Book viva slot", origin: "2026-08-17", source: "todo" },
-  { text: "Draft methods", origin: "2026-08-03", source: "priority" },
-  { text: "Email supervisor", origin: "2026-08-17", source: "todo" },
+  { text: "Book viva slot", origin: "2026-08-17" },
+  { text: "Draft methods", origin: "2026-08-03" },
+  { text: "Email supervisor", origin: "2026-08-17" },
 ];
 
 const setup = (props = {}) =>
@@ -1359,7 +1389,7 @@ git commit -m "Show how many weeks an action has been slipping"
 - [ ] **Step 1: Run the whole suite**
 
 Run: `npm test`
-Expected: PASS. The count rises from 186 by the tests added here — 8 schema, 22 rules, 9 source, 18 bar, 4 marker.
+Expected: PASS. The count rises from 186 by the tests added here — 8 schema, 24 rules, 9 source, 18 bar, 4 marker.
 
 - [ ] **Step 2: Lint**
 
