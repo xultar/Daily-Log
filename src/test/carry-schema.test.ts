@@ -37,7 +37,19 @@ describe("origin survives a save and load", () => {
     expect(repaired.weeklyTodos[0].origin).toBeUndefined();
   });
 
-  it("leaves origin absent rather than storing an empty string", () => {
+  it("drops a date-shaped value that is not a real date", () => {
+    // ISO_DATE is a shape check: 2026-02-31 matches it. Handing that to
+    // date-fns format() throws RangeError and unmounts the app, which is why
+    // parseability is checked too.
+    const repaired = repairWeek(
+      { weeklyTodos: [{ text: "Keep me", checked: false, origin: "2026-02-31" }] },
+      MONDAY
+    );
+    expect(repaired.weeklyTodos[0].text).toBe("Keep me");
+    expect(repaired.weeklyTodos[0].origin).toBeUndefined();
+  });
+
+  it("leaves origin off the object entirely when there is none", () => {
     const repaired = repairWeek({ weeklyTodos: [{ text: "Fresh", checked: false }] }, MONDAY);
     expect("origin" in repaired.weeklyTodos[0]).toBe(false);
   });

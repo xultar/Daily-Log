@@ -170,9 +170,18 @@ const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 const asText = (value: unknown): string => (typeof value === "string" ? value : "");
 
-/** An origin survives only if it is a real ISO date; anything else degrades the item to age zero rather than rendering a broken marker. */
+/** Shape and parseability: `2026-02-31` has the shape but is not a date. */
+const isUsableIsoDate = (value: unknown): value is string =>
+  typeof value === "string" &&
+  ISO_DATE.test(value) &&
+  isValid(parse(value, "yyyy-MM-dd", new Date()));
+
+/**
+ * An origin survives only if it is a real, parseable date; anything else
+ * degrades the item to age zero rather than rendering a broken marker.
+ */
 const asOrigin = (value: unknown): string | undefined =>
-  typeof value === "string" && ISO_DATE.test(value) ? value : undefined;
+  isUsableIsoDate(value) ? value : undefined;
 
 const asRecord = (value: unknown): Record<string, unknown> =>
   value && typeof value === "object" ? (value as Record<string, unknown>) : {};
@@ -242,8 +251,7 @@ function repairDay(value: unknown, fallbackDate: Date): DayData {
   // Both day views feed this straight to date-fns parse() and then format(),
   // which throws a RangeError on an unparseable date and unmounts the app.
   const storedDate = asText(raw.date);
-  const usable =
-    ISO_DATE.test(storedDate) && isValid(parse(storedDate, "yyyy-MM-dd", new Date()));
+  const usable = isUsableIsoDate(storedDate);
   return {
     date: usable ? storedDate : format(fallbackDate, "yyyy-MM-dd"),
     subjects: repairList(raw.subjects, DEFAULT_SUBJECT_ROWS, repairSubject),
@@ -308,7 +316,7 @@ export function weekKeyForStoredWeek(week: unknown): string | null {
   if (!Array.isArray(days)) return null;
   for (const day of days) {
     const stored = asText(asRecord(day).date);
-    if (!ISO_DATE.test(stored)) continue;
+    if (!isUsableIsoDate(stored)) continue;
     const parsed = parse(stored, "yyyy-MM-dd", new Date());
     if (isValid(parsed)) return getWeekKey(parsed);
   }
