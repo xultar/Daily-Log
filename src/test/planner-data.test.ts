@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeEach } from "vitest";
 import {
   BLOCK_COLORS,
   getBlockColor,
@@ -11,6 +11,9 @@ import {
   calcDayColorMinutes,
   calcWeekColorMinutes,
   formatMinutes,
+  saveWeek,
+  loadWeek,
+  getBlockTint,
 } from "@/lib/planner-data";
 
 describe("BLOCK_COLORS", () => {
@@ -212,5 +215,65 @@ describe("formatMinutes", () => {
 
   it("shows zero as minutes", () => {
     expect(formatMinutes(0)).toBe("0m");
+  });
+});
+
+describe("getBlockTint", () => {
+  it("returns null for an empty block", () => {
+    expect(getBlockTint(0, false)).toBeNull();
+    expect(getBlockTint(0, true)).toBeNull();
+  });
+
+  it("returns null for an out-of-range value", () => {
+    expect(getBlockTint(BLOCK_COLORS.length + 1, false)).toBeNull();
+    expect(getBlockTint(99, true)).toBeNull();
+  });
+
+  it("returns the light colour at 16% alpha for every id", () => {
+    for (const c of BLOCK_COLORS) {
+      expect(getBlockTint(c.id, false)).toBe(`hsl(${c.hsl} / 0.16)`);
+    }
+  });
+
+  it("returns the dark colour at 16% alpha for every id", () => {
+    for (const c of BLOCK_COLORS) {
+      expect(getBlockTint(c.id, true)).toBe(`hsl(${c.hslDark} / 0.16)`);
+    }
+  });
+
+  it("resolves a storage id, not a display position", () => {
+    expect(getBlockTint(6, false)).toBe("hsl(0 0% 78% / 0.16)");
+  });
+});
+
+describe("SubjectRow.colorId", () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it("is absent on a freshly created day", () => {
+    const day = createEmptyDay(MONDAY);
+    expect(day.subjects[0].colorId).toBeUndefined();
+  });
+
+  it("survives a save and load round trip", () => {
+    const week = createEmptyWeek(MONDAY);
+    week.days[0].subjects[0] = { subject: "Draft the proposal", checked: false, colorId: 7 };
+    saveWeek(MONDAY, week);
+    expect(loadWeek(MONDAY).days[0].subjects[0].colorId).toBe(7);
+  });
+
+  it("loads a row saved without a colorId as untagged", () => {
+    saveWeek(MONDAY, createEmptyWeek(MONDAY));
+    const loaded = loadWeek(MONDAY);
+    expect(loaded.days[0].subjects[0].colorId).toBeUndefined();
+    expect(loaded.days[0].subjects[0].subject).toBe("");
+  });
+
+  it("stores the storage id, so gray round trips as 6 and not 9", () => {
+    const week = createEmptyWeek(MONDAY);
+    week.days[3].subjects[2] = { subject: "Buffer", checked: false, colorId: 6 };
+    saveWeek(MONDAY, week);
+    expect(loadWeek(MONDAY).days[3].subjects[2].colorId).toBe(6);
   });
 });

@@ -8,6 +8,12 @@ export interface TodoItem {
 export interface SubjectRow {
   subject: string;
   checked: boolean;
+  /**
+   * Storage id of this row's colour tag — the same contract as timeBlocks,
+   * never a display position. Optional: rows saved before this field existed
+   * load as undefined and render untagged, so no migration is needed.
+   */
+  colorId?: number;
 }
 
 export interface DayData {
@@ -173,6 +179,17 @@ export function getBlockColor(value: number, isDark: boolean): string | null {
   const color = BLOCK_COLORS[value - 1];
   if (!color) return null;
   return `hsl(${isDark ? color.hslDark : color.hsl})`;
+}
+
+/**
+ * The faint background wash for a tagged row. Same storage-id contract as
+ * getBlockColor: index 0 and out-of-range values yield null.
+ */
+export function getBlockTint(value: number, isDark: boolean): string | null {
+  if (value === 0) return null;
+  const color = BLOCK_COLORS[value - 1];
+  if (!color) return null;
+  return `hsl(${isDark ? color.hslDark : color.hsl} / 0.16)`;
 }
 
 /**
