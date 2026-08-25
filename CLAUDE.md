@@ -210,6 +210,12 @@ an hour that appears on a clock, so `formatHourLabel` renders that last row as
 `00`. It is presentation only, applied in `TimeGrid`; nothing else should read
 it.
 
+**The Today button sits after the next chevron, and has to stay there.**
+`src/test/autosave.test.tsx` and `src/test/pending-save.test.tsx` reach the next
+week with `container.querySelectorAll("button")[1]`, so a control inserted
+before either chevron silently repoints those tests at the wrong button. They
+fail in a way that looks like a save bug rather than a layout change.
+
 ## Traps that cost time to find
 
 **Do not rewrite `updateSubject`** in `DailyView.tsx` or `DayColumn.tsx`. Its
@@ -244,7 +250,7 @@ because mousedown would unmount the button before its click fires.
 
 ## Baselines
 
-- `npm test` — 153 tests across 15 files
+- `npm test` — 162 tests across 16 files
 - `npm run lint` — **0 errors, 10 warnings**. All ten are pre-existing
   `react-refresh/only-export-components` and `react-hooks/exhaustive-deps` in
   `src/components/ui/*`, `MonthlyView.tsx` and `theme-context.tsx`. Do not treat

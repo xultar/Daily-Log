@@ -112,6 +112,19 @@ const StudyPlanner: React.FC = () => {
     setWeekData((prev) => ({ ...prev, [field]: value }));
   }, [markDirty]);
 
+  /**
+   * Back to now, from wherever the user has navigated to. Setting both pieces of
+   * state covers all three views at once: the day view lands on today itself,
+   * the week view on this week, and the month view on this month, since it
+   * derives from currentDate.
+   */
+  const goToToday = () => {
+    const now = new Date();
+    setCurrentDate(startOfWeek(now, { weekStartsOn: 1 }));
+    // getDay() counts Sunday as 0; the planner's week starts on Monday.
+    setSelectedDayIndex(now.getDay() === 0 ? 6 : now.getDay() - 1);
+  };
+
   const navigatePrev = () => {
     if (viewMode === "daily") {
       if (selectedDayIndex > 0) setSelectedDayIndex(selectedDayIndex - 1);
@@ -165,6 +178,14 @@ const StudyPlanner: React.FC = () => {
           </span>
           <Button variant="ghost" size="icon" className="h-7 w-7" onClick={navigateNext}>
             <ChevronRight className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-6 text-[10px] px-2 ml-1"
+            onClick={goToToday}
+          >
+            Today
           </Button>
         </div>
 

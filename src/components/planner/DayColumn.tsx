@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { format, parse } from "date-fns";
+import { format, parse, isToday } from "date-fns";
 import { DayData, calcDayTotal, getBlockColor, getBlockTint } from "@/lib/planner-data";
 import TimeGrid from "./TimeGrid";
 import ColorPicker from "./ColorPicker";
@@ -20,6 +20,9 @@ const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const DayColumn: React.FC<DayColumnProps> = ({ day, dayIndex, onChange, compact, activeColor, onActiveColorChange }) => {
   const dateObj = parse(day.date, "yyyy-MM-dd", new Date());
   const total = calcDayTotal(day);
+  // isToday compares against an invalid date without throwing, so a damaged
+  // date simply reads as not-today rather than taking the column down.
+  const isCurrentDay = isToday(dateObj);
 
   const isDark = useIsDark();
 
@@ -57,7 +60,14 @@ const DayColumn: React.FC<DayColumnProps> = ({ day, dayIndex, onChange, compact,
   return (
     <div className="border-r border-border flex flex-col min-w-0 h-full">
       {/* Date header */}
-      <div className="bg-primary/40 px-1 py-0.5 text-center border-b border-border">
+      <div
+        aria-current={isCurrentDay ? "date" : undefined}
+        className={`px-1 py-0.5 text-center border-b border-border ${
+          isCurrentDay
+            ? "bg-primary/80 ring-1 ring-inset ring-primary-foreground/25"
+            : "bg-primary/40"
+        }`}
+      >
         <div className="text-[10px] font-medium text-primary-foreground/80">{DAY_NAMES[dayIndex]}</div>
         <div className="text-xs font-semibold text-primary-foreground">
           {format(dateObj, "M/d")}
