@@ -69,9 +69,34 @@ switch: arm blue in the daily view, switch to weekly, still blue.
 `1`, which is both storage id 1 and display position 1, and must not be routed
 through `colorIdForDisplayPosition`.
 
-`TimeGrid`'s `internalColor` fallback stays in place. Nothing will use it once
-both call sites are controlled, but removing it would change the component's
-contract for no benefit.
+`TimeGrid`'s `activeColor` and `onActiveColorChange` props become REQUIRED and the
+`internalColor` fallback is deleted.
+
+This reverses an earlier decision in this spec, which said to leave the fallback
+alone. That reasoning was written before the wiring existed. Now that both call
+sites are controlled, the optional props are not merely dead code — they are a
+type hole. A call site that forgets the prop compiles clean and silently receives
+a private `useState(1)` that diverges from the shared value, which is exactly the
+bug this lift exists to eliminate. Task 3 adds a legend that reads and writes the
+shared color, and Phase 2 extracts the picker out of `TimeGrid`; both are chances
+to reintroduce it with no compiler complaint.
+
+`TimeGrid` has exactly two call sites and neither is standalone, so nothing is
+lost by requiring the props.
+
+### The setter must be passed by identity
+
+`StudyPlanner` passes `setActiveColor` — React's own dispatcher, which is stable
+for the component's lifetime — and `DayColumn` forwards that reference unchanged
+rather than re-wrapping it.
+
+This is load-bearing. `TimeGrid`'s keydown effect lists the setter in its
+dependency array, so wrapping it in an inline lambda at any call site would tear
+down and re-register all seven `window` listeners on every `StudyPlanner` render
+— which, during a drag-paint, means dozens of listener churn cycles per second.
+Passing the dispatcher directly makes that effect run once per mount.
+
+Any future call site must pass the setter by identity, not wrap it.
 
 ### The duplicate listener tradeoff
 
@@ -86,6 +111,15 @@ position translation — up to `StudyPlanner`. That logic was hardened and verif
 across three review rounds. Reopening it to remove a non-issue is a bad trade.
 
 This is a deliberate decision, not an oversight.
+
+The collapse is better than "React batches identical updates" suggests. React 18's
+`dispatchSetState` bails eagerly when the fiber has no pending work, so pressing
+the digit for the already-armed color produces zero renders, not one; pressing a
+different digit produces exactly one. The seven handlers each run their full guard
+chain, including an ancestor walk for the menu selector, which is microseconds and
+was already happening before this change.
+
+This tradeoff is only cheap while the setter is passed by identity. See above.
 
 ### The legend strip
 

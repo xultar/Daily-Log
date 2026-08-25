@@ -34,7 +34,9 @@ Carried forward from the color-tag work. Two numbers identify a color and they a
 | `src/components/planner/DayColumn.tsx` | Forwards `activeColor` to `TimeGrid` | Modify |
 | `src/components/planner/WeeklyColorLegend.tsx` | The footer strip | Create |
 
-`TimeGrid.tsx` is NOT modified. It already accepts `activeColor` and `onActiveColorChange` as optional props; this plan simply starts passing them from the weekly side too.
+`TimeGrid.tsx` is modified once, at the end of Task 2, to make `activeColor` and
+`onActiveColorChange` REQUIRED and delete the now-unreachable `internalColor`
+fallback. See Task 2 Step 8. Nothing else in that file changes.
 
 Do not attempt to consolidate `TimeGrid`'s keydown listener. Once the weekly view
 is controlled, all seven mounted grids will register a `window` listener and all
