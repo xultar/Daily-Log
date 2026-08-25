@@ -24,7 +24,8 @@ describe("carriedWeeks", () => {
     // Exactly 7 days apart, same as the single-carry case above: this is
     // plain calendar-day arithmetic with no ISO-year involvement, so it kills
     // no mutant that the single-carry test doesn't already kill. Kept anyway
-    // because getISOWeek/getISOWeekYear are already imported into this file,
+    // because getISOWeek/getISOWeekYear are already imported into
+    // planner-data.ts, where getWeekKey uses them,
     // so a future reimplementation reaching for ISO-week arithmetic is a live
     // hazard, and this is the test that would catch it.
     expect(carriedWeeks("2025-12-29", "2026-01-05")).toBe(1);
