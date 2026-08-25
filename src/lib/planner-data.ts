@@ -316,9 +316,10 @@ export function weekKeyForStoredWeek(week: unknown): string | null {
   if (!Array.isArray(days)) return null;
   for (const day of days) {
     const stored = asText(asRecord(day).date);
+    // isUsableIsoDate has already parsed this and found it valid, so the parse
+    // below is only to get the Date that getWeekKey needs — not a second check.
     if (!isUsableIsoDate(stored)) continue;
-    const parsed = parse(stored, "yyyy-MM-dd", new Date());
-    if (isValid(parsed)) return getWeekKey(parsed);
+    return getWeekKey(parse(stored, "yyyy-MM-dd", new Date()));
   }
   return null;
 }
