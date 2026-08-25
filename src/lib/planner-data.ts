@@ -207,6 +207,70 @@ export function carriedWeeks(origin: string | undefined, mondayISO: string): num
   return Math.max(0, differenceInCalendarWeeks(to, from, { weekStartsOn: 1 }));
 }
 
+export interface CarryCandidate {
+  text: string;
+  /** ISO Monday of the week this item was first written in. */
+  origin: string;
+  /** Where it came from, so the bar can say so. */
+  source: "todo" | "priority";
+}
+
+/**
+ * The unfinished work in a week: unchecked Weekly Actions, plus unchecked
+ * daily rows the user explicitly flagged as priorities.
+ *
+ * Unflagged daily rows are excluded on purpose. Forty-two rows a week are
+ * partly a log of what happened, and carrying a log forward is noise; the flag
+ * is the user saying "this one is a commitment".
+ *
+ * Blank rows never carry — a default week is 8 empty todos and 42 empty
+ * subject rows.
+ */
+export function collectCarryForward(source: WeekData, sourceMonday: string): CarryCandidate[] {
+  const out: CarryCandidate[] = [];
+  const take = (text: string, checked: boolean, origin: string | undefined, from: "todo" | "priority") => {
+    if (checked || text.trim() === "") return;
+    // An existing origin wins, so carrying twice reports two weeks rather than
+    // resetting to one. This is what makes a repeated carry idempotent.
+    out.push({ text: text.trim(), origin: origin ?? sourceMonday, source: from });
+  };
+  for (const todo of source.weeklyTodos ?? []) {
+    take(todo.text, todo.checked, todo.origin, "todo");
+  }
+  for (const day of source.days ?? []) {
+    for (const row of day.subjects ?? []) {
+      if (row.flagged === true) take(row.subject, row.checked, row.origin, "priority");
+    }
+  }
+  return out;
+}
+
+/**
+ * Copy chosen candidates into a week's Weekly Actions, returning a new week.
+ *
+ * The source week is never touched: last week genuinely ended with these items
+ * unfinished, and ticking one off here must leave that record true.
+ *
+ * A flagged daily row lands as a weekly action rather than on a day. A row that
+ * failed to happen on Tuesday no longer belongs to a day, and re-pinning it to
+ * one would be a guess. Its colorId does not survive — TodoItem has no colour.
+ */
+export function applyCarryForward(target: WeekData, chosen: CarryCandidate[]): WeekData {
+  const todos = (target.weeklyTodos ?? []).map((t) => ({ ...t }));
+  const present = new Set(todos.map((t) => t.text.trim()).filter((t) => t !== ""));
+  for (const c of chosen) {
+    if (present.has(c.text)) continue;
+    present.add(c.text);
+    const landed = { text: c.text, checked: false, origin: c.origin };
+    // Fill a blank row before appending: a fresh week starts with 8 empty rows
+    // and appending past them would leave the list front-loaded with blanks.
+    const blank = todos.findIndex((t) => t.text.trim() === "");
+    if (blank === -1) todos.push(landed);
+    else todos[blank] = landed;
+  }
+  return { ...target, weeklyTodos: todos };
+}
+
 const asRecord = (value: unknown): Record<string, unknown> =>
   value && typeof value === "object" ? (value as Record<string, unknown>) : {};
 
