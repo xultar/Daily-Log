@@ -15,7 +15,9 @@ export function exportAllData(): ExportData {
       try {
         const weekKey = key.replace("planner-", "");
         weeks[weekKey] = JSON.parse(localStorage.getItem(key)!);
-      } catch {}
+      } catch {
+        // Ignore entries that are not valid JSON
+      }
     }
   }
   return {
