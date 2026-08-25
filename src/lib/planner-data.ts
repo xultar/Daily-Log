@@ -120,7 +120,7 @@ export const MINUTE_LABELS = [10, 20, 30, 40, 50, 60];
  * Block color palette. A stored block value is this array's 1-based index, so
  * entries may only be APPENDED — never reordered or removed, or every saved
  * week that used a moved color is silently repainted.
- * To change how the palette is presented, edit PALETTE_ORDER instead.
+ * To change how the palette is presented, edit COLOR_IDS_IN_DISPLAY_ORDER instead.
  * Index 0 = empty.
  */
 export const BLOCK_COLORS: readonly BlockColor[] = [
@@ -147,19 +147,23 @@ export function getBlockColor(value: number, isDark: boolean): string | null {
  * Storage ids are positions in BLOCK_COLORS and must never move; reorder this
  * list instead. Gray sits last here while keeping storage id 6.
  */
-export const PALETTE_ORDER = [1, 2, 3, 4, 5, 7, 8, 9, 6];
+export const COLOR_IDS_IN_DISPLAY_ORDER: readonly number[] = [1, 2, 3, 4, 5, 7, 8, 9, 6];
 
 /** The palette in the order it should be shown to the user. */
 export function getPaletteInDisplayOrder(): BlockColor[] {
-  return PALETTE_ORDER.map((id) => BLOCK_COLORS[id - 1]);
+  return COLOR_IDS_IN_DISPLAY_ORDER.map((id) => BLOCK_COLORS[id - 1]);
 }
 
 /**
  * Translate a 1-based display position (what the user sees and types) into the
- * storage id written to timeBlocks. Returns null for anything off the palette.
+ * storage id written to timeBlocks. Position 0, non-integers, and anything
+ * outside the palette all miss the array and yield null. Callers must check
+ * for null themselves: strictNullChecks is off in this project, so nothing
+ * stops a caller from assigning the result straight to a number and writing
+ * that null into timeBlocks, which persists to localStorage.
  */
 export function colorIdForDisplayPosition(position: number): number | null {
-  return PALETTE_ORDER[position - 1] ?? null;
+  return COLOR_IDS_IN_DISPLAY_ORDER[position - 1] ?? null;
 }
 
 const COLOR_LABELS_KEY = "planner-color-labels";

@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   BLOCK_COLORS,
   getBlockColor,
-  PALETTE_ORDER,
+  COLOR_IDS_IN_DISPLAY_ORDER,
   getPaletteInDisplayOrder,
   colorIdForDisplayPosition,
 } from "@/lib/planner-data";
@@ -67,23 +67,23 @@ describe("getBlockColor", () => {
   });
 });
 
-describe("PALETTE_ORDER", () => {
+describe("COLOR_IDS_IN_DISPLAY_ORDER", () => {
   it("is a permutation of the palette ids", () => {
     const ids = BLOCK_COLORS.map((c) => c.id).sort((a, b) => a - b);
-    const ordered = [...PALETTE_ORDER].sort((a, b) => a - b);
+    const ordered = [...COLOR_IDS_IN_DISPLAY_ORDER].sort((a, b) => a - b);
     expect(ordered).toEqual(ids);
   });
 
   it("shows gray last", () => {
-    expect(PALETTE_ORDER[PALETTE_ORDER.length - 1]).toBe(6);
+    expect(COLOR_IDS_IN_DISPLAY_ORDER[COLOR_IDS_IN_DISPLAY_ORDER.length - 1]).toBe(6);
   });
 });
 
 describe("getPaletteInDisplayOrder", () => {
-  it("returns every entry, in PALETTE_ORDER sequence", () => {
+  it("returns every entry, in COLOR_IDS_IN_DISPLAY_ORDER sequence", () => {
     const shown = getPaletteInDisplayOrder();
     expect(shown).toHaveLength(BLOCK_COLORS.length);
-    expect(shown.map((c) => c.id)).toEqual(PALETTE_ORDER);
+    expect(shown.map((c) => c.id)).toEqual(COLOR_IDS_IN_DISPLAY_ORDER);
   });
 });
 
@@ -96,7 +96,13 @@ describe("colorIdForDisplayPosition", () => {
 
   it("returns null outside the palette", () => {
     expect(colorIdForDisplayPosition(0)).toBeNull();
-    expect(colorIdForDisplayPosition(PALETTE_ORDER.length + 1)).toBeNull();
+    expect(colorIdForDisplayPosition(COLOR_IDS_IN_DISPLAY_ORDER.length + 1)).toBeNull();
     expect(colorIdForDisplayPosition(NaN)).toBeNull();
+  });
+
+  it("agrees with getPaletteInDisplayOrder on every position", () => {
+    getPaletteInDisplayOrder().forEach((c, i) => {
+      expect(colorIdForDisplayPosition(i + 1)).toBe(c.id);
+    });
   });
 });
