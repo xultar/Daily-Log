@@ -23,6 +23,8 @@ const StudyPlanner: React.FC = () => {
   const [showWeekends, setShowWeekends] = useState(() => {
     return localStorage.getItem("planner-show-weekends") !== "false";
   });
+  // Storage id of the armed color, shared by every view. Not a display position.
+  const [activeColor, setActiveColor] = useState(1);
 
   useEffect(() => {
     setWeekData(loadWeek(currentDate));
@@ -175,6 +177,8 @@ const StudyPlanner: React.FC = () => {
             day={weekData.days[selectedDayIndex]}
             dayIndex={selectedDayIndex}
             onChange={(d) => updateDay(selectedDayIndex, d)}
+            activeColor={activeColor}
+            onActiveColorChange={setActiveColor}
           />
         </div>
       )}
@@ -187,7 +191,13 @@ const StudyPlanner: React.FC = () => {
               const actualIndex = showWeekends ? i : i;
               return (
                 <div key={actualIndex} className="flex-1 min-w-[100px] h-full">
-                  <DayColumn day={day} dayIndex={actualIndex} onChange={(d) => updateDay(actualIndex, d)} />
+                  <DayColumn
+                    day={day}
+                    dayIndex={actualIndex}
+                    onChange={(d) => updateDay(actualIndex, d)}
+                    activeColor={activeColor}
+                    onActiveColorChange={setActiveColor}
+                  />
                 </div>
               );
             })}

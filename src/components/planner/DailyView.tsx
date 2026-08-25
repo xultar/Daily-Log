@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { format, parse } from "date-fns";
-import { DayData, calcDayTotal, getPaletteInDisplayOrder, loadColorLabels, saveColorLabels } from "@/lib/planner-data";
+import { DayData, calcDayTotal, calcDayColorMinutes, formatMinutes, getPaletteInDisplayOrder, loadColorLabels, saveColorLabels } from "@/lib/planner-data";
 import TimeGrid from "./TimeGrid";
 import { Plus, X } from "lucide-react";
 
@@ -8,27 +8,22 @@ interface DailyViewProps {
   day: DayData;
   dayIndex: number;
   onChange: (day: DayData) => void;
+  activeColor: number;
+  onActiveColorChange: (color: number) => void;
 }
 
 const DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
-const DailyView: React.FC<DailyViewProps> = ({ day, dayIndex, onChange }) => {
+const DailyView: React.FC<DailyViewProps> = ({ day, dayIndex, onChange, activeColor, onActiveColorChange }) => {
   const dateObj = parse(day.date, "yyyy-MM-dd", new Date());
   const total = calcDayTotal(day);
-  const [activeColor, setActiveColor] = useState(1);
   const [colorLabels, setColorLabels] = useState<Record<number, string>>(() => loadColorLabels());
 
   const isDark =
     typeof window !== "undefined" &&
     window.matchMedia("(prefers-color-scheme: dark)").matches;
 
-  // Count minutes per color
-  const colorMinutes: Record<number, number> = {};
-  for (const hourBlocks of day.timeBlocks) {
-    for (const block of hourBlocks) {
-      if (block) colorMinutes[block] = (colorMinutes[block] ?? 0) + 10;
-    }
-  }
+  const colorMinutes = calcDayColorMinutes(day);
 
   useEffect(() => {
     saveColorLabels(colorLabels);
@@ -123,7 +118,7 @@ const DailyView: React.FC<DailyViewProps> = ({ day, dayIndex, onChange }) => {
               onChange={(timeBlocks) => onChange({ ...day, timeBlocks })}
               size="large"
               activeColor={activeColor}
-              onActiveColorChange={setActiveColor}
+              onActiveColorChange={onActiveColorChange}
             />
           </div>
 
@@ -136,7 +131,7 @@ const DailyView: React.FC<DailyViewProps> = ({ day, dayIndex, onChange }) => {
               {getPaletteInDisplayOrder().map((c, index, shown) => (
                 <button
                   key={c.id}
-                  onClick={() => setActiveColor(c.id)}
+                  onClick={() => onActiveColorChange(c.id)}
                   className={`flex items-center gap-1.5 px-2 py-1 border-b border-border/50 transition-all ${
                     index === shown.length - 1 ? "" : "border-r"
                   } ${
@@ -160,9 +155,7 @@ const DailyView: React.FC<DailyViewProps> = ({ day, dayIndex, onChange }) => {
                   />
                   {(colorMinutes[c.id] ?? 0) > 0 && (
                     <span className="text-[10px] text-muted-foreground tabular-nums shrink-0">
-                      {Math.floor((colorMinutes[c.id] ?? 0) / 60) > 0
-                        ? `${Math.floor((colorMinutes[c.id] ?? 0) / 60)}h ${(colorMinutes[c.id] ?? 0) % 60 > 0 ? `${(colorMinutes[c.id] ?? 0) % 60}m` : ""}`
-                        : `${colorMinutes[c.id]}m`}
+                      {formatMinutes(colorMinutes[c.id])}
                     </span>
                   )}
                 </button>
