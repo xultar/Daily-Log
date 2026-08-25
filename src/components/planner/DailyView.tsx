@@ -99,8 +99,11 @@ const DailyView: React.FC<DailyViewProps> = ({ day, dayIndex, onChange, activeCo
                     setRowPicker({ x: e.clientX, y: e.clientY, idx });
                   }}
                   aria-label={s.colorId ? "Change row colour" : "Tag row with the armed colour"}
-                  className="w-[10px] shrink-0 cursor-pointer"
-                  style={{ borderLeft: `3px solid ${stripe ?? "transparent"}` }}
+                  title={s.colorId ? "Click to clear, right-click to change" : "Click to tag with the armed colour"}
+                  className={`w-[10px] shrink-0 cursor-pointer border-l-[3px] transition-colors ${
+                    s.colorId ? "" : "border-border/70 hover:border-foreground/40"
+                  }`}
+                  style={stripe ? { borderLeftColor: stripe } : undefined}
                 />
                 <div className="flex items-center flex-1 min-w-0 px-1 py-1.5">
                 <input
