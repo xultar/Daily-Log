@@ -179,12 +179,39 @@ Add to `WeekData`, after `weeklyTodos`:
 Still in `src/lib/planner-data.ts`, add a shared helper next to `asText`:
 
 ```ts
-/** An origin survives only if it is a real ISO date; anything else degrades the item to age zero rather than rendering a broken marker. */
+/** Shape and parseability: `2026-02-31` has the shape but is not a date. */
+const isUsableIsoDate = (value: unknown): value is string =>
+  typeof value === "string" &&
+  ISO_DATE.test(value) &&
+  isValid(parse(value, "yyyy-MM-dd", new Date()));
+
+/**
+ * An origin survives only if it is a real date. Anything else degrades the
+ * item to age zero rather than rendering a broken marker — or worse, reaching
+ * date-fns format(), which throws RangeError and unmounts the app.
+ */
 const asOrigin = (value: unknown): string | undefined =>
-  typeof value === "string" && ISO_DATE.test(value) ? value : undefined;
+  isUsableIsoDate(value) ? value : undefined;
 ```
 
-`ISO_DATE` is declared above these helpers already, so no reordering is needed.
+`ISO_DATE`, `parse` and `isValid` are all already in scope, so no reordering or new imports are needed.
+
+**`ISO_DATE.test` alone is not enough, and this is the one thing to get right here.** `ISO_DATE` is `/^\d{4}-\d{2}-\d{2}$/` — a shape check. `2026-02-31`, `2026-13-45` and `0000-99-99` all match it, all fail `isValid`, and all make `format()` throw. The file already combines both checks in two places, `repairDay` and `weekKeyForStoredWeek`, and `repairDay`'s own comment says why: an unparseable date "throws a RangeError on an unparseable date and unmounts the app."
+
+**Route those two existing call sites through `isUsableIsoDate` as well**, so the predicate is spelled once rather than three times. Keep their surrounding comments — they explain why parseability is checked and are load-bearing. The resulting check is identical to what each already does, so this is de-duplication, not a behaviour change; `week-repair.test.ts` and `week-key-migration.test.ts` cover both sites and must stay green.
+
+Add a ninth assertion to the test file pinning the gap:
+
+```ts
+  it("drops a date-shaped value that is not a real date", () => {
+    const repaired = repairWeek(
+      { weeklyTodos: [{ text: "Keep me", checked: false, origin: "2026-02-31" }] },
+      MONDAY
+    );
+    expect(repaired.weeklyTodos[0].text).toBe("Keep me");
+    expect(repaired.weeklyTodos[0].origin).toBeUndefined();
+  });
+```
 
 Extend `repairSubject`, keeping its existing body and adding before the `return`:
 
@@ -227,7 +254,7 @@ export function repairWeek(value: unknown, date: Date): WeekData {
 - [ ] **Step 5: Run the tests and verify they pass**
 
 Run: `npx vitest run src/test/carry-schema.test.ts`
-Expected: PASS, 7 tests.
+Expected: PASS, 8 tests.
 
 - [ ] **Step 6: Run the whole suite**
 
@@ -320,20 +347,29 @@ Add the function near the other week helpers:
  * damaged item renders as ordinary rather than as a broken marker.
  */
 export function carriedWeeks(origin: string | undefined, mondayISO: string): number {
-  if (!origin || !ISO_DATE.test(origin)) return 0;
+  if (!isUsableIsoDate(origin) || !isUsableIsoDate(mondayISO)) return 0;
   const from = parse(origin, "yyyy-MM-dd", new Date());
   const to = parse(mondayISO, "yyyy-MM-dd", new Date());
-  if (!isValid(from) || !isValid(to)) return 0;
   return Math.max(0, differenceInCalendarWeeks(to, from, { weekStartsOn: 1 }));
 }
 ```
 
-`ISO_DATE` is declared at line 153, so place `carriedWeeks` below it.
+Place `carriedWeeks` below `isUsableIsoDate`, which Task 1 extracted.
+
+**Use `isUsableIsoDate`, not `ISO_DATE.test`.** `ISO_DATE` is `/^\d{4}-\d{2}-\d{2}$/` — a shape check only, which `2026-02-31` passes. Task 1's review caught exactly this in `asOrigin`; do not reintroduce it here as a fourth hand-rolled spelling. `isUsableIsoDate` already combines the shape check with `isValid(parse(...))`, which is why this function no longer needs its own `isValid` guard.
+
+Add this case to the test block above:
+
+```ts
+  it("is zero for a date-shaped value that is not a real date", () => {
+    expect(carriedWeeks("2026-02-31", "2026-08-24")).toBe(0);
+  });
+```
 
 - [ ] **Step 4: Run the tests and verify they pass**
 
 Run: `npx vitest run src/test/carry-rules.test.ts`
-Expected: PASS, 7 tests.
+Expected: PASS, 8 tests.
 
 - [ ] **Step 5: Commit**
 
@@ -534,7 +570,7 @@ export function applyCarryForward(target: WeekData, chosen: CarryCandidate[]): W
 - [ ] **Step 4: Run the tests and verify they pass**
 
 Run: `npx vitest run src/test/carry-rules.test.ts`
-Expected: PASS, 19 tests.
+Expected: PASS, 20 tests.
 
 - [ ] **Step 5: Commit**
 
@@ -1297,7 +1333,7 @@ git commit -m "Show how many weeks an action has been slipping"
 - [ ] **Step 1: Run the whole suite**
 
 Run: `npm test`
-Expected: PASS. The count rises from 186 by the tests added here — 7 schema, 19 rules, 9 source, 18 bar, 4 marker.
+Expected: PASS. The count rises from 186 by the tests added here — 8 schema, 20 rules, 9 source, 18 bar, 4 marker.
 
 - [ ] **Step 2: Lint**
 
