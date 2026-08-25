@@ -189,13 +189,21 @@ const DailyView: React.FC<DailyViewProps> = ({ day, dayIndex, onChange, activeCo
               Color Tags
             </div>
             <div className="grid grid-cols-2 gap-0">
-              {getPaletteInDisplayOrder().map((c, index, shown) => (
+              {getPaletteInDisplayOrder().map((c, index, shown) => {
+                // The container draws the outer edges, so a cell adds a line
+                // only where the grid itself needs one. Nine entries in two
+                // columns leave the last row holding a single cell: its bottom
+                // border would sit on the container's, and a right border would
+                // be a stub into the empty half of the row.
+                const inLastRow = index >= shown.length - (shown.length % 2 || 2);
+                const hasCellToTheRight = index % 2 === 0 && index + 1 < shown.length;
+                return (
                 <button
                   key={c.id}
                   onClick={() => onActiveColorChange(c.id)}
-                  className={`flex items-center gap-1.5 px-2 py-1 border-b border-border/50 transition-all ${
-                    index === shown.length - 1 ? "" : "border-r"
-                  } ${
+                  className={`flex items-center gap-1.5 px-2 py-1 border-border/50 transition-all ${
+                    inLastRow ? "" : "border-b"
+                  } ${hasCellToTheRight ? "border-r" : ""} ${
                     activeColor === c.id
                       ? "bg-muted/60 ring-1 ring-inset ring-foreground/10"
                       : "hover:bg-muted/30"
@@ -220,7 +228,8 @@ const DailyView: React.FC<DailyViewProps> = ({ day, dayIndex, onChange, activeCo
                     </span>
                   )}
                 </button>
-              ))}
+                );
+              })}
             </div>
           </div>
           <div className="text-[9px] text-muted-foreground/60 mt-1">

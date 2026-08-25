@@ -216,6 +216,16 @@ week with `container.querySelectorAll("button")[1]`, so a control inserted
 before either chevron silently repoints those tests at the wrong button. They
 fail in a way that looks like a save bug rather than a layout change.
 
+**The colour legend's grid lines belong to the grid, not the cells.** It is a
+two-column grid inside a bordered box, so a cell draws a bottom border only when
+a row follows it and a right border only when a cell sits beside it. Nine
+entries leave the last row holding one cell; giving it either border puts a
+doubled line on the container's own edge, or a stub into the empty half of the
+row. Both rules are derived from the palette length, so they still hold when
+`BLOCK_COLORS` is appended to. `src/test/legend-borders.test.tsx` pins them, and
+asserts exact class tokens rather than substrings — `border-border/50` contains
+the characters `border-b`, so a substring check discriminates nothing.
+
 ## Traps that cost time to find
 
 **Do not rewrite `updateSubject`** in `DailyView.tsx` or `DayColumn.tsx`. Its
@@ -250,7 +260,7 @@ because mousedown would unmount the button before its click fires.
 
 ## Baselines
 
-- `npm test` — 162 tests across 16 files
+- `npm test` — 167 tests across 17 files
 - `npm run lint` — **0 errors, 10 warnings**. All ten are pre-existing
   `react-refresh/only-export-components` and `react-hooks/exhaustive-deps` in
   `src/components/ui/*`, `MonthlyView.tsx` and `theme-context.tsx`. Do not treat
@@ -268,15 +278,10 @@ the background stays white, so swatches render dark-on-light and the 16% row was
 reads muddier than designed. Not broken, but wrong. Fixing it means deciding
 whether the app should follow the OS, follow a class, or expose a toggle.
 
-**The daily legend's bottom edge** renders doubled across the left half only, since
-the lone ninth cell keeps its `border-b` against the container's. Cosmetic.
-
 **The `<input>` inside `<button>`** in the daily legend is invalid HTML and
 pre-existing. Assistive tech commonly prunes children of `role="button"`, which can
 make the label field unreachable. The `stopPropagation` on that input is what holds
 it together for mouse users. Fixing it needs a real restructure.
-
-**`compact` on `DayColumn`** is declared and never used.
 
 **Two tabs overwrite each other.** Nothing listens for the `storage` event, and
 every edit serialises and writes the whole week from in-memory state. A second

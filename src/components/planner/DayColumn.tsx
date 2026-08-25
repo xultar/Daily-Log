@@ -10,14 +10,13 @@ interface DayColumnProps {
   day: DayData;
   dayIndex: number;
   onChange: (day: DayData) => void;
-  compact?: boolean;
   activeColor: number;
   onActiveColorChange: (color: number) => void;
 }
 
 const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
-const DayColumn: React.FC<DayColumnProps> = ({ day, dayIndex, onChange, compact, activeColor, onActiveColorChange }) => {
+const DayColumn: React.FC<DayColumnProps> = ({ day, dayIndex, onChange, activeColor, onActiveColorChange }) => {
   const dateObj = parse(day.date, "yyyy-MM-dd", new Date());
   const total = calcDayTotal(day);
   // isToday compares against an invalid date without throwing, so a damaged
