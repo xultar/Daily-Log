@@ -5,6 +5,7 @@ import {
   colorIdForDisplayPosition,
 } from "@/lib/planner-data";
 import ColorPicker from "./ColorPicker";
+import { useIsDark } from "@/hooks/use-is-dark";
 
 interface TimeGridProps {
   timeBlocks: number[][];
@@ -32,9 +33,7 @@ const TimeGrid: React.FC<TimeGridProps> = ({
   const large = size === "large";
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const isDark =
-    typeof window !== "undefined" &&
-    window.matchMedia("(prefers-color-scheme: dark)").matches;
+  const isDark = useIsDark();
 
   const setBlock = useCallback(
     (hourIdx: number, blockIdx: number, value: number) => {

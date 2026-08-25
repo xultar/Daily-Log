@@ -3,6 +3,7 @@ import { format, parse } from "date-fns";
 import { DayData, calcDayTotal, calcDayColorMinutes, formatMinutes, getPaletteInDisplayOrder, loadColorLabels, saveColorLabels } from "@/lib/planner-data";
 import TimeGrid from "./TimeGrid";
 import { Plus, X } from "lucide-react";
+import { useIsDark } from "@/hooks/use-is-dark";
 
 interface DailyViewProps {
   day: DayData;
@@ -19,9 +20,7 @@ const DailyView: React.FC<DailyViewProps> = ({ day, dayIndex, onChange, activeCo
   const total = calcDayTotal(day);
   const [colorLabels, setColorLabels] = useState<Record<number, string>>(() => loadColorLabels());
 
-  const isDark =
-    typeof window !== "undefined" &&
-    window.matchMedia("(prefers-color-scheme: dark)").matches;
+  const isDark = useIsDark();
 
   const colorMinutes = calcDayColorMinutes(day);
 
