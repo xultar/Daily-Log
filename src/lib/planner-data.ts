@@ -358,15 +358,15 @@ export const MINUTE_LABELS = [10, 20, 30, 40, 50, 60];
  * Index 0 = empty.
  */
 export const BLOCK_COLORS: readonly BlockColor[] = [
-  { id: 1, label: "Blue",     hsl: "213 60% 80%",  hslDark: "213 50% 40%" },
-  { id: 2, label: "Pink",     hsl: "340 55% 82%",  hslDark: "340 45% 42%" },
-  { id: 3, label: "Green",    hsl: "140 35% 75%",  hslDark: "140 30% 38%" },
-  { id: 4, label: "Lavender", hsl: "270 40% 80%",  hslDark: "270 35% 42%" },
-  { id: 5, label: "Orange",   hsl: "25 65% 78%",   hslDark: "25 55% 40%" },
-  { id: 6, label: "Gray",     hsl: "0 0% 78%",     hslDark: "0 0% 42%" },
-  { id: 7, label: "Yellow",   hsl: "50 70% 76%",   hslDark: "50 55% 38%" },
-  { id: 8, label: "Teal",     hsl: "178 40% 74%",  hslDark: "178 35% 36%" },
-  { id: 9, label: "Magenta",  hsl: "305 40% 80%",  hslDark: "305 35% 42%" },
+  { id: 1, label: "Blue",     hsl: "213 60% 80%",  hslDark: "213 60% 52%" },
+  { id: 2, label: "Pink",     hsl: "340 55% 82%",  hslDark: "340 55% 60%" },
+  { id: 3, label: "Green",    hsl: "140 35% 75%",  hslDark: "140 40% 42%" },
+  { id: 4, label: "Lavender", hsl: "270 40% 80%",  hslDark: "270 45% 64%" },
+  { id: 5, label: "Orange",   hsl: "25 65% 78%",   hslDark: "25 70% 50%" },
+  { id: 6, label: "Gray",     hsl: "0 0% 78%",     hslDark: "0 0% 46%" },
+  { id: 7, label: "Yellow",   hsl: "50 70% 76%",   hslDark: "50 70% 58%" },
+  { id: 8, label: "Teal",     hsl: "178 40% 74%",  hslDark: "178 45% 38%" },
+  { id: 9, label: "Magenta",  hsl: "305 40% 80%",  hslDark: "305 45% 56%" },
 ];
 
 /** Row wash opacity. Spec-fixed at 16%, tuned to stay legible across 42 weekly rows. */

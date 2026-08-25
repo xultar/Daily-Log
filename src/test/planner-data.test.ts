@@ -32,21 +32,30 @@ describe("BLOCK_COLORS", () => {
   // Adding a row at the END is the only safe edit — extend this table to match.
   it("pins every entry to its storage position", () => {
     expect(BLOCK_COLORS.map((c) => [c.id, c.label, c.hsl, c.hslDark])).toEqual([
-      [1, "Blue",     "213 60% 80%", "213 50% 40%"],
-      [2, "Pink",     "340 55% 82%", "340 45% 42%"],
-      [3, "Green",    "140 35% 75%", "140 30% 38%"],
-      [4, "Lavender", "270 40% 80%", "270 35% 42%"],
-      [5, "Orange",   "25 65% 78%",  "25 55% 40%"],
-      [6, "Gray",     "0 0% 78%",    "0 0% 42%"],
-      [7, "Yellow",   "50 70% 76%",  "50 55% 38%"],
-      [8, "Teal",     "178 40% 74%", "178 35% 36%"],
-      [9, "Magenta",  "305 40% 80%", "305 35% 42%"],
+      [1, "Blue",     "213 60% 80%", "213 60% 52%"],
+      [2, "Pink",     "340 55% 82%", "340 55% 60%"],
+      [3, "Green",    "140 35% 75%", "140 40% 42%"],
+      [4, "Lavender", "270 40% 80%", "270 45% 64%"],
+      [5, "Orange",   "25 65% 78%",  "25 70% 50%"],
+      [6, "Gray",     "0 0% 78%",    "0 0% 46%"],
+      [7, "Yellow",   "50 70% 76%",  "50 70% 58%"],
+      [8, "Teal",     "178 40% 74%", "178 45% 38%"],
+      [9, "Magenta",  "305 40% 80%", "305 45% 56%"],
     ]);
   });
 
   it("has no duplicate colors in either theme", () => {
     expect(new Set(BLOCK_COLORS.map((c) => c.hsl)).size).toBe(BLOCK_COLORS.length);
     expect(new Set(BLOCK_COLORS.map((c) => c.hslDark)).size).toBe(BLOCK_COLORS.length);
+  });
+
+  it("spreads the dark palette across lightness, not just hue", () => {
+    // Nine hues at one lightness are not separable at swatch size. This pins
+    // the property that motivated the re-tune so a later edit cannot quietly
+    // flatten them back.
+    const lightness = BLOCK_COLORS.map((c) => Number(c.hslDark.split(" ")[2].replace("%", "")));
+    const span = Math.max(...lightness) - Math.min(...lightness);
+    expect(span).toBeGreaterThan(20);
   });
 });
 
@@ -58,7 +67,7 @@ describe("getBlockColor", () => {
 
   it("resolves a storage id to its literal color", () => {
     expect(getBlockColor(1, false)).toBe("hsl(213 60% 80%)");
-    expect(getBlockColor(6, true)).toBe("hsl(0 0% 42%)");
+    expect(getBlockColor(6, true)).toBe("hsl(0 0% 46%)");
     expect(getBlockColor(7, false)).toBe("hsl(50 70% 76%)");
   });
 
