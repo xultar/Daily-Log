@@ -60,7 +60,7 @@ const SOURCE_MONDAY = "2026-08-17";
 
 function sourceWeek(): WeekData {
   const w = createEmptyWeek(new Date(2026, 7, 17));
-  w.weeklyTodos[0] = { text: "Book viva slot", checked: false };
+  w.weeklyTodos[0] = { text: "  Book viva slot  ", checked: false };
   w.weeklyTodos[1] = { text: "Return library books", checked: true };
   w.weeklyTodos[2] = { text: "   ", checked: false };
   w.days[1].subjects[0] = { subject: "Draft methods", checked: false, flagged: true, colorId: 3 };
@@ -99,6 +99,15 @@ describe("collectCarryForward", () => {
   it("returns nothing for an empty week", () => {
     expect(collectCarryForward(createEmptyWeek(MONDAY), SOURCE_MONDAY)).toEqual([]);
   });
+
+  it("does not mutate the source week", () => {
+    // Carrying copies, never moves: last week genuinely ended with these
+    // items unfinished, and this is the sentence the whole feature rests on.
+    const w = sourceWeek();
+    const before = JSON.stringify(w);
+    collectCarryForward(w, SOURCE_MONDAY);
+    expect(JSON.stringify(w)).toBe(before);
+  });
 });
 
 describe("applyCarryForward", () => {
@@ -133,6 +142,17 @@ describe("applyCarryForward", () => {
     target.weeklyTodos[0] = { text: "  Book viva slot  ", checked: false };
     const out = applyCarryForward(target, collectCarryForward(sourceWeek(), SOURCE_MONDAY));
     expect(out.weeklyTodos.filter((t) => t.text.trim() === "Book viva slot")).toHaveLength(1);
+  });
+
+  it("lands only one copy when two candidates share text", () => {
+    // Reachable in practice: a user can write "Draft methods" in Weekly
+    // Actions and also flag it on Tuesday, so collectCarryForward can emit
+    // two candidates with identical text from the same source week.
+    const w = createEmptyWeek(new Date(2026, 7, 17));
+    w.weeklyTodos[0] = { text: "Draft methods", checked: false };
+    w.days[1].subjects[0] = { subject: "Draft methods", checked: false, flagged: true };
+    const out = applyCarryForward(createEmptyWeek(MONDAY), collectCarryForward(w, SOURCE_MONDAY));
+    expect(out.weeklyTodos.filter((t) => t.text.trim() === "Draft methods")).toHaveLength(1);
   });
 
   it("does not mutate the target week", () => {

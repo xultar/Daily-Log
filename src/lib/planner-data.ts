@@ -211,8 +211,6 @@ export interface CarryCandidate {
   text: string;
   /** ISO Monday of the week this item was first written in. */
   origin: string;
-  /** Where it came from, so the bar can say so. */
-  source: "todo" | "priority";
 }
 
 /**
@@ -225,21 +223,25 @@ export interface CarryCandidate {
  *
  * Blank rows never carry — a default week is 8 empty todos and 42 empty
  * subject rows.
+ *
+ * `week` must already have been through `repairWeek` — this does not guard
+ * against missing arrays or non-string text.
  */
-export function collectCarryForward(source: WeekData, sourceMonday: string): CarryCandidate[] {
+export function collectCarryForward(week: WeekData, sourceMonday: string): CarryCandidate[] {
   const out: CarryCandidate[] = [];
-  const take = (text: string, checked: boolean, origin: string | undefined, from: "todo" | "priority") => {
-    if (checked || text.trim() === "") return;
+  const take = (text: string, checked: boolean, origin: string | undefined) => {
+    const trimmed = text.trim();
+    if (checked || trimmed === "") return;
     // An existing origin wins, so carrying twice reports two weeks rather than
     // resetting to one. This is what makes a repeated carry idempotent.
-    out.push({ text: text.trim(), origin: origin ?? sourceMonday, source: from });
+    out.push({ text: trimmed, origin: origin ?? sourceMonday });
   };
-  for (const todo of source.weeklyTodos ?? []) {
-    take(todo.text, todo.checked, todo.origin, "todo");
+  for (const todo of week.weeklyTodos) {
+    take(todo.text, todo.checked, todo.origin);
   }
-  for (const day of source.days ?? []) {
-    for (const row of day.subjects ?? []) {
-      if (row.flagged === true) take(row.subject, row.checked, row.origin, "priority");
+  for (const day of week.days) {
+    for (const row of day.subjects) {
+      if (row.flagged === true) take(row.subject, row.checked, row.origin);
     }
   }
   return out;
@@ -254,14 +256,22 @@ export function collectCarryForward(source: WeekData, sourceMonday: string): Car
  * A flagged daily row lands as a weekly action rather than on a day. A row that
  * failed to happen on Tuesday no longer belongs to a day, and re-pinning it to
  * one would be a guess. Its colorId does not survive — TodoItem has no colour.
+ *
+ * `chosen` is expected to come from an earlier week — `findCarrySource` only
+ * ever scans backwards, so each candidate's `origin` is a strictly earlier
+ * Monday — but this function has no way to enforce that itself.
+ *
+ * `target` must already have been through `repairWeek` — this does not guard
+ * against a missing `weeklyTodos` array.
  */
 export function applyCarryForward(target: WeekData, chosen: CarryCandidate[]): WeekData {
-  const todos = (target.weeklyTodos ?? []).map((t) => ({ ...t }));
+  const todos = target.weeklyTodos.map((t) => ({ ...t }));
   const present = new Set(todos.map((t) => t.text.trim()).filter((t) => t !== ""));
   for (const c of chosen) {
-    if (present.has(c.text)) continue;
-    present.add(c.text);
-    const landed = { text: c.text, checked: false, origin: c.origin };
+    const text = c.text.trim();
+    if (text === "" || present.has(text)) continue;
+    present.add(text);
+    const landed = { text, checked: false, origin: c.origin };
     // Fill a blank row before appending: a fresh week starts with 8 empty rows
     // and appending past them would leave the list front-loaded with blanks.
     const blank = todos.findIndex((t) => t.text.trim() === "");
