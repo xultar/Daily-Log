@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { readItem, writeItem } from "./storage";
+import { buildTagPaletteCss, buildThemeCss, installGeneratedCss } from "./tag-palette";
 import {
   ColorScheme,
   readColorScheme,
@@ -18,6 +19,20 @@ export interface PlannerTheme {
   campusGrid: string;
   campusFilled: string;
   accent: string;
+  /**
+   * The same seven values tuned for a dark ground. Every theme needs one:
+   * without it, switching to dark would leave headers, grid lines and filled
+   * cells showing their light pastels against a near-black background.
+   */
+  dark: {
+    primary: string;
+    primaryForeground: string;
+    campusBlue: string;
+    campusBlueDark: string;
+    campusGrid: string;
+    campusFilled: string;
+    accent: string;
+  };
 }
 
 export const THEMES: PlannerTheme[] = [
@@ -31,6 +46,11 @@ export const THEMES: PlannerTheme[] = [
     campusGrid: "214 30% 90%",
     campusFilled: "213 60% 80%",
     accent: "213 60% 87%",
+    dark: {
+      primary: "213 45% 32%", primaryForeground: "210 25% 92%",
+      campusBlue: "213 45% 32%", campusBlueDark: "213 50% 55%",
+      campusGrid: "217 22% 22%", campusFilled: "213 45% 38%", accent: "213 45% 32%",
+    },
   },
   {
     id: "sakura-pink",
@@ -42,6 +62,11 @@ export const THEMES: PlannerTheme[] = [
     campusGrid: "340 25% 92%",
     campusFilled: "340 55% 82%",
     accent: "340 60% 88%",
+    dark: {
+      primary: "340 40% 34%", primaryForeground: "340 25% 92%",
+      campusBlue: "340 40% 34%", campusBlueDark: "340 45% 58%",
+      campusGrid: "340 15% 22%", campusFilled: "340 40% 40%", accent: "340 40% 34%",
+    },
   },
   {
     id: "matcha-green",
@@ -53,6 +78,11 @@ export const THEMES: PlannerTheme[] = [
     campusGrid: "140 20% 90%",
     campusFilled: "140 35% 75%",
     accent: "140 35% 82%",
+    dark: {
+      primary: "140 30% 28%", primaryForeground: "140 20% 92%",
+      campusBlue: "140 30% 28%", campusBlueDark: "140 30% 48%",
+      campusGrid: "140 12% 21%", campusFilled: "140 30% 34%", accent: "140 30% 28%",
+    },
   },
   {
     id: "lavender",
@@ -64,6 +94,11 @@ export const THEMES: PlannerTheme[] = [
     campusGrid: "270 25% 92%",
     campusFilled: "270 40% 80%",
     accent: "270 45% 87%",
+    dark: {
+      primary: "270 35% 34%", primaryForeground: "270 20% 92%",
+      campusBlue: "270 35% 34%", campusBlueDark: "270 35% 56%",
+      campusGrid: "270 15% 22%", campusFilled: "270 35% 40%", accent: "270 35% 34%",
+    },
   },
   {
     id: "sunset-orange",
@@ -75,6 +110,11 @@ export const THEMES: PlannerTheme[] = [
     campusGrid: "25 30% 92%",
     campusFilled: "25 65% 78%",
     accent: "25 70% 85%",
+    dark: {
+      primary: "25 50% 32%", primaryForeground: "25 25% 92%",
+      campusBlue: "25 50% 32%", campusBlueDark: "25 55% 52%",
+      campusGrid: "25 18% 22%", campusFilled: "25 50% 38%", accent: "25 50% 32%",
+    },
   },
   {
     id: "monochrome",
@@ -86,6 +126,11 @@ export const THEMES: PlannerTheme[] = [
     campusGrid: "0 0% 92%",
     campusFilled: "0 0% 75%",
     accent: "0 0% 88%",
+    dark: {
+      primary: "0 0% 30%", primaryForeground: "0 0% 92%",
+      campusBlue: "0 0% 30%", campusBlueDark: "0 0% 52%",
+      campusGrid: "0 0% 21%", campusFilled: "0 0% 36%", accent: "0 0% 30%",
+    },
   },
 ];
 
@@ -139,17 +184,28 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return () => mql.removeEventListener("change", apply);
   }, [colorScheme]);
 
-  // Apply CSS variables
+  // One generated stylesheet holds the tag palette and the accent theme, both
+  // on the same three-block plan: :root light, .dark dark, @media print light.
+  //
+  // A stylesheet rather than root.style.setProperty, which is what this used to
+  // do. Inline styles on <html> outrank class rules, so the theme's light
+  // pastels would have clobbered .dark — dark mode would have applied to
+  // backgrounds but not to headers, grid lines or filled cells — and print
+  // could not override them without !important on every property.
   useEffect(() => {
-    const root = document.documentElement;
-    root.style.setProperty("--primary", theme.primary);
-    root.style.setProperty("--primary-foreground", theme.primaryForeground);
-    root.style.setProperty("--campus-blue", theme.campusBlue);
-    root.style.setProperty("--campus-blue-dark", theme.campusBlueDark);
-    root.style.setProperty("--campus-grid", theme.campusGrid);
-    root.style.setProperty("--campus-filled", theme.campusFilled);
-    root.style.setProperty("--accent", theme.accent);
-    root.style.setProperty("--accent-foreground", theme.primaryForeground);
+    const vars = (t: PlannerTheme | PlannerTheme["dark"]) => ({
+      "--primary": t.primary,
+      "--primary-foreground": t.primaryForeground,
+      "--campus-blue": t.campusBlue,
+      "--campus-blue-dark": t.campusBlueDark,
+      "--campus-grid": t.campusGrid,
+      "--campus-filled": t.campusFilled,
+      "--accent": t.accent,
+      "--accent-foreground": t.primaryForeground,
+    });
+    installGeneratedCss(
+      buildTagPaletteCss() + "\n" + buildThemeCss(vars(theme), vars(theme.dark))
+    );
   }, [theme]);
 
   return (
