@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import { saveWeek, createEmptyWeek } from "@/lib/planner-data";
 import { findCarrySource, isCurrentOrFutureWeek } from "@/lib/carry-forward";
 import { subWeeks, startOfWeek } from "date-fns";
@@ -56,6 +56,16 @@ describe("findCarrySource", () => {
     saveWeek(subWeeks(MONDAY, 1), createEmptyWeek(subWeeks(MONDAY, 1)));
     expect(findCarrySource(new Date(2026, 7, 27))!.monday).toBe("2026-08-17");
   });
+
+  it("never returns the week being viewed, only earlier ones", () => {
+    // The current week is almost always stored — the user is editing it — so a
+    // scan starting at back=0 would offer to carry a week's own items into
+    // itself.
+    const w = createEmptyWeek(MONDAY);
+    w.weeklyTodos[0] = { text: "This week's own work", checked: false };
+    saveWeek(MONDAY, w);
+    expect(findCarrySource(MONDAY)).toBeNull();
+  });
 });
 
 describe("isCurrentOrFutureWeek", () => {
@@ -73,5 +83,19 @@ describe("isCurrentOrFutureWeek", () => {
 
   it("accepts a future week", () => {
     expect(isCurrentOrFutureWeek(new Date(2099, 0, 5))).toBe(true);
+  });
+
+  it("puts the Sunday before a Monday in the previous week, not the current one", () => {
+    // The only day where Monday-based and Sunday-based week starts disagree.
+    // With the clock pinned, this keeps killing the mutant forever; keyed to
+    // the real date it would stop discriminating as soon as time moved on.
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 7, 25)); // Tue 25 Aug 2026
+    try {
+      expect(isCurrentOrFutureWeek(new Date(2026, 7, 23))).toBe(false); // Sun 23 Aug
+      expect(isCurrentOrFutureWeek(new Date(2026, 7, 24))).toBe(true); // Mon 24 Aug
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
