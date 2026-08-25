@@ -1,5 +1,10 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { HOUR_LABELS, BLOCK_COLORS, getBlockColor } from "@/lib/planner-data";
+import {
+  HOUR_LABELS,
+  getBlockColor,
+  getPaletteInDisplayOrder,
+  colorIdForDisplayPosition,
+} from "@/lib/planner-data";
 
 interface TimeGridProps {
   timeBlocks: number[][];
@@ -84,14 +89,14 @@ const TimeGrid: React.FC<TimeGridProps> = ({
     return () => window.removeEventListener("click", close);
   }, [contextMenu]);
 
-  // Keyboard shortcuts 1-6 to change active color
+  // Number keys select by display position, not storage id
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
       if (target.tagName === "INPUT" || target.tagName === "TEXTAREA") return;
-      const num = parseInt(e.key);
-      if (num >= 1 && num <= 6) {
-        setActiveColor(num);
+      const colorId = colorIdForDisplayPosition(parseInt(e.key));
+      if (colorId !== null) {
+        setActiveColor(colorId);
       }
     };
     window.addEventListener("keydown", handler);
@@ -151,15 +156,15 @@ const TimeGrid: React.FC<TimeGridProps> = ({
           style={{ left: contextMenu.x, top: contextMenu.y }}
           onClick={(e) => e.stopPropagation()}
         >
-          {BLOCK_COLORS.map((c) => (
+          {getPaletteInDisplayOrder().map((c, index) => (
             <button
               key={c.id}
               className="w-6 h-6 rounded-sm border border-border/50 hover:scale-110 transition-transform flex items-center justify-center text-[9px] font-bold"
               style={{ backgroundColor: `hsl(${isDark ? c.hslDark : c.hsl})` }}
-              title={`${c.label} (${c.id})`}
+              title={`${c.label} (${index + 1})`}
               onClick={() => pickColor(c.id)}
             >
-              {c.id}
+              {index + 1}
             </button>
           ))}
           <button
