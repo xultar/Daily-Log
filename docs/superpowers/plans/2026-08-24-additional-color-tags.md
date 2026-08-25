@@ -517,8 +517,11 @@ Confirm each of these:
    degrades silently rather than crashing.
 5. Right-clicking a block shows ten buttons — nine numbered swatches plus clear.
 6. Reload the page. Painted blocks keep their colors and typed labels persist.
+7. Press `Ctrl+9` (or `Cmd+9` on macOS), then `Ctrl+7`. Neither may change the active color. These are browser tab shortcuts, and `e.key` is `"9"` whether or not a modifier is held, so without the modifier guard they silently arm gray and yellow.
+8. Switch to the weekly view and right-click a block in the rightmost day column, hard against the viewport edge. All ten buttons must be reachable, including the clear button, which renders last and is the first to be stranded if the menu overflows.
+9. Open the toolbar dropdown menu and press `9` while it is focused. The paint color must not change. The dropdown's focused element is a `div` with `role="menuitem"`, which the old tagName-only guard let through.
 
-Point 6 is the one that matters most. It is the check that the storage id split did not corrupt anything.
+Point 6 is the one that matters most. It is the check that the storage id split did not corrupt anything. Points 7 through 9 cover hardening added during code review, none of which the earlier checks would catch.
 
 - [ ] **Step 6: Verify against a pre-existing week**
 
