@@ -100,6 +100,16 @@ describe("collectCarryForward", () => {
     expect(collectCarryForward(createEmptyWeek(MONDAY), SOURCE_MONDAY)).toEqual([]);
   });
 
+  it("offers the same text only once, however many rows carry it", () => {
+    // applyCarryForward would land only one either way, so no data was at risk.
+    // But the bar counts what it is handed: without deduping here it lists the
+    // item twice and offers to "Bring 2 forward" while bringing one.
+    const w = createEmptyWeek(new Date(2026, 7, 17));
+    w.weeklyTodos[0] = { text: "Draft methods", checked: false };
+    w.days[1].subjects[0] = { subject: "  Draft methods  ", checked: false, flagged: true };
+    expect(collectCarryForward(w, SOURCE_MONDAY).filter((c) => c.text === "Draft methods")).toHaveLength(1);
+  });
+
   it("does not mutate the source week", () => {
     // Carrying copies, never moves: last week genuinely ended with these
     // items unfinished, and this is the sentence the whole feature rests on.

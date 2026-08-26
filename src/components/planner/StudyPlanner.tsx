@@ -168,6 +168,7 @@ const StudyPlanner: React.FC = () => {
   };
 
   const dates = getWeekDates(currentDate);
+  const mondayISO = format(dates[0], "yyyy-MM-dd");
   // Both memos recompute on every weekData change, which includes every
   // painted block, memo/priority edit, and goal/review keystroke — they do
   // not save the drag-paint walk. What they save is re-running the ~798-cell
@@ -292,11 +293,20 @@ const StudyPlanner: React.FC = () => {
           The tests that would actually catch it are the navigating ones in
           carry-bar.test.tsx — autosave.test.tsx and pending-save.test.tsx seed
           no prior week, so no bar renders there and their indices are safe. */}
-      {viewMode !== "monthly" && !weekData.carryResolved && candidates.length > 0 && (
+      {/* Weekly view only. The items land in the Weekly Actions sidebar, which
+          the day view does not show — pressing Bring there would make the bar
+          vanish with nothing visibly happening, and carryResolved would then
+          stop it reappearing in the week view. */}
+      {viewMode === "weekly" && !weekData.carryResolved && candidates.length > 0 && (
         <CarryForwardBar
-          key={format(dates[0], "yyyy-MM-dd")}
+          // Keyed so the bar remounts whenever its candidate list can change.
+          // Its tick state is by array position, so a reused mount would leave
+          // an outstanding untick glued to the index rather than the item.
+          // refreshKey belongs here too: an import changes the candidates
+          // without changing the Monday.
+          key={`${mondayISO}:${refreshKey}`}
           candidates={candidates}
-          mondayISO={format(dates[0], "yyyy-MM-dd")}
+          mondayISO={mondayISO}
           onBring={bringForward}
           onDismiss={dismissCarry}
         />
@@ -320,7 +330,7 @@ const StudyPlanner: React.FC = () => {
           <div className="flex flex-1 overflow-hidden min-h-0">
             <WeeklyTodoSidebar
               todos={weekData.weeklyTodos}
-              mondayISO={format(dates[0], "yyyy-MM-dd")}
+              mondayISO={mondayISO}
               onChange={updateTodos}
             />
             <div className="flex flex-1 min-w-0 h-full overflow-x-auto">

@@ -107,6 +107,12 @@
      unlayered styles beat layered ones regardless of specificity. */
   :root {
     color-scheme: light;
+    /* --destructive is not part of the generated theme sheet, so it has no
+       print reset of its own. The carry marker's 3w+ rule is the only printed
+       use of it in the app, and without this a dark-mode user prints that rule
+       in the dark variant — the same class of bug the tag palette's print
+       block exists to prevent. */
+    --destructive: 0 84.2% 60.2%;
   }
   .no-print {
     display: none !important;

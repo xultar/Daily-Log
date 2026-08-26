@@ -229,9 +229,16 @@ export interface CarryCandidate {
  */
 export function collectCarryForward(week: WeekData, sourceMonday: string): CarryCandidate[] {
   const out: CarryCandidate[] = [];
+  // Deduped here, not only at landing. The same text can arrive twice — once as
+  // a weekly action, once as a flagged daily row — and applyCarryForward would
+  // still land only one. But the bar counts what it is given, so without this
+  // it lists the item twice and offers to "Bring 2 forward" while bringing one.
+  // No data was ever at risk; the count was simply lying to the user.
+  const seen = new Set<string>();
   const take = (text: string, checked: boolean, origin: string | undefined) => {
     const trimmed = text.trim();
-    if (checked || trimmed === "") return;
+    if (checked || trimmed === "" || seen.has(trimmed)) return;
+    seen.add(trimmed);
     // An existing origin wins, so carrying twice reports two weeks rather than
     // resetting to one. This is what makes a repeated carry idempotent.
     out.push({ text: trimmed, origin: origin ?? sourceMonday });

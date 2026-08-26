@@ -362,4 +362,14 @@ describe("StudyPlanner carry-forward", () => {
     fireEvent.click(screen.getByRole("button", { name: /month/i }));
     expect(screen.queryByText(/unfinished from last week/)).toBeNull();
   });
+
+  it("hides the bar in the day view, where the items would land off screen", () => {
+    // The Weekly Actions sidebar is not rendered in the day view, so pressing
+    // Bring there would make the bar vanish with nothing visibly happening —
+    // and carryResolved would then stop it reappearing in the week view.
+    seedLastWeekWithUnfinishedWork();
+    render(<StudyPlanner />);
+    fireEvent.click(screen.getByRole("button", { name: /^day$/i }));
+    expect(screen.queryByText(/unfinished from last week/)).toBeNull();
+  });
 });
