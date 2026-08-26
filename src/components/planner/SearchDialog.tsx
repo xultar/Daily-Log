@@ -11,6 +11,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { SearchField, SearchMatch, searchWeeks } from "@/lib/search";
+import TagHistoryPanel from "./TagHistoryPanel";
 
 /** What a result row calls the field it matched. */
 const FIELD_LABEL: Record<SearchField, string> = {
@@ -45,12 +46,13 @@ const dayName = (monday: string, dayIndex: number) =>
 const SearchDialog: React.FC<{ onJump: (monday: string) => void }> = ({ onJump }) => {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const [mode, setMode] = useState<"text" | "tag">("text");
 
   // Recomputed when the dialog opens as well as on every keystroke: weeks may
   // have changed since it was last closed, including from another tab.
   const matches = useMemo<SearchMatch[]>(
-    () => (open ? searchWeeks(query) : []),
-    [query, open]
+    () => (open && mode === "text" ? searchWeeks(query) : []),
+    [query, open, mode]
   );
 
   const jump = (monday: string) => {
@@ -70,49 +72,77 @@ const SearchDialog: React.FC<{ onJump: (monday: string) => void }> = ({ onJump }
       </DialogTrigger>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle className="text-sm">Search all weeks</DialogTitle>
+          <DialogTitle className="text-sm">Find</DialogTitle>
           <DialogDescription className="text-xs">
-            Goals, reviews, weekly actions, priorities and memos.
+            {mode === "text"
+              ? "Goals, reviews, weekly actions, priorities and memos."
+              : "When you last used a tag, and every time before that."}
           </DialogDescription>
         </DialogHeader>
 
-        <input
-          type="text"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          aria-label="Search all weeks"
-          placeholder="Search…"
-          autoFocus
-          className="w-full text-sm bg-transparent border border-border rounded-md px-2 py-1.5 outline-none text-foreground placeholder:text-muted-foreground/50"
-        />
-
-        <div className="max-h-80 overflow-y-auto -mx-1 px-1">
-          {tooShort ? (
-            <p className="text-xs text-muted-foreground py-2">
-              Type at least two characters.
-            </p>
-          ) : matches.length === 0 ? (
-            <p className="text-xs text-muted-foreground py-2">No matches.</p>
-          ) : (
-            <ul className="flex flex-col gap-0.5">
-              {matches.map((m, i) => (
-                <li key={`${m.weekKey}-${m.field}-${m.dayIndex ?? ""}-${i}`}>
-                  <button
-                    type="button"
-                    onClick={() => jump(m.monday)}
-                    className="w-full text-left px-2 py-1.5 rounded hover:bg-muted/50 transition-colors"
-                  >
-                    <span className="block text-sm text-foreground">{m.snippet}</span>
-                    <span className="block text-[10px] text-muted-foreground">
-                      {weekLabel(m.monday)} · {FIELD_LABEL[m.field]}
-                      {m.dayIndex === undefined ? "" : ` · ${dayName(m.monday, m.dayIndex)}`}
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
+        {/* aria-pressed rather than a tabs primitive: two options, and this is
+            the idiom the legend cell already uses for an armed state. */}
+        <div className="flex gap-1">
+          {(["text", "tag"] as const).map((m) => (
+            <button
+              key={m}
+              type="button"
+              aria-pressed={mode === m}
+              onClick={() => setMode(m)}
+              className={`px-2 py-1 rounded border text-[11px] transition-colors ${
+                mode === m
+                  ? "border-foreground/40 bg-muted/60 text-foreground"
+                  : "border-border text-muted-foreground hover:bg-muted/40"
+              }`}
+            >
+              {m === "text" ? "Text" : "Tag"}
+            </button>
+          ))}
         </div>
+
+        {mode === "text" ? (
+          <>
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              aria-label="Search all weeks"
+              placeholder="Search…"
+              autoFocus
+              className="w-full text-sm bg-transparent border border-border rounded-md px-2 py-1.5 outline-none text-foreground placeholder:text-muted-foreground/50"
+            />
+
+            <div className="max-h-80 overflow-y-auto -mx-1 px-1">
+              {tooShort ? (
+                <p className="text-xs text-muted-foreground py-2">
+                  Type at least two characters.
+                </p>
+              ) : matches.length === 0 ? (
+                <p className="text-xs text-muted-foreground py-2">No matches.</p>
+              ) : (
+                <ul className="flex flex-col gap-0.5">
+                  {matches.map((m, i) => (
+                    <li key={`${m.weekKey}-${m.field}-${m.dayIndex ?? ""}-${i}`}>
+                      <button
+                        type="button"
+                        onClick={() => jump(m.monday)}
+                        className="w-full text-left px-2 py-1.5 rounded hover:bg-muted/50 transition-colors"
+                      >
+                        <span className="block text-sm text-foreground">{m.snippet}</span>
+                        <span className="block text-[10px] text-muted-foreground">
+                          {weekLabel(m.monday)} · {FIELD_LABEL[m.field]}
+                          {m.dayIndex === undefined ? "" : ` · ${dayName(m.monday, m.dayIndex)}`}
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </>
+        ) : (
+          <TagHistoryPanel onJump={jump} />
+        )}
       </DialogContent>
     </Dialog>
   );
