@@ -67,6 +67,31 @@ describe("the age marker", () => {
     expect(hidden).toContain("1w");
   });
 
+  it("places the age marker after the row's text, never before it", () => {
+    // Every other test here asks whether the marker renders, never where. So
+    // moving the block above the text input leaves all of them green while
+    // shoving each row's text sideways in a 128px column — and it moves the
+    // announcement too, to "carried 1 week Slipped once".
+    //
+    // Pinned as indices within the row rather than by class, because the
+    // position is what matters and the classes are already pinned elsewhere.
+    const { container } = setup();
+    const row = [...container.querySelectorAll(".group")][1]; // "Slipped once"
+    const children = [...row.children];
+    const at = (el: Element | null) => children.indexOf(el as Element);
+
+    const text = row.querySelector('input[type="text"]');
+    const remove = row.querySelector("button");
+    const token = [...row.querySelectorAll('[aria-hidden="true"]')][0];
+    const spoken = row.querySelector(".sr-only");
+
+    expect(at(text)).toBeGreaterThanOrEqual(0);
+    expect(at(token)).toBeGreaterThan(at(text));
+    expect(at(spoken)).toBeGreaterThan(at(text));
+    expect(at(token)).toBeLessThan(at(remove));
+    expect(at(spoken)).toBeLessThan(at(remove));
+  });
+
   it("thickens the rule with age and caps it at three weeks", () => {
     // Token-exact, not substring: CLAUDE.md records that border-border/50
     // contains the characters border-b, so a substring check discriminates
