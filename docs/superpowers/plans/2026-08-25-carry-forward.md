@@ -1444,6 +1444,26 @@ describe("the age marker", () => {
     fireEvent.click(screen.getAllByRole("checkbox")[2]);
     expect(onChange.mock.calls[0][0][2].origin).toBe("2026-08-03");
   });
+
+  it("measures age against the week being viewed, not a fixed date", () => {
+    // A component ignoring the prop would pass every other test here.
+    render(<WeeklyTodoSidebar todos={TODOS} mondayISO="2026-08-31" onChange={vi.fn()} />);
+    expect(screen.getByText("2w")).toBeInTheDocument();
+    expect(screen.getByText("4w")).toBeInTheDocument();
+  });
+
+  it("announces the age as words, not as 3w", () => {
+    setup();
+    expect(screen.getByText("carried 3 weeks")).toBeInTheDocument();
+    expect(screen.getByText("carried 1 week")).toBeInTheDocument();
+  });
+
+  it("hides the short token from screen readers, so it is not read as 'one w'", () => {
+    const { container } = setup();
+    const hidden = [...container.querySelectorAll('[aria-hidden="true"]')].map((e) => e.textContent);
+    expect(hidden).toContain("3w");
+    expect(hidden).toContain("1w");
+  });
 });
 ```
 
@@ -1491,11 +1511,16 @@ Add the age label immediately after the text `<input>` and before the remove `<b
 
 ```tsx
             {age > 0 && (
-              <span className="text-[7px] text-muted-foreground shrink-0 tabular-nums" title={`Carried forward ${age} week${age === 1 ? "" : "s"}`}>
-                {age}w
-              </span>
+              <>
+                <span aria-hidden="true" className="text-[7px] text-muted-foreground shrink-0 tabular-nums">
+                  {age}w
+                </span>
+                <span className="sr-only">carried {age} week{age === 1 ? "" : "s"}</span>
+              </>
             )}
 ```
+
+Same shape as `CarryForwardBar` uses: the short token is decorative, and the phrase beside it is what gets announced. Without the `aria-hidden` the age is read twice — once as "one w" and once as "carried 1 week" — which is worse than either alone.
 
 Close the map with `);})}` instead of `))}`.
 
@@ -1508,7 +1533,22 @@ Close the map with `);})}` instead of `))}`.
             : `${RULE_WIDTH[Math.min(age, 3)]} ${age > 2 ? "border-l-destructive/70" : "border-l-campus-blue-dark"}`;
 ```
 
-Use this second form. The first is shown only to name the trap: a class assembled at runtime is invisible to Tailwind's scanner and silently produces no CSS.
+Use this second form. The first is shown only to name the trap: a class assembled at runtime is invisible to Tailwind's scanner and silently produces no CSS. **`npm run build` is the check that catches it** — grep the built stylesheet for `border-left-width:6px` to confirm the arbitrary value survived.
+
+**Pin the thickness cap and the colour threshold with token-exact class assertions.** They are the two design decisions this task encodes, and without tests both `Math.min(age, 3) → Math.min(age, 2)` and `age > 2 → age > 3` pass the whole suite. The house rule bans **computed-style** assertions — jsdom v20's `cssstyle` predates CSS Color 4, so those read empty — but class tokens are the established idiom; `src/test/legend-borders.test.tsx` pins the colour legend the same way.
+
+Assert on the **token array, not the string**. CLAUDE.md records why: `border-border/50` contains the characters `border-b`, so `toContain` on a className discriminates nothing.
+
+```tsx
+    const tokens = (row: Element) => row.className.split(/\s+/);
+    // fixture ages against 2026-08-24: 0, 1, 2 and 5 weeks
+    expect(tokens(rows[0])).toContain("border-l-transparent");
+    expect(tokens(rows[1])).toContain("border-l-2");
+    expect(tokens(rows[2])).toContain("border-l-4");
+    expect(tokens(rows[3])).toContain("border-l-[6px]");        // capped at three
+    expect(tokens(rows[2])).toContain("border-l-campus-blue-dark");
+    expect(tokens(rows[3])).toContain("border-l-destructive/70"); // warning past two weeks
+```
 
 - [ ] **Step 4: Pass the prop from StudyPlanner**
 
@@ -1521,7 +1561,7 @@ In `src/components/planner/StudyPlanner.tsx`, find the `<WeeklyTodoSidebar` usag
 - [ ] **Step 5: Run the tests and verify they pass**
 
 Run: `npx vitest run src/test/carry-marker.test.tsx`
-Expected: PASS, 4 tests.
+Expected: PASS, 9 tests.
 
 - [ ] **Step 6: Commit**
 
@@ -1537,7 +1577,7 @@ git commit -m "Show how many weeks an action has been slipping"
 - [ ] **Step 1: Run the whole suite**
 
 Run: `npm test`
-Expected: PASS. The count rises from 186 by the tests added here — 8 schema, 24 rules, 16 source, 30 bar, 4 marker.
+Expected: PASS. The count rises from 186 by the tests added here — 8 schema, 24 rules, 16 source, 30 bar, 9 marker.
 
 - [ ] **Step 2: Lint**
 
