@@ -1,6 +1,7 @@
 import React from "react";
 import { TodoItem, carriedWeeks } from "@/lib/planner-data";
 import { Plus } from "lucide-react";
+import AgeMarker from "./AgeMarker";
 
 interface WeeklyTodoSidebarProps {
   todos: TodoItem[];
@@ -57,14 +58,7 @@ const WeeklyTodoSidebar: React.FC<WeeklyTodoSidebarProps> = ({ todos, mondayISO,
               className={`flex-1 text-[9px] px-1 py-[3px] bg-transparent border-none outline-none min-w-0 text-foreground placeholder:text-muted-foreground/50 ${todo.checked ? "line-through text-muted-foreground" : ""}`}
               placeholder="—"
             />
-            {age > 0 && (
-              <>
-                <span aria-hidden="true" className="text-[7px] text-muted-foreground shrink-0 tabular-nums">
-                  {age}w
-                </span>
-                <span className="sr-only">carried {age} week{age === 1 ? "" : "s"}</span>
-              </>
-            )}
+            <AgeMarker age={age} className="text-[7px] text-muted-foreground shrink-0 tabular-nums" />
             <button
               onClick={() => removeTodo(idx)}
               className="opacity-0 group-hover:opacity-50 hover:!opacity-100 text-[8px] text-muted-foreground px-0.5 transition-opacity"
