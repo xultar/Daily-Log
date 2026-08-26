@@ -9,7 +9,9 @@ import {
   isSameMonth,
   getISOWeek,
 } from "date-fns";
-import { loadWeek, calcDayTotal, getWeekKey, getWeekDates, dominantTag, getBlockTint, tintAlpha, loadColorLabels, BLOCK_COLORS } from "@/lib/planner-data";
+import { useTheme } from "@/lib/theme-context";
+import { resolveScheme, prefersDark } from "@/lib/color-scheme";
+import { loadWeek, calcDayTotal, getWeekKey, getWeekDates, dominantTag, getBlockTint, tintAlpha, WASH_CEILING_DARK, WASH_CEILING_LIGHT, loadColorLabels, BLOCK_COLORS } from "@/lib/planner-data";
 
 interface MonthlyViewProps {
   currentDate: Date;
@@ -51,6 +53,19 @@ const MonthlyView: React.FC<MonthlyViewProps> = ({ currentDate, onSelectDay }) =
     return day ? dominantTag(day) : null;
   };
 
+  // How strong the wash may get depends on the theme, and by a lot: dark caps
+  // at 0.45 because the tags are lighter than the page and drag the cell toward
+  // the colour of its own text, while light clears WCAG AA at any alpha. Both
+  // numbers, and why they differ, live on the constants.
+  //
+  // Read through the context rather than the `.dark` class so this is not
+  // reaching into the DOM during render, and recomputed on every render so a
+  // system theme change — which re-renders the provider — is picked up.
+  const { colorScheme } = useTheme();
+  const washCeiling = resolveScheme(colorScheme, prefersDark())
+    ? WASH_CEILING_DARK
+    : WASH_CEILING_LIGHT;
+
   // Read once per mount, as WeeklyColorLegend does and for the same reason:
   // loadColorLabels hits localStorage, and StudyPlanner renders the month
   // branch conditionally rather than keeping it mounted and hidden, so
@@ -87,7 +102,7 @@ const MonthlyView: React.FC<MonthlyViewProps> = ({ currentDate, onSelectDay }) =
             // Hue says what the day was spent on, strength says how much. A ten
             // minute day is a hint; four hours is unmistakable.
             const tag = getDayDominantTag(date);
-            const tint = tag === null ? null : getBlockTint(tag, tintAlpha(mins));
+            const tint = tag === null ? null : getBlockTint(tag, tintAlpha(mins, washCeiling));
             const tagName = tag === null ? null : labels[tag] || BLOCK_COLORS[tag - 1]?.label;
 
             return (

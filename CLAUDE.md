@@ -236,22 +236,30 @@ Consequences:
 ## The month view's wash has a measured ceiling
 
 A month cell tints with its dominant tag — hue for what, alpha for how much —
-and `tintAlpha` caps that alpha at **0.45**. That number is a contrast limit,
-not a preference.
+and `tintAlpha` takes the ceiling as an argument because **the two themes have
+different limits, and by a lot**: `WASH_CEILING_DARK` is 0.45,
+`WASH_CEILING_LIGHT` is 0.75. These are contrast limits, not preferences.
 
 The cell carries text over the wash. In dark mode the tags are lighter than the
 page, so a strong wash drags the cell toward the colour of its own text.
 Measured against `--foreground`: yellow crosses WCAG AA's 4.5:1 at alpha 0.45,
-the other eleven tags between 0.65 and 0.70. Light mode is safe at any alpha,
-because the tags are pastel and the text is near-black. **Dark is the binding
-constraint for both**, which is the opposite of the palette's own legibility,
-where light is the tight one.
+the other eleven tags between 0.65 and 0.70. In light mode the tags are pastel
+and the text is near-black, so every tag clears 4.5:1 at *full* opacity; 0.75 is
+chosen for looks with margin to spare, and measures 7.99:1 at its worst.
 
-It shipped at 0.75 for about ten minutes, which put the minutes text at 1.65:1
-on a yellow day — perfectly legible in a screenshot and not legible in use. If
-you raise the ceiling, measure it; the eye passes this and the numbers do not.
-Light mode still has headroom if the wash is ever wanted bolder there, but that
-needs a per-theme alpha rather than one constant.
+**This is the opposite way round from the palette's own legibility**, where
+light is the tight theme because pastels crowd together. The same twelve colours
+have opposite worst cases depending on whether the question is "can I tell these
+apart" or "can I read text on this". Do not carry one conclusion into the other.
+
+The dark ceiling shipped at 0.75 for about ten minutes, which put the minutes
+text at 1.65:1 on a yellow day — perfectly legible in a screenshot and not
+legible in use. If you move either ceiling, measure it; the eye passes this and
+the numbers do not.
+
+`MonthlyView` resolves the theme through `useTheme` and `resolveScheme` rather
+than reading the `.dark` class, so it is not touching the DOM during render, and
+a system theme change re-renders the provider and is picked up.
 
 **The tag's name is in the cell for a reason.** Colour alone is the one encoding
 this palette is measured to be unable to carry, and a mono print turns every
@@ -711,7 +719,7 @@ the tab would lose it with no trace — worse than the problem being solved.
 
 ## Baselines
 
-- `npm test` — 378 tests across 36 files. `vitest.config.ts` sets
+- `npm test` — 379 tests across 36 files. `vitest.config.ts` sets
   `testTimeout: 15000` against a 5s default, and that is load-bearing: several
   tests render the whole app and click through it, sitting at 3-4s alone. Under
   full-suite contention they cross 5s — `today.test.tsx` timed out at 5597ms on
