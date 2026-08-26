@@ -59,4 +59,57 @@ describe("the age marker", () => {
     expect(screen.getByText("carried 3 weeks")).toBeInTheDocument();
     expect(screen.getByText("carried 1 week")).toBeInTheDocument();
   });
+
+  it("hides the short token from screen readers, so it is not read as 'one w'", () => {
+    const { container } = setup();
+    const hidden = [...container.querySelectorAll('[aria-hidden="true"]')].map((e) => e.textContent);
+    expect(hidden).toContain("3w");
+    expect(hidden).toContain("1w");
+  });
+
+  it("thickens the rule with age and caps it at three weeks", () => {
+    // Token-exact, not substring: CLAUDE.md records that border-border/50
+    // contains the characters border-b, so a substring check discriminates
+    // nothing. legend-borders.test.tsx pins classes the same way.
+    const { container } = render(
+      <WeeklyTodoSidebar
+        todos={[
+          { text: "Fresh", checked: false },
+          { text: "One week", checked: false, origin: "2026-08-17" },
+          { text: "Two weeks", checked: false, origin: "2026-08-10" },
+          { text: "Five weeks", checked: false, origin: "2026-07-20" },
+        ]}
+        mondayISO="2026-08-24"
+        onChange={vi.fn()}
+      />
+    );
+    const tokens = (row: Element) => row.className.split(/\s+/);
+    const rows = [...container.querySelectorAll(".group")];
+    expect(rows).toHaveLength(4);
+    expect(tokens(rows[0])).toContain("border-l-transparent");
+    expect(tokens(rows[1])).toContain("border-l-2");
+    expect(tokens(rows[2])).toContain("border-l-4");
+    expect(tokens(rows[3])).toContain("border-l-[6px]"); // five weeks, capped at three
+  });
+
+  it("switches the rule to the warning colour past two weeks", () => {
+    // A third item at exactly three weeks pins the boundary itself: at two
+    // weeks it must still read as the calm colour, and at three it must not.
+    const { container } = render(
+      <WeeklyTodoSidebar
+        todos={[
+          { text: "Fresh", checked: false },
+          { text: "Two weeks", checked: false, origin: "2026-08-10" },
+          { text: "Three weeks", checked: false, origin: "2026-08-03" },
+        ]}
+        mondayISO="2026-08-24"
+        onChange={vi.fn()}
+      />
+    );
+    const tokens = (row: Element) => row.className.split(/\s+/);
+    const rows = [...container.querySelectorAll(".group")];
+    expect(rows).toHaveLength(3);
+    expect(tokens(rows[1])).toContain("border-l-campus-blue-dark");
+    expect(tokens(rows[2])).toContain("border-l-destructive/70");
+  });
 });
