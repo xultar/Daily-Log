@@ -22,19 +22,56 @@ the page renders blank.
 week-key migration, the export fix, the error boundary, import validation,
 storage guards and the autosave flush.
 
-On 2026-08-25 three things merged into `main` and **deployed**: the priority
-flag branch, dark mode with the print fix, and a follow-up making native
-widgets follow the colour scheme. The live site was confirmed serving them.
+Everything below merged into `main` and **deployed on 2026-08-25**: the priority
+flag, dark mode with the print fix, native widgets following the colour scheme,
+and the whole of carry-forward. There is no unmerged work.
 
-**`carry-forward` is built and unmerged.** The branch carries all eight tasks
-of the carry-forward feature — schema, rules, the backwards scan, the review
-bar, the `StudyPlanner` wiring and the sidebar age marker — verified in tests
-and seen working in a browser on 2026-08-25, in both light and dark. Spec and plan are in
-`docs/superpowers/`. Merging is the user's call.
+Carry-forward shipped as eight tasks — schema, rules, the backwards scan, the
+review bar, the `StudyPlanner` wiring, the sidebar age marker — verified by
+tests and seen working in a browser in both light and dark. Spec and plan are in
+`docs/superpowers/`.
 
-Still open and untouched: the two-tab overwrite, the `<input>` inside
-`<button>` in the daily legend, and the cold-run timeout flake in
-`startup-migration.test.tsx`.
+## Pick up here next
+
+Nothing is half-finished, so any of these can start cold. Roughly by value.
+
+**Carry-forward polish, deliberately deferred.** All found by the final review,
+none blocking, all small:
+
+- The review bar has no height cap. Up to 8 weekly actions plus 42 flagged rows
+  can be candidates, and on a 100vh flex layout a big list squeezes the grid.
+  `max-h-24 overflow-y-auto` on the rows container in `CarryForwardBar.tsx`.
+- The age marker's **position within the row** is unpinned. Moving it from after
+  the text input to before it leaves the whole suite green, while shoving every
+  row's text sideways in a 128px column. Needs an ordering assertion.
+- The **quarantine write is untested**. `findCarrySource` → `loadWeek` can write
+  `daily-log-unreadable-<key>` when a prior week holds corrupt JSON. It is safe
+  and documented, and it is the one write the carry path can trigger, so it
+  deserves a test.
+- The age marker's JSX is **duplicated** between `CarryForwardBar.tsx` and
+  `WeeklyTodoSidebar.tsx` — same `aria-hidden` token, same `sr-only` phrase,
+  different classes. A shared `AgeMarker` would stop the two drifting; both call
+  sites already have tests that would keep it honest.
+
+**Two tabs still overwrite each other.** Nothing listens for the `storage`
+event, and every edit serialises the whole week from in-memory state, so a
+second tab holding a stale copy reverts the first tab's work on its next
+keystroke. Last writer wins, silently. Fixing it means reloading on `storage` or
+merging per field; neither is obviously right for a planner normally open once.
+This is the largest remaining correctness gap.
+
+**The `<input>` inside `<button>`** in the daily legend is invalid HTML and
+blocks "edit colour labels from the weekly strip", which would replicate it into
+a second place. Do the restructure first.
+
+**The cold-run test flake.** `startup-migration.test.tsx` renders the whole app
+and can cross Vitest's default 5s timeout on a cold run — it will bite on a cold
+CI runner, which is what deploys. A `testTimeout` bump in `vitest.config.ts` is
+probably all it needs.
+
+**If you want a feature rather than a cleanup**, `Discussed but not started`
+below still holds; search across weeks is the most-wanted and the data access is
+already solved by `exportAllData`.
 
 ## The one rule that can corrupt user data
 
