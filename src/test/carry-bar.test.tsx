@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, fireEvent, cleanup, act } from "@testing-library/react";
+import { render, screen, fireEvent, cleanup, act, within } from "@testing-library/react";
 import CarryForwardBar from "@/components/planner/CarryForwardBar";
 import { CarryCandidate, saveWeek, createEmptyWeek, loadWeek } from "@/lib/planner-data";
 import { startOfWeek, subWeeks } from "date-fns";
@@ -286,6 +286,46 @@ describe("StudyPlanner carry-forward", () => {
     fireEvent.click(container.querySelectorAll("button")[0]);
     fireEvent.click(container.querySelectorAll("button")[0]);
     expect(screen.queryByText(/unfinished from last week/)).toBeNull();
+  });
+
+  it("does not offer the bar on a past week even when there is work behind it", () => {
+    // The two-weeks-back test above is green for the wrong reason: from there,
+    // findCarrySource's backward scan never reaches the seeded week, so it
+    // would pass with the isCurrentOrFutureWeek guard deleted. This puts the
+    // work exactly one week behind the week being viewed, so only the guard
+    // can hide the bar.
+    const twoBack = subWeeks(thisMonday(), 2);
+    const w = createEmptyWeek(twoBack);
+    w.weeklyTodos[0] = { text: "Older unfinished work", checked: false };
+    saveWeek(twoBack, w);
+    const { container } = render(<StudyPlanner />);
+    fireEvent.click(container.querySelectorAll("button")[0]); // back one week
+    expect(screen.queryByText(/unfinished from last week/)).toBeNull();
+  });
+
+  it("resets the tick state when navigating to a week with its own candidates", async () => {
+    // Without the remount key, unticking a row here would stay glued to
+    // position 0 when the bar's candidates prop changes underneath it for the
+    // next week, rather than resetting to the fresh-review default of
+    // "everything ticked".
+    seedLastWeekWithUnfinishedWork(); // gives this week a candidate: "Book viva slot"
+    const current = createEmptyWeek(thisMonday());
+    // This week's own unfinished item becomes next week's candidate.
+    current.weeklyTodos[0] = { text: "Draft methods", checked: false };
+    saveWeek(thisMonday(), current);
+
+    const { container } = render(<StudyPlanner />);
+    // Scoped to the bar's own group: WeeklyTodoSidebar renders checkboxes too.
+    const firstGroup = screen.getByRole("group", { name: /unfinished from last week/ });
+    // Untick the only candidate in this week's bar, without pressing Bring.
+    fireEvent.click(within(firstGroup).getByRole("checkbox"));
+    fireEvent.click(container.querySelectorAll("button")[1]); // next week
+    await settle();
+
+    expect(screen.getByText("Draft methods")).toBeInTheDocument();
+    const nextGroup = screen.getByRole("group", { name: /unfinished from last week/ });
+    const boxes = within(nextGroup).getAllByRole("checkbox");
+    expect(boxes.every((b) => (b as HTMLInputElement).checked)).toBe(true);
   });
 
   it("hides the bar in the month view", () => {
