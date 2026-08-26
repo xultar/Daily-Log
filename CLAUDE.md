@@ -53,12 +53,21 @@ none blocking, all small:
   different classes. A shared `AgeMarker` would stop the two drifting; both call
   sites already have tests that would keep it honest.
 
-**Two tabs still overwrite each other.** Nothing listens for the `storage`
-event, and every edit serialises the whole week from in-memory state, so a
-second tab holding a stale copy reverts the first tab's work on its next
-keystroke. Last writer wins, silently. Fixing it means reloading on `storage` or
-merging per field; neither is obviously right for a planner normally open once.
-This is the largest remaining correctness gap.
+**Two tabs overwriting each other — designed, planned, being built.** Nothing
+listens for the `storage` event, so a second tab holding a stale copy reverts
+the first tab's work on its next keystroke, silently. This is the largest
+remaining correctness gap and it is no longer an open question:
+
+- Spec: `docs/superpowers/specs/2026-08-25-cross-tab-safety-design.md`
+- Plan: `docs/superpowers/plans/2026-08-25-cross-tab-safety.md`
+
+A clean tab reloads silently; a tab that has edited the week keeps its work and
+says so. Two traps are written up in both documents and are invisible in the
+code: bumping `refreshKey` is **not** a reload on its own, because the load
+effect flushes the pending write first and would send the stale copy over the
+other tab's work; and `dirtyRef` means *edited since loaded*, not *unsaved*, so
+a tab whose write already landed is still the tab whose work may have just been
+overwritten.
 
 **The `<input>` inside `<button>`** in the daily legend is invalid HTML and
 blocks "edit colour labels from the weekly strip", which would replicate it into
