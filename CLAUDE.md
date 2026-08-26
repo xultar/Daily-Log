@@ -81,31 +81,128 @@ or cancelled run in this repo does not always say so.
 ## Pick up here next
 
 Nothing is half-finished and there are no known defects outstanding. What is
-left is new functionality: least specified, most free, and each needs a design
-pass before code — see the working rhythm below.
+left is new functionality. Each item below carries what it needs to start cold.
 
-- **Duplicate a day, or template a week.** The natural follow-on from
-  carry-forward, and the other copy-shaped idea: recurring schedules get retyped
-  every week. Much of the machinery already exists — `applyCarryForward` is a
-  worked example of copying into a week without mutating the source, and the
-  `origin` field shows how to mark where something came from. The design
-  questions are what a template *is* (a named saved week? last week? a specific
-  week you point at?), whether it copies time blocks as well as text, and what
-  happens to a day that already has content.
-- **Find when you last used a tag.** Came out of the search design on
-  2026-08-26 and is deliberately not part of it: it is a different query.
-  Text search reads prose and answers with passages; this reads `timeBlocks`
-  and tagged rows and answers with dates. "When did I last work on Thesis"
-  became a real question the moment tags had names. The text-search result list
-  should be built so a tag filter can slot in beside it.
-- **Trends across months.** Time reporting shipped for a single month; what is
-  still missing is the shape over a year — a row per tag per month, so Thesis
-  rising and Admin falling is visible. `totalsByTag` takes a date range, so the
-  data side is a loop over months rather than new logic. It is the drawing that
-  is the work.
-- **Edit colour labels from the weekly strip.** No longer blocked: the daily
-  legend now splits arming and renaming into sibling controls, so the strip has
-  a correct pattern to copy rather than a mistake to replicate.
+### Starting a session here
+
+1. **Confirm the tree before changing it.** `npm test` should be 394 across 38
+   files, `npm run lint` 0 errors and 10 pre-existing warnings, `npm run build`
+   clean. If any of those differ, find out why before writing anything.
+2. **Read the section that governs what you are about to touch.** "The one rule
+   that can corrupt user data" before anything with colours. "A stored week is
+   repaired, never replaced" and "Nothing calls localStorage directly" before
+   anything with storage. "The colour tags are the user's goals" before deciding
+   a tag name is decoration.
+3. **Design before code, and write it down.** Brainstorm the open questions with
+   the user, put the agreed design in
+   `docs/superpowers/specs/YYYY-MM-DD-<topic>-design.md`, commit it, then build.
+   Larger pieces also get a task-by-task plan in `docs/superpowers/plans/`.
+4. **TDD, then mutation-test, then look at it in a browser.** Write the failing
+   test first. Then break the line each test defends and confirm *that* test
+   fails. Then check the thing in the app, because jsdom sees no colour and no
+   layout.
+5. **Work on a branch.** Pushing `main` deploys, and the deploy is gated on
+   `npm test`. Merging is the user's call.
+
+### 1. Duplicate a day, or template a week
+
+Recurring schedules get retyped every week. This is the other copy-shaped idea,
+and the natural follow-on from carry-forward.
+
+**Already there:** `applyCarryForward` in `planner-data.ts` is a worked example
+of copying into a week without mutating the source. The `origin` field shows how
+to mark where a copied item came from. `loadWeek`/`saveWeek` handle the storage.
+
+**Open questions:** What a template *is* — a named saved week, last week, or one
+you point at? Does it copy `timeBlocks` as well as text? What happens to a day
+that already has content: merge, replace, or refuse? Does a templated item carry
+an `origin`, and if so, of what?
+
+**Traps:** Copying must never mutate the source — carry-forward's first rule,
+and it exists because last week genuinely ended the way it ended. Writing into a
+week you are *not* currently viewing needs the state updater form; see
+"`bringForward` must keep the updater form", where closing over `weekData`
+wrote one week's contents under another week's key and the whole suite passed.
+
+**Copy from:** `docs/superpowers/specs/2026-08-25-carry-forward-design.md`.
+
+### 2. Find when you last used a tag
+
+"When did I last work on Thesis." Since the tags are the user's goals, this is
+really "when did I last touch this goal". Deliberately excluded from text
+search, which reads prose and answers with passages; this reads `timeBlocks` and
+answers with dates.
+
+**Already there:** `loadAllWeeks` enumerates every stored week. `totalsByTag` in
+`reporting.ts` already walks every day in a range and reads its grid — the same
+traversal, keeping different bookkeeping. `searchWeeks` and `SearchDialog` are
+the result-list-and-jump pattern, including the rule that a click lands on the
+week view.
+
+**Open questions:** Does it live beside text search in the same dialog as a
+filter, or get its own surface? Does it answer "last used" with one date, or
+"every use" with a list? Does it count tagged priority rows
+(`SubjectRow.colorId`) as well as painted blocks — they are both "used this tag",
+and only one of them is time.
+
+**Traps:** Weeks from `loadAllWeeks` are **unrepaired**; defend every field
+access. A result's Monday comes from the entry key, not from the day dates — see
+"Search reads raw, and navigates by key", which explains why that is the
+opposite of the filing rule and deliberately so. Storage id, never display
+position.
+
+**Copy from:** `src/lib/search.ts` and `src/components/planner/SearchDialog.tsx`.
+
+### 3. Trends across months
+
+Time reporting shipped for one month. What is missing is the shape over a year —
+Thesis rising, Admin falling.
+
+**Already there:** `totalsByTag(from, to)` takes a range, so the data layer is a
+loop over months and no new logic. `TimeByTag.tsx` is the drawing idiom —
+swatch, name, proportional bar, total. `formatMinutes` and `getBlockColor` do
+the formatting and the fill.
+
+**Open questions:** Where does it live? The month view is already long, so this
+may want its own surface. How many months, and chosen how? How is it drawn — a
+stacked bar per month, or a line per tag? What does a month with no data look
+like?
+
+**Traps:** **Do not reach for `recharts` without measuring** — see "Not charting
+with recharts". It is in `package.json`, contributes zero bytes today, and costs
++103 kB gzipped the moment anything imports it. Twelve series is also a lot of
+lines, and several pairs of tags are indistinguishable under colourblindness, so
+any chart needs names rather than colour alone.
+
+**Copy from:** `src/components/planner/TimeByTag.tsx`.
+
+### 4. Edit colour labels from the weekly strip
+
+Rename a tag without going to the day view. No longer blocked: the daily legend
+now has the correct structure to copy rather than a mistake to replicate.
+
+**Already there:** The daily legend cell is the pattern — a plain container
+holding a button that arms the colour and a sibling input that renames it, with
+`aria-pressed` and the key hint in the button's accessible name.
+`src/test/legend-cell.test.tsx` includes the structural assertion that no cell
+nests one interactive element inside another.
+
+**Open questions:** The weekly strip is a horizontal scroller with far less room
+per entry than the daily grid's 100px cells. An always-visible text field may
+simply not fit, so this may want a different affordance *despite* the daily
+view's answer — do not assume the daily solution transfers.
+
+**Traps:** Never nest an `<input>` inside a `<button>`; that defect was removed
+on 2026-08-26 and the test above exists to stop it returning.
+`WeeklyColorLegend` reads labels once per mount with a `useMemo`, which is
+deliberate and carries a comment explaining when it would go stale — making the
+strip editable changes that calculus, so read it first. Do not add
+`role="menu"`, `role="dialog"` or `role="listbox"` to anything in the strip:
+`TimeGrid`'s keydown guard tests for exactly those and would silently disable
+the 1-9 paint shortcuts while focus sits inside.
+
+**Copy from:** the legend cell in `src/components/planner/DailyView.tsx` and
+`docs/superpowers/specs/2026-08-26-legend-cell-a11y-design.md`.
 
 ### The working rhythm in this repo
 
