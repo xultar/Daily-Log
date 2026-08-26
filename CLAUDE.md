@@ -33,41 +33,91 @@ tests and seen working in a browser in both light and dark. Spec and plan are in
 
 ## Pick up here next
 
-Nothing is half-finished, so any of these can start cold. Roughly by value.
+Nothing is half-finished. Every item below can start cold, and they are grouped
+in the order they are wanted: finish the copy feature, clear the small polish,
+then add new functions.
 
-**Carry-forward polish, deliberately deferred.** All found by the final review,
-none blocking, all small:
+### 1. Finish the copy feature (carry-forward)
 
-- The review bar has no height cap. Up to 8 weekly actions plus 42 flagged rows
-  can be candidates, and on a 100vh flex layout a big list squeezes the grid.
-  `max-h-24 overflow-y-auto` on the rows container in `CarryForwardBar.tsx`.
-- The age marker's **position within the row** is unpinned. Moving it from after
-  the text input to before it leaves the whole suite green, while shoving every
-  row's text sideways in a 128px column. Needs an ordering assertion.
-- The **quarantine write is untested**. `findCarrySource` → `loadWeek` can write
-  `daily-log-unreadable-<key>` when a prior week holds corrupt JSON. It is safe
-  and documented, and it is the one write the carry path can trigger, so it
-  deserves a test.
-- The age marker's JSX is **duplicated** between `CarryForwardBar.tsx` and
-  `WeeklyTodoSidebar.tsx` — same `aria-hidden` token, same `sr-only` phrase,
-  different classes. A shared `AgeMarker` would stop the two drifting; both call
-  sites already have tests that would keep it honest.
+Carry-forward works and is deployed. These four came out of its final review as
+non-blocking, and they are what "finishing" it means. All small; any one is a
+sensible single sitting.
 
-**Two tabs overwriting each other is fixed** — see the section below. The
-remaining polish items are the four carry-forward ones above.
+- **Cap the review bar's height.** `CarryForwardBar.tsx` renders the rows in a
+  `flex-wrap` list with no bound, and the bar is `shrink-0` in a `h-screen`
+  column — so a week where you flagged a lot of rows squeezes the grid. Up to 8
+  weekly actions plus 42 flagged daily rows can be candidates.
+  `max-h-24 overflow-y-auto` on the rows container. Add a test with ~20
+  candidates so the bound is pinned, not just applied.
+- **Pin the age marker's position in the row.** In `WeeklyTodoSidebar.tsx` the
+  `{age > 0 && …}` block sits after the text input. Moving it before the input
+  leaves all 297 tests green while shoving every row's text sideways in a 128px
+  column. Needs an ordering assertion — `compareDocumentPosition`, or an index
+  check within the row's children.
+- **Test the quarantine write.** `findCarrySource` → `loadWeek` writes
+  `daily-log-unreadable-<key>` when a prior week holds corrupt JSON. It is
+  correct and documented, and it is the *only* write the carry path can trigger,
+  so it should not be the one thing untested. Write junk to a prior week's key,
+  mount, assert the quarantine key appears and the original is untouched.
+- **Extract a shared `AgeMarker`.** The `aria-hidden` token plus `sr-only`
+  phrase is duplicated between `CarryForwardBar.tsx` and
+  `WeeklyTodoSidebar.tsx` — same logic, same pluralisation, different classes.
+  Both call sites already have tests that would keep the extraction honest.
+  Take the class names as a prop; do not try to unify the styling.
 
-**The `<input>` inside `<button>`** in the daily legend is invalid HTML and
-blocks "edit colour labels from the weekly strip", which would replicate it into
-a second place. Do the restructure first.
+### 2. The other small polish
 
-**The cold-run test flake.** `startup-migration.test.tsx` renders the whole app
-and can cross Vitest's default 5s timeout on a cold run — it will bite on a cold
-CI runner, which is what deploys. A `testTimeout` bump in `vitest.config.ts` is
-probably all it needs.
+- **The `<input>` inside `<button>`** in the daily legend is invalid HTML, and
+  assistive tech commonly prunes children of `role="button"`, which can make the
+  label field unreachable. The `stopPropagation` on that input is what holds it
+  together for mouse users. **This blocks "edit colour labels from the weekly
+  strip"**, which would replicate the same mistake in a second place — so do
+  this first if that feature is wanted. Needs a real restructure, not a patch.
+- **The cold-run test flake.** `startup-migration.test.tsx` renders the whole
+  app through the router and can cross Vitest's default 5s timeout on a cold
+  run; it passes warm. It will bite on a cold CI runner, which is what deploys.
+  A `testTimeout` bump in `vitest.config.ts` is probably the whole fix. Do not
+  change what the test asserts — the week-key migration it pins is load-bearing.
 
-**If you want a feature rather than a cleanup**, `Discussed but not started`
-below still holds; search across weeks is the most-wanted and the data access is
-already solved by `exportAllData`.
+### 3. New functions
+
+Least specified, most freedom. Each needs a design pass before code — see the
+working rhythm below.
+
+- **Duplicate a day, or template a week.** The natural follow-on from
+  carry-forward, and the other copy-shaped idea: recurring schedules get retyped
+  every week. Much of the machinery already exists — `applyCarryForward` is a
+  worked example of copying into a week without mutating the source, and the
+  `origin` field shows how to mark where something came from. The design
+  questions are what a template *is* (a named saved week? last week? a specific
+  week you point at?), whether it copies time blocks as well as text, and what
+  happens to a day that already has content.
+- **Search across weeks.** The most-wanted of the older backlog. `exportAllData`
+  already enumerates every stored week, so the data access is solved and this is
+  mostly UI plus a result-to-week jump.
+- **Colour in the month view.** A month cell shows total minutes and an
+  intensity shade — how much, never what. `calcDayColorMinutes` already exists.
+- **Trends over time.** `recharts` is a dependency and entirely unused.
+  Per-colour minutes per week across a term is the natural payoff for all this
+  logging.
+- **Edit colour labels from the weekly strip.** Blocked on the a11y restructure
+  above; doing it naively replicates the `<input>`-inside-`<button>` problem.
+
+### The working rhythm in this repo
+
+Design before code, and write both down. `docs/superpowers/specs/` holds
+approved designs, `docs/superpowers/plans/` the task-by-task plans. Several
+specs record decisions that were reversed after review — read the spec before
+changing behaviour it describes.
+
+Two habits earned their keep repeatedly and are worth keeping:
+
+- **Mutation-test the tests.** Break the line the test claims to defend and
+  check that test actually fails. This repeatedly caught tests that were green
+  for a reason unrelated to their own name — including one that passed because
+  its fixture was outside the code path entirely.
+- **Verify the mutation applied.** A mutation that silently fails to apply and a
+  mutation that survives look identical in the output. Check the file changed.
 
 ## The one rule that can corrupt user data
 
@@ -535,7 +585,7 @@ specified; each needs a design pass before any code.
 
 - **Search across weeks.** Months of memos and priorities are reachable only by
   clicking week by week. `exportAllData` already enumerates every stored week, so
-  the data access is solved and this is mostly UI.
+  the data access is solved and this is mostly UI. See "Pick up here next".
 - **Colour in the month view.** A month cell shows total minutes and an intensity
   shade, so it says how much but never what. `calcDayColorMinutes` already
   exists. The weekly-legend spec listed this out of scope at the time; worth
@@ -545,7 +595,7 @@ specified; each needs a design pass before any code.
 - **Edit colour labels from the weekly strip.** Small on the surface, but doing it
   naively replicates the `<input>` inside `<button>` problem into a second place.
   Do the a11y restructure first.
-- **Duplicate a day, or template a week.** Recurring schedules get retyped weekly.
+- **Duplicate a day, or template a week.** Written up under "Pick up here next".
 
 Deliberately not doing: **cloud sync or accounts.** The localStorage-only design
 is why this repo can be public with no user data in it, and why there is no
