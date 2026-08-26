@@ -118,6 +118,43 @@ entries by shape rather than by the `planner-` prefix, which is what stopped
 settings being treated as weeks. `exportAllData` was rewritten onto it when
 search arrived rather than letting a third hand-written copy of that loop exist.
 
+## Tag history shows the day and navigates by the key
+
+`tagHistory` is the first caller to need both date rules at once, and they are
+opposites. A row **displays** `day.date`, because the date is the fact and that
+is the question being answered. It **navigates** by `mondayOfKey(weekKey)`,
+because `loadWeek` is key-addressed and that is the only Monday that opens the
+week the row came from. `mondayOfKey` moved out of `search.ts` into
+`planner-data.ts` so it could sit beside `weekKeyForStoredWeek`, the rule it is
+the opposite of.
+
+Transposing those two fields is invisible to every test where the key and the
+dates agree, which is most of them. The test that catches it stores a week
+filed under `2026-W29` carrying August dates and asserts the row says 24 August
+and goes to 13 July. Mutation-checked: swapping the fields kills that test and
+two others, and leaves the happy-path ones green.
+
+**A day with no readable date is skipped**, which is a deliberate divergence
+from search. A week too damaged to state its dates stays searchable, because a
+text match can navigate by key alone. It has no tag history, because here the
+answer *is* a date and that week cannot supply one.
+
+**The unit is a day within a stored week, not a calendar date.** Two stored
+weeks carrying the same date give two rows, ordered by week key descending.
+Merging them would add minutes belonging to two different weeks and then have
+to pick one of the two to navigate to, making the row untrue either way.
+
+**Blocked time and tagged priority rows are both uses, and are never added.**
+`minutes` and `onPriorities` are separate fields for the same reason the month
+report says "blocked" rather than "spent": a priority row is intent, not time.
+A priority-only day reads "on priorities" rather than `0m`, which would be a lie
+about the time rather than a statement about the day.
+
+`totalsByTag` and `tagHistory` read through one `eachStoredDay` iterator in
+`reporting.ts`, which is where the unrepaired-week defending now lives. That
+extraction was made safe by leaving `reporting.test.ts` untouched: if it had
+changed behaviour, those eight tests would have said so.
+
 ## A crash must not take the data with it
 
 `ErrorBoundary` wraps everything in `App.tsx`, **outside** the providers —

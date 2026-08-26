@@ -81,7 +81,7 @@ or cancelled run in this repo does not always say so.
 ## Pick up here next — the backlog
 
 **This section is the backlog.** If you were asked for "the backlog", "what's
-next", "the todo list" or "outstanding work", it is the four numbered items
+next", "the todo list" or "outstanding work", it is the three numbered items
 below and there is no other list. One other paragraph in this file mentions a
 backlog being retired; that refers to a duplicate of this one that was deleted
 on 2026-08-26, not to this.
@@ -132,34 +132,7 @@ wrote one week's contents under another week's key and the whole suite passed.
 
 **Copy from:** `docs/superpowers/specs/2026-08-25-carry-forward-design.md`.
 
-### 2. Find when you last used a tag
-
-"When did I last work on Thesis." Since the tags are the user's goals, this is
-really "when did I last touch this goal". Deliberately excluded from text
-search, which reads prose and answers with passages; this reads `timeBlocks` and
-answers with dates.
-
-**Already there:** `loadAllWeeks` enumerates every stored week. `totalsByTag` in
-`reporting.ts` already walks every day in a range and reads its grid — the same
-traversal, keeping different bookkeeping. `searchWeeks` and `SearchDialog` are
-the result-list-and-jump pattern, including the rule that a click lands on the
-week view.
-
-**Open questions:** Does it live beside text search in the same dialog as a
-filter, or get its own surface? Does it answer "last used" with one date, or
-"every use" with a list? Does it count tagged priority rows
-(`SubjectRow.colorId`) as well as painted blocks — they are both "used this tag",
-and only one of them is time.
-
-**Traps:** Weeks from `loadAllWeeks` are **unrepaired**; defend every field
-access. A result's Monday comes from the entry key, not from the day dates — see
-"Search reads raw, and navigates by key" in `docs/design-notes.md`, which explains why that is the
-opposite of the filing rule and deliberately so. Storage id, never display
-position.
-
-**Copy from:** `src/lib/search.ts` and `src/components/planner/SearchDialog.tsx`.
-
-### 3. Trends across months
+### 2. Trends across months
 
 Time reporting shipped for one month. What is missing is the shape over a year —
 Thesis rising, Admin falling.
@@ -181,7 +154,7 @@ any chart needs names rather than colour alone.
 
 **Copy from:** `src/components/planner/TimeByTag.tsx`.
 
-### 4. Edit colour labels from the weekly strip
+### 3. Edit colour labels from the weekly strip
 
 Rename a tag without going to the day view. No longer blocked: the daily legend
 now has the correct structure to copy rather than a mistake to replicate.
@@ -383,6 +356,11 @@ Read the matching note before changing anything in that area.
 - **Search reads unrepaired weeks**, so every field access defends itself, and a
   result's Monday comes from the **entry key**, not the day dates — the opposite
   of the filing rule, and deliberately so.
+- **Tag history shows the day but navigates by the key.** It needs both date
+  rules at once — `day.date` for the label, `mondayOfKey` for the click — and
+  transposing them is invisible unless the key and the dates disagree. Blocked
+  time and tagged priority rows are both uses and are never added together.
+  `totalsByTag` and `tagHistory` share one `eachStoredDay` iterator.
 - **A crash must not take the data with it.** `ErrorBoundary` wraps everything
   *outside* the providers, because `ThemeProvider` reads storage while
   rendering. Its fallback offers a backup download; that is not decoration.
@@ -512,7 +490,7 @@ rather than dropping it.
 
 ## Baselines
 
-- `npm test` — 394 tests across 38 files. `vitest.config.ts` sets
+- `npm test` — 411 tests across 40 files. `vitest.config.ts` sets
   `testTimeout: 15000` against a 5s default, and that is load-bearing: several
   tests render the whole app and click through it, sitting at 3-4s alone. Under
   full-suite contention they cross 5s — `today.test.tsx` timed out at 5597ms on
