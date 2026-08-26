@@ -143,9 +143,15 @@ positively; `DailyView` adds the class when the field is true.
 It lives in `planner-data.ts` beside `getPaletteInDisplayOrder`, which is the
 other function that exists solely to present the palette.
 
-The existing rendering tests stay, re-pointed at the new cell markup; new unit
-tests exercise the function at odd and even counts without depending on the live
-palette's length.
+The cell markup itself does not change here — that belongs to the separate
+accessibility restructure — so the rendering tests keep their selector. Two of
+them are nonetheless written for an odd palette and must be reworked before the
+palette grows: one asserts that every cell but the last carries a bottom border,
+which is false once two cells share the final row.
+
+New unit tests exercise the function at odd and even counts with literal
+expectations. They must not recompute the formula the implementation uses: a
+test that mirrors the arithmetic agrees with it even when it is wrong.
 
 ## Print
 
@@ -199,6 +205,22 @@ line, which reads "Press 1-9 to switch color", to name the new key.
   does not repaint.
 - `legendCellBorders` at an odd count and an even count, covering the lone-cell
   case the live palette no longer produces.
+
+Three existing tests encode a nine-entry palette and fail when it grows. All
+three are correct to exist and none is deleted:
+
+- `planner-data.test.ts` "has nine entries" — a tripwire, so that growing the
+  palette is a deliberate act with a diff attached. The number and the test's
+  name both change.
+- `planner-data.test.ts` "shows gray last" — its intent is deliberately
+  reversed. Gray now sits mid-list again, because the alternative moves it to
+  position 12 and makes the 9 key select red. Positions 1-9 are frozen.
+- `week-repair.test.ts` "clears block values that are not a real colour" — feeds
+  the repairer a 10 as a value past the end of the palette. At twelve colours 10
+  is a valid red block, so the repairer rightly keeps it. **Widening the palette
+  changes what counts as damage.** The fixture becomes `BLOCK_COLORS.length + 1`,
+  the convention `planner-data.test.ts` already uses, so it cannot go stale
+  again.
 - Every new test is mutation-tested: break the line it defends and confirm that
   test, and not merely some test, fails.
 
