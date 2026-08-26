@@ -318,7 +318,11 @@ const StudyPlanner: React.FC = () => {
       {viewMode === "weekly" && (
         <div className="flex flex-col flex-1 overflow-hidden border-t border-border min-h-0">
           <div className="flex flex-1 overflow-hidden min-h-0">
-            <WeeklyTodoSidebar todos={weekData.weeklyTodos} onChange={updateTodos} />
+            <WeeklyTodoSidebar
+              todos={weekData.weeklyTodos}
+              mondayISO={format(dates[0], "yyyy-MM-dd")}
+              onChange={updateTodos}
+            />
             <div className="flex flex-1 min-w-0 h-full overflow-x-auto">
               {visibleDays.map((day, i) => (
                 <div key={day.date} className="flex-1 min-w-[100px] h-full">
