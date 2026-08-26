@@ -6,8 +6,18 @@ Status: approved
 ## Summary
 
 Totals per tag over a date range, drawn as horizontal bars under the month
-calendar. The month view already shows which days went to what; this says how
+calendar. The month view already shows which days carry which tag; this says how
 much.
+
+**It reports blocked time, forwards as well as back.** The purpose is to see
+whether time lines up with goals and projects — which is a question asked about
+next month as often as last month. The aggregate reads a date range and neither
+knows nor cares which side of today it falls on, so navigating to a future month
+reports the plan rather than the record, with no extra code.
+
+That is also a limit worth stating: **the app cannot tell a plan from a record.**
+A painted block is a painted block. So the wording is "blocked", never "spent"
+or "went" — past tense would be wrong half the time.
 
 ## Motivation
 

@@ -68,6 +68,8 @@ Shipped on **2026-08-26**, all merged, pushed and confirmed live:
   and the label write moved off mount.
 - Text search across every stored week, from a dialog in the toolbar.
 - Colour in the month view: each cell tints with its dominant tag and names it.
+- Time reporting: bars under the month calendar showing time blocked per tag,
+  which read a future month as a plan.
 
 There is no unmerged work and nothing waiting to deploy.
 
@@ -96,11 +98,11 @@ pass before code — see the working rhythm below.
   and tagged rows and answers with dates. "When did I last work on Thesis"
   became a real question the moment tags had names. The text-search result list
   should be built so a tag filter can slot in beside it.
-- **Time reporting: how much went where.** The other half of the same thought,
-  and the point of logging any of this. `calcWeekColorMinutes` already totals a
-  week by storage id; what is missing is the same across a term, and a way to
-  see it. `recharts` is a dependency and has never been imported. Twelve
-  labelled tags and a measured palette make a chart legend worth reading now.
+- **Trends across months.** Time reporting shipped for a single month; what is
+  still missing is the shape over a year — a row per tag per month, so Thesis
+  rising and Admin falling is visible. `totalsByTag` takes a date range, so the
+  data side is a loop over months rather than new logic. It is the drawing that
+  is the work.
 - **Edit colour labels from the weekly strip.** No longer blocked: the daily
   legend now splits arming and renaming into sibling controls, so the strip has
   a correct pattern to copy rather than a mistake to replicate.
@@ -232,6 +234,50 @@ Consequences:
   `timeBlocks`, which persists and then fails silently in both directions —
   `getBlockColor(null)` returns null so the block looks unpainted, and
   `calcDayTotal`'s truthiness check skips it so the totals look right.
+
+## Time reporting reports blocked time, not spent time
+
+`totalsByTag(from, to)` sums painted blocks per tag over a date range, and the
+month view draws it as bars under the calendar.
+
+**It neither knows nor cares which side of today the range falls on.** Navigate
+to next month and the same bars report the plan. That is half the point of
+having it — the question "does my time match my goals" is asked forwards as
+often as back.
+
+Which makes the wording load-bearing: **the app cannot tell a plan from a
+record.** A painted block is a painted block. The heading says "Time blocked by
+tag", never "spent" or "went", because past tense would be wrong half the time.
+
+**The range is a parameter, not a month.** Which span to show is the caller's
+decision, so changing it later is an argument rather than a rewrite. That was
+deliberate: the range was chosen before there was a month of real data to look
+at, and this is what makes being wrong cheap.
+
+Aggregation is **per day, not per week**, which is the only reason an arbitrary
+range works — a week straddles a month boundary and a day does not. A day is in
+range when its own `date` says so, never by the week key it was filed under.
+
+Weeks arrive unrepaired from `loadAllWeeks`, so every field access defends
+itself, exactly as search does. The test feeds it a week damaged several ways at
+once; note that `timeBlocks: "not a grid"` is a **weaker fixture than it looks**,
+because a string is iterable and `for...of` walks its characters harmlessly.
+Mutation testing caught that: the guard survived until the fixture used a number.
+
+## Not charting with recharts
+
+`recharts` is in `package.json`, is 5.2 MB installed, and contributes **zero
+bytes** to the bundle. The only file importing it is `src/components/ui/chart.tsx`,
+which nothing imports, so Vite shakes the whole thing out.
+
+Measured before deciding: importing it takes the bundle from 453 kB to 826 kB,
+and 139 kB to 241 kB gzipped — a 74% increase. The hand-drawn bars cost 0.5 kB
+gzipped.
+
+**"It is already a dependency" is true of the lockfile and false of the
+bundle**, and the two look identical from `package.json`. If a future chart
+wants axes, tooltips, zoom or real time series, recharts earns its weight — but
+measure the bundle before and after rather than assuming it is already paid for.
 
 ## The month view's wash has a measured ceiling
 
@@ -719,7 +765,7 @@ the tab would lose it with no trace — worse than the problem being solved.
 
 ## Baselines
 
-- `npm test` — 379 tests across 36 files. `vitest.config.ts` sets
+- `npm test` — 394 tests across 38 files. `vitest.config.ts` sets
   `testTimeout: 15000` against a 5s default, and that is load-bearing: several
   tests render the whole app and click through it, sitting at 3-4s alone. Under
   full-suite contention they cross 5s — `today.test.tsx` timed out at 5597ms on

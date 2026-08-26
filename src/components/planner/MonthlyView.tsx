@@ -9,6 +9,7 @@ import {
   isSameMonth,
   getISOWeek,
 } from "date-fns";
+import TimeByTag from "./TimeByTag";
 import { useTheme } from "@/lib/theme-context";
 import { resolveScheme, prefersDark } from "@/lib/color-scheme";
 import { loadWeek, calcDayTotal, getWeekKey, getWeekDates, dominantTag, getBlockTint, tintAlpha, WASH_CEILING_DARK, WASH_CEILING_LIGHT, loadColorLabels, BLOCK_COLORS } from "@/lib/planner-data";
@@ -141,6 +142,11 @@ const MonthlyView: React.FC<MonthlyViewProps> = ({ currentDate, onSelectDay }) =
           })
         )}
       </div>
+
+      {/* Under the calendar, not in a dialog: the cells say which days carry
+          which tag, and this says how much. Reads a future month as a plan,
+          because a painted block is a painted block. */}
+      <TimeByTag from={monthStart} to={monthEnd} />
 
       <p className="no-print text-[10px] text-muted-foreground text-center mt-2">
         Click on a day to switch to daily view
