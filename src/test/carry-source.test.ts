@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { saveWeek, createEmptyWeek } from "@/lib/planner-data";
+import { saveWeek, createEmptyWeek, getWeekKey } from "@/lib/planner-data";
 import { findCarrySource, isCurrentOrFutureWeek } from "@/lib/carry-source";
 import { subWeeks, startOfWeek } from "date-fns";
 
@@ -70,6 +70,30 @@ describe("findCarrySource", () => {
   it("still reaches a week exactly four back", () => {
     saveWeek(subWeeks(MONDAY, 4), createEmptyWeek(subWeeks(MONDAY, 4)));
     expect(findCarrySource(MONDAY)!.monday).toBe("2026-07-27");
+  });
+
+  it("quarantines an unreadable prior week, and writes nothing else", () => {
+    // loadWeek's quarantine is the only write this scan can trigger, and the
+    // scan runs on mount — so it is the one write that happens to a user who
+    // has done nothing but open the app. week-repair.test.ts pins the
+    // quarantine itself; this pins that the carry path reaches it, and that
+    // the raw text survives at both keys rather than being consumed.
+    const prior = subWeeks(MONDAY, 1);
+    const priorKey = `planner-${getWeekKey(prior)}`;
+    const parked = `daily-log-unreadable-${getWeekKey(prior)}`;
+    localStorage.setItem(priorKey, "{ not json");
+
+    const source = findCarrySource(MONDAY);
+
+    // The corrupt week is still the source; it reads as empty, so nothing
+    // carries and the bar stays down.
+    expect(source!.monday).toBe("2026-08-17");
+    expect(source!.week.weeklyTodos.every((t) => t.text === "")).toBe(true);
+
+    expect(localStorage.getItem(parked)).toBe("{ not json");
+    expect(localStorage.getItem(priorKey)).toBe("{ not json");
+    // Exhaustive: any other key here would be a week written by a read.
+    expect(Object.keys(localStorage).sort()).toEqual([parked, priorKey].sort());
   });
 });
 
