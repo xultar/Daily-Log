@@ -93,9 +93,17 @@ pass before code — see the working rhythm below.
   mostly UI plus a result-to-week jump.
 - **Colour in the month view.** A month cell shows total minutes and an
   intensity shade — how much, never what. `calcDayColorMinutes` already exists.
-- **Trends over time.** `recharts` is a dependency and entirely unused.
-  Per-colour minutes per week across a term is the natural payoff for all this
-  logging.
+- **Find when you last used a tag.** Came out of the search design on
+  2026-08-26 and is deliberately not part of it: it is a different query.
+  Text search reads prose and answers with passages; this reads `timeBlocks`
+  and tagged rows and answers with dates. "When did I last work on Thesis"
+  became a real question the moment tags had names. The text-search result list
+  should be built so a tag filter can slot in beside it.
+- **Time reporting: how much went where.** The other half of the same thought,
+  and the point of logging any of this. `calcWeekColorMinutes` already totals a
+  week by storage id; what is missing is the same across a term, and a way to
+  see it. `recharts` is a dependency and has never been imported. Twelve
+  labelled tags and a measured palette make a chart legend worth reading now.
 - **Edit colour labels from the weekly strip.** No longer blocked: the daily
   legend now splits arming and renaming into sibling controls, so the strip has
   a correct pattern to copy rather than a mistake to replicate.
