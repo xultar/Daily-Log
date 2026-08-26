@@ -120,6 +120,33 @@ describe("renaming a colour from the legend", () => {
   });
 });
 
+describe("opening the day view", () => {
+  const snapshot = () =>
+    JSON.stringify(
+      Object.keys(localStorage)
+        .sort()
+        .map((k) => [k, localStorage.getItem(k)])
+    );
+
+  it("writes nothing to storage, because arriving somewhere is not an edit", () => {
+    // An effect ran on mount and saved the labels it had just loaded, so
+    // merely opening the day view left planner-color-labels: {} behind.
+    //
+    // Harmless on its own, and exactly the shape of the bug the autosave
+    // dirtyRef exists to prevent — that one wrote an empty week over an
+    // unreadable one 300ms after it was viewed.
+    //
+    // This cannot pass by nothing ever being written: "renames without arming"
+    // above asserts that typing a label does reach storage.
+    localStorage.setItem("planner-show-weekends", "false");
+    const before = snapshot();
+
+    setup();
+
+    expect(snapshot()).toBe(before);
+  });
+});
+
 describe("the cell is valid HTML", () => {
   it("nests no interactive element inside another", () => {
     // The defect itself, asserted structurally so it cannot come back quietly.

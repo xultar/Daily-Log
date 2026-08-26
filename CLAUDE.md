@@ -48,46 +48,37 @@ review bar, the `StudyPlanner` wiring, the sidebar age marker — verified by
 tests and seen working in a browser in both light and dark. Spec and plan are in
 `docs/superpowers/`.
 
-Merged into `main` on **2026-08-26**: carry-forward's four non-blocking review
-items (the review bar's height bound, an ordering assertion for the age marker,
-a test for the quarantine write, and the shared `AgeMarker`), the scoped timeout
-on `startup-migration.test.tsx`, and the `npm test` step in `deploy.yml`.
+Shipped on **2026-08-26**, all merged, pushed and confirmed live:
 
-**`main` is ahead of what is live.** GitHub Actions was in a major outage on
-2026-08-26 and cancelled two queued runs without executing a single step, so the
-Pages site still serves the build from before those merges. Nothing is wrong
-with the commits. Re-run the workflow — it has `workflow_dispatch`, so no empty
-commit is needed — and confirm the live bundle hash changes.
+- Carry-forward's four non-blocking review items — the review bar's height
+  bound, an ordering assertion for the age marker, a test for the quarantine
+  write, and the shared `AgeMarker`.
+- The `npm test` step in `deploy.yml`, so a red suite now blocks a deploy. It
+  had never existed; before it, a commit with every test failing would have
+  published as readily as a green one.
+- A twelve-tag palette: red, chartreuse and brown, with `0` selecting the tenth
+  and the last two reachable only by picker.
+- Colour labels in backups. The exporter collected week-shaped entries only, so
+  a restore handed back every week and none of the names you gave your tags.
+- A ratchet on palette legibility, across four visions and both themes, computed
+  without a browser.
+- Magenta off lavender, then pink off gray. Pink and gray were the same colour
+  to a deuteranope at ΔE 0.7.
+- The daily legend cell split into a button and a field, which is valid HTML,
+  and the label write moved off mount.
 
-That also means **the test gate has never actually run in CI**. The first run
-that completes will be its first real exercise.
+There is no unmerged work and nothing waiting to deploy.
 
-Merged into `main` locally and **not pushed**: the twelve-tag palette, and the
-global test timeout. Spec and plan for the palette are in `docs/superpowers/`.
-
-**Unmerged: branch `labels-in-backups`.** Four things, each with its own
-commit: colour labels now travel in a backup (export format version 2), a
-ratchet on how alike any two tags may look, magenta moved off lavender with
-colourblindness measured for the first time, and the daily legend cell split
-into sibling controls. Specs are in `docs/superpowers/`.
+One note kept because it cost time: GitHub Actions was in a major outage that
+day and cancelled two queued runs without executing a step, reporting one as
+`failure` and one as `startup_failure`. Neither was a real failure. A superseded
+or cancelled run in this repo does not always say so.
 
 ## Pick up here next
 
-Nothing is half-finished. Two known defects first, then new functionality.
-
-### 1. Small polish
-
-- **Opening the day view writes `planner-color-labels: {}`.** Mounting is
-  enough; no edit required. Harmless in itself and long pre-existing, but it is
-  a read that writes, which is the exact shape of the bug the autosave
-  `dirtyRef` exists to prevent — and that one turned an unreadable week into an
-  empty one 300ms after it was viewed. The fix is a guard on the effect in
-  `DailyView` that saves labels, so it writes on change rather than on mount.
-
-### 2. New functions
-
-Least specified, most free. Each needs a design pass before code — see the
-working rhythm below.
+Nothing is half-finished and there are no known defects outstanding. What is
+left is new functionality: least specified, most free, and each needs a design
+pass before code — see the working rhythm below.
 
 - **Duplicate a day, or template a week.** The natural follow-on from
   carry-forward, and the other copy-shaped idea: recurring schedules get retyped
@@ -660,7 +651,7 @@ the tab would lose it with no trace — worse than the problem being solved.
 
 ## Baselines
 
-- `npm test` — 342 tests across 31 files. `vitest.config.ts` sets
+- `npm test` — 343 tests across 31 files. `vitest.config.ts` sets
   `testTimeout: 15000` against a 5s default, and that is load-bearing: several
   tests render the whole app and click through it, sitting at 3-4s alone. Under
   full-suite contention they cross 5s — `today.test.tsx` timed out at 5597ms on
@@ -688,11 +679,18 @@ the tab would lose it with no trace — worse than the problem being solved.
 
 ## Known open issues
 
-**Opening the day view writes `planner-color-labels: {}` to storage.** No edit
-required — mounting is enough. It is harmless in itself, and it long predates
-the current work, but it is the same shape as the bug the autosave `dirtyRef`
-exists to prevent: a read that writes. Worth a guard on the effect that saves
-labels, next time someone is in that file.
+None. The last two — the `<input>` nested inside a `<button>` in the daily
+legend, and the label write that happened on mount — were both fixed on
+2026-08-26 and both have tests that fail if they come back.
+
+The second is worth remembering as a pattern rather than as a bug. `DailyView`
+held its labels in state seeded from storage and saved them from an effect on
+that state; effects run on mount, so opening the day view wrote back the value
+it had just read. It was fixed by deleting the effect and saving where the
+change happens, which leaves nothing to guard. **An effect that persists state
+is a write on every mount unless something stops it** — `StudyPlanner`'s
+`dirtyRef` is the same lesson, learned the expensive way when a read that wrote
+turned an unreadable week into an empty one.
 
 ## Discussed but not started
 
