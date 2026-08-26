@@ -570,6 +570,31 @@ export function getPaletteInDisplayOrder(): BlockColor[] {
 }
 
 /**
+ * Which grid lines a legend cell draws in a two-column grid inside a bordered
+ * container. True means draw it.
+ *
+ * The container draws the outer edges, so a cell adds a line only where the
+ * grid itself needs one: nothing along the bottom of the final row, where the
+ * container's own border already sits, and nothing to the right of a cell that
+ * has no neighbour — which is every odd index, and the lone cell of a final
+ * odd row, where a right border stubs into the empty half.
+ *
+ * `count` is a parameter rather than read from the palette so the odd-length
+ * case stays testable now that the palette itself is even. That case is not
+ * hypothetical: it was the live behaviour until the palette grew to twelve.
+ */
+export function legendCellBorders(
+  index: number,
+  count: number
+): { bottom: boolean; right: boolean } {
+  const lastRowStart = count - (count % 2 || 2);
+  return {
+    bottom: index < lastRowStart,
+    right: index % 2 === 0 && index + 1 < count,
+  };
+}
+
+/**
  * Translate a 1-based display position (what the user sees and types) into the
  * storage id written to timeBlocks. Position 0, non-integers, and anything
  * outside the palette all miss the array and yield null. Callers must check

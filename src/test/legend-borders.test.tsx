@@ -1,7 +1,7 @@
 import { describe, it, expect, afterEach } from "vitest";
 import { render, cleanup } from "@testing-library/react";
 import DailyView from "@/components/planner/DailyView";
-import { createEmptyDay, getPaletteInDisplayOrder } from "@/lib/planner-data";
+import { createEmptyDay, getPaletteInDisplayOrder, legendCellBorders } from "@/lib/planner-data";
 
 /**
  * The colour legend is a two-column grid inside a bordered box. Nine entries
@@ -38,6 +38,40 @@ const renderLegend = () => {
 };
 
 afterEach(cleanup);
+
+describe("legendCellBorders", () => {
+  // Expectations are literal, never recomputed from the same formula the
+  // implementation uses. A test that mirrors the arithmetic cannot fail when
+  // the arithmetic is wrong — it reproduces the bug and agrees with it.
+
+  it("keeps the bottom border off both cells of an even grid's last row", () => {
+    // Twelve entries: indices 10 and 11 share the final row.
+    const bottoms = Array.from({ length: 12 }, (_, i) => legendCellBorders(i, 12).bottom);
+    expect(bottoms).toEqual([
+      true, true, true, true, true,
+      true, true, true, true, true,
+      false, false,
+    ]);
+  });
+
+  it("keeps it off the lone cell of an odd grid's last row", () => {
+    // Nine entries: only index 8 is on the final row, alone.
+    const bottoms = Array.from({ length: 9 }, (_, i) => legendCellBorders(i, 9).bottom);
+    expect(bottoms).toEqual([true, true, true, true, true, true, true, true, false]);
+  });
+
+  it("draws a right border only on a cell that has one beside it", () => {
+    const rights = Array.from({ length: 12 }, (_, i) => legendCellBorders(i, 12).right);
+    expect(rights).toEqual([
+      true, false, true, false, true, false,
+      true, false, true, false, true, false,
+    ]);
+  });
+
+  it("draws none on the lone cell of an odd grid, where it would stub into nothing", () => {
+    expect(legendCellBorders(8, 9).right).toBe(false);
+  });
+});
 
 describe("the colour legend's grid lines", () => {
   it("draws one cell per palette entry", () => {
