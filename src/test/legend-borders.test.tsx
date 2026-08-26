@@ -78,19 +78,22 @@ describe("the colour legend's grid lines", () => {
     expect(renderLegend()).toHaveLength(getPaletteInDisplayOrder().length);
   });
 
-  it("leaves the bottom border off the last row, where the container's already is", () => {
+  it("asks legendCellBorders which lines to draw, rather than deciding itself", () => {
     const cells = renderLegend();
 
-    // Nine entries in two columns: the ninth sits alone on the final row.
-    expect(classesOf(cells[cells.length - 1])).not.toContain("border-b");
-  });
+    // Literal, and tied to the twelve-entry palette on purpose. If the palette
+    // changes length this fails loudly and someone rereads it — which is
+    // exactly what did not happen when nine became twelve and the lone-cell
+    // assertion quietly lost its subject.
+    expect(cells).toHaveLength(12);
 
-  it("still separates every row above the last", () => {
-    const cells = renderLegend();
+    const withBottom = cells.filter((c) => classesOf(c).includes("border-b"));
+    const withRight = cells.filter((c) => classesOf(c).includes("border-r"));
 
-    for (const cell of cells.slice(0, -1)) {
-      expect(classesOf(cell)).toContain("border-b");
-    }
+    expect(withBottom).toHaveLength(10); // all but the final row's two
+    expect(withRight).toHaveLength(6); // one per left-hand cell
+    expect(classesOf(cells[10])).not.toContain("border-b");
+    expect(classesOf(cells[11])).not.toContain("border-b");
   });
 
   it("draws a right border only where a cell actually sits to the right", () => {
@@ -102,10 +105,8 @@ describe("the colour legend's grid lines", () => {
     });
   });
 
-  it("puts no right border on the lone cell of the final row", () => {
-    const cells = renderLegend();
-
-    // Otherwise it draws a stub into the empty half of that row.
-    expect(classesOf(cells[cells.length - 1])).not.toContain("border-r");
-  });
+  // "puts no right border on the lone cell of the final row" lived here. At
+  // twelve entries there is no lone cell, so it had no subject left to assert
+  // against. That behaviour is now pinned by legendCellBorders(8, 9).right
+  // above, which can still exercise an odd palette.
 });

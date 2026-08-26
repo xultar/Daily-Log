@@ -17,13 +17,16 @@ import {
 } from "@/lib/planner-data";
 
 describe("BLOCK_COLORS", () => {
-  it("has nine entries", () => {
-    expect(BLOCK_COLORS).toHaveLength(9);
+  it("has twelve entries", () => {
+    // A tripwire, not a fact. It exists so that growing the palette is a
+    // deliberate act with a diff attached, rather than something that happens
+    // to a file. Update the number when you mean to; never delete the test.
+    expect(BLOCK_COLORS).toHaveLength(12);
   });
 
   it("has unique ids numbered sequentially from 1", () => {
     const ids = BLOCK_COLORS.map((c) => c.id);
-    expect(ids).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9]);
+    expect(ids).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
     expect(new Set(ids).size).toBe(ids.length);
   });
 
@@ -41,6 +44,9 @@ describe("BLOCK_COLORS", () => {
       [7, "Yellow",   "50 70% 76%",  "50 70% 58%"],
       [8, "Teal",     "178 40% 74%", "178 45% 38%"],
       [9, "Magenta",  "305 40% 80%", "305 45% 56%"],
+      [10, "Red",        "4 65% 74%",  "4 65% 52%"],
+      [11, "Chartreuse", "95 45% 74%", "95 45% 40%"],
+      [12, "Brown",      "30 38% 64%", "30 42% 34%"],
     ]);
   });
 
@@ -91,8 +97,17 @@ describe("COLOR_IDS_IN_DISPLAY_ORDER", () => {
     expect(ordered).toEqual(ids);
   });
 
-  it("shows gray last", () => {
-    expect(COLOR_IDS_IN_DISPLAY_ORDER[COLOR_IDS_IN_DISPLAY_ORDER.length - 1]).toBe(6);
+  it("keeps gray at display position 9, where the 9 key has always put it", () => {
+    // This deliberately reverses an earlier decision. The 2026-08-24 design
+    // moved gray to the end so it would not sit mid-list; appending red,
+    // chartreuse and brown puts it mid-list again. Restoring tidiness would
+    // mean gray moving to position 12 and the 9 key selecting red instead —
+    // silently retraining anyone with the shortcuts in their fingers.
+    //
+    // Display order costs nothing to change and muscle memory costs a lot, so
+    // positions 1-9 are frozen and the new colours go on the end.
+    expect(COLOR_IDS_IN_DISPLAY_ORDER[8]).toBe(6);
+    expect(colorIdForDisplayPosition(9)).toBe(6);
   });
 });
 

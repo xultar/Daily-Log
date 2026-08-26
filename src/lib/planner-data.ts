@@ -519,6 +519,13 @@ export const BLOCK_COLORS: readonly BlockColor[] = [
   { id: 7, label: "Yellow",   hsl: "50 70% 76%",   hslDark: "50 70% 58%" },
   { id: 8, label: "Teal",     hsl: "178 40% 74%",  hslDark: "178 45% 38%" },
   { id: 9, label: "Magenta",  hsl: "305 40% 80%",  hslDark: "305 45% 56%" },
+  { id: 10, label: "Red",        hsl: "4 65% 74%",   hslDark: "4 65% 52%" },
+  { id: 11, label: "Chartreuse", hsl: "95 45% 74%",  hslDark: "95 45% 40%" },
+  // Brown is five degrees from orange, so hue does almost none of the work
+  // here: the separation is 27 points of saturation and 14 of lightness. That
+  // makes it the only tag added in this batch that survives a greyscale print,
+  // where two hues at matched lightness collapse to the same grey.
+  { id: 12, label: "Brown",      hsl: "30 38% 64%",  hslDark: "30 42% 34%" },
 ];
 
 /** Row wash opacity. Spec-fixed at 16%, tuned to stay legible across 42 weekly rows. */
@@ -562,7 +569,13 @@ export function getBlockTint(value: number | undefined): string | null {
  * Storage ids are positions in BLOCK_COLORS and must never move; reorder this
  * list instead. Gray sits last here while keeping storage id 6.
  */
-export const COLOR_IDS_IN_DISPLAY_ORDER: readonly number[] = [1, 2, 3, 4, 5, 7, 8, 9, 6];
+// Positions 1-9 are exactly what they were. Gray stays at position 9 even
+// though three chromatic colours now follow it, because moving it would change
+// what the 9 key selects, and muscle memory is worth more than a tidy
+// ordering. Positions 11 and 12 have no key: the palette outran the number row.
+export const COLOR_IDS_IN_DISPLAY_ORDER: readonly number[] = [
+  1, 2, 3, 4, 5, 7, 8, 9, 6, 10, 11, 12,
+];
 
 /** The palette in the order it should be shown to the user. */
 export function getPaletteInDisplayOrder(): BlockColor[] {
