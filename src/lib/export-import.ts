@@ -1,11 +1,33 @@
-import { WeekData, weekKeyForStoredWeek, weekKeyFromEntryKey } from "./planner-data";
+import {
+  BLOCK_COLORS,
+  WeekData,
+  loadColorLabels,
+  saveColorLabels,
+  weekKeyForStoredWeek,
+  weekKeyFromEntryKey,
+} from "./planner-data";
 import { readItem, writeItem, listKeys } from "./storage";
 
+/**
+ * What travels besides the weeks. Colour labels only: they are the one piece of
+ * user-typed content that does not live inside a week. Whether weekends are
+ * showing, and which theme is on, are properties of a device rather than of the
+ * data, and restoring last month's planning should not repaint the app.
+ */
+export interface ExportSettings {
+  /** Keyed by storage id, never display position — as planner-color-labels is. */
+  colorLabels: Record<number, string>;
+}
+
 export interface ExportData {
-  version: 1;
+  version: 2;
   exportedAt: string;
   weeks: Record<string, WeekData>;
+  settings: ExportSettings;
 }
+
+/** Versions this build can read. Writing is always the newest. */
+const READABLE_VERSIONS = [1, 2];
 
 export function exportAllData(): ExportData {
   const weeks: Record<string, WeekData> = {};
@@ -24,9 +46,13 @@ export function exportAllData(): ExportData {
     }
   }
   return {
-    version: 1,
+    version: 2,
     exportedAt: new Date().toISOString(),
     weeks,
+    // Always present, even when nothing is labelled. An empty object and an
+    // absent one mean the same thing on read, and writing it unconditionally
+    // keeps the shape of an export predictable.
+    settings: { colorLabels: loadColorLabels() },
   };
 }
 
@@ -121,7 +147,9 @@ export function importFromJSON(jsonString: string): ImportResult {
   }
 
   if (!isPlainObject(parsed)) return refuse("That file is not a Daily Log export.");
-  if (parsed.version !== 1) return refuse("That file was written by an unsupported version.");
+  if (!READABLE_VERSIONS.includes(parsed.version as number)) {
+    return refuse("That file was written by an unsupported version.");
+  }
   if (!isPlainObject(parsed.weeks)) return refuse("That file contains no weeks.");
 
   const staged: [string, unknown][] = [];
@@ -149,7 +177,38 @@ export function importFromJSON(jsonString: string): ImportResult {
       error: `Storage is full or unavailable \u2014 only ${written} of ${staged.length} weeks could be saved.`,
     };
   }
+  // After the weeks, deliberately. The weeks are what the user came for, so a
+  // label write that fails on full storage must not turn a restore that
+  // restored everything important into a failure.
+  const labels = usableLabels(isPlainObject(parsed.settings) ? parsed.settings.colorLabels : null);
+  if (Object.keys(labels).length > 0) {
+    // Merged by id, exactly as the weeks above are merged by key: what the file
+    // names is overwritten, what it does not name is left alone. A file that
+    // mentions no labels is not an instruction to delete them.
+    saveColorLabels({ ...loadColorLabels(), ...labels });
+  }
+
   return { success: true, weeksImported: written, weeksSkipped: skipped };
+}
+
+/**
+ * The labels from an untrusted file, minus anything unusable.
+ *
+ * `loadColorLabels` does no shape checking of its own — it returns whatever
+ * `JSON.parse` produced — so whatever passes through here is handed straight to
+ * the legend. A key must name a colour that exists, and a label must be text.
+ */
+function usableLabels(value: unknown): Record<number, string> {
+  if (!isPlainObject(value)) return {};
+  const out: Record<number, string> = {};
+  for (const [key, label] of Object.entries(value)) {
+    if (typeof label !== "string") continue;
+    if (!/^\d+$/.test(key)) continue;
+    const id = Number(key);
+    if (id < 1 || id > BLOCK_COLORS.length) continue;
+    out[id] = label;
+  }
+  return out;
 }
 
 export function downloadFile(content: string, filename: string, mimeType: string) {
