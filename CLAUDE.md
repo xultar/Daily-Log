@@ -60,28 +60,17 @@ that completes will be its first real exercise.
 Merged into `main` locally and **not pushed**: the twelve-tag palette, and the
 global test timeout. Spec and plan for the palette are in `docs/superpowers/`.
 
-**Unmerged: branch `labels-in-backups`.** Three things, each with its own
+**Unmerged: branch `labels-in-backups`.** Four things, each with its own
 commit: colour labels now travel in a backup (export format version 2), a
-ratchet on how alike any two tags may look, and magenta moved off lavender with
-colourblindness measured for the first time. See the palette section below.
+ratchet on how alike any two tags may look, magenta moved off lavender with
+colourblindness measured for the first time, and the daily legend cell split
+into sibling controls. Specs are in `docs/superpowers/`.
 
 ## Pick up here next
 
-Nothing is half-finished. Every item below can start cold, and they are grouped
-in the order they are wanted: clear the small polish, then add new functions.
-
-### 1. Small polish
-- **The `<input>` inside `<button>`** in the daily legend is invalid HTML, and
-  assistive tech commonly prunes children of `role="button"`, which can make the
-  label field unreachable. The `stopPropagation` on that input is what holds it
-  together for mouse users. **This blocks "edit colour labels from the weekly
-  strip"**, which would replicate the same mistake in a second place — so do
-  this first if that feature is wanted. Needs a real restructure, not a patch.
-
-### 2. New functions
-
-Least specified, most freedom. Each needs a design pass before code — see the
-working rhythm below.
+Nothing is half-finished, and the polish list is empty for the first time in a
+while. What is left is new functionality. Each item is least specified and most
+free, and each needs a design pass before code — see the working rhythm below.
 
 - **Duplicate a day, or template a week.** The natural follow-on from
   carry-forward, and the other copy-shaped idea: recurring schedules get retyped
@@ -99,8 +88,9 @@ working rhythm below.
 - **Trends over time.** `recharts` is a dependency and entirely unused.
   Per-colour minutes per week across a term is the natural payoff for all this
   logging.
-- **Edit colour labels from the weekly strip.** Blocked on the a11y restructure
-  above; doing it naively replicates the `<input>`-inside-`<button>` problem.
+- **Edit colour labels from the weekly strip.** No longer blocked: the daily
+  legend now splits arming and renaming into sibling controls, so the strip has
+  a correct pattern to copy rather than a mistake to replicate.
 
 ### The working rhythm in this repo
 
@@ -145,6 +135,24 @@ own.
 **Positions 11 and 12 have no key.** Twelve colours outran the number row: 1-9
 select the first nine, `0` selects position 10, and chartreuse and brown are
 reachable only from the legend or the right-click picker.
+
+**A daily legend cell is two controls, not one.** A button arms the colour and a
+field beside it renames the colour; the cell itself is a plain container. The
+field used to sit *inside* the button, which is invalid — a button may not
+contain interactive content, and assistive tech commonly prunes the children of
+`role="button"`, so the field could be unreachable. An `onClick` with
+`stopPropagation` was what held it together for mouse users; it is gone, because
+the structure now does that job.
+
+Two things follow, and both are easy to undo by accident:
+
+- **The button's `aria-label` carries the key hint, and the digit in it is the
+  display position.** Positions 11 and 12 name no key, because they have none.
+  A test asserts `Use Gray (key 9)`, and using `c.id` there fails it twice over.
+- **Do not make the cell container clickable.** It would restore the large click
+  target and reintroduce exactly what this removed: something clickable that the
+  keyboard cannot reach. The button instead stretches to the cell's full height,
+  which brings the target to 25px — the 24px minimum — without moving anything.
 
 **The palette's ceiling is perceptual, not arithmetic, and hue degrees are a bad
 proxy for it.** Chartreuse was specified at hue 95 on the reasoning that it sat
@@ -624,7 +632,7 @@ the tab would lose it with no trace — worse than the problem being solved.
 
 ## Baselines
 
-- `npm test` — 333 tests across 30 files. `vitest.config.ts` sets
+- `npm test` — 342 tests across 31 files. `vitest.config.ts` sets
   `testTimeout: 15000` against a 5s default, and that is load-bearing: several
   tests render the whole app and click through it, sitting at 3-4s alone. Under
   full-suite contention they cross 5s — `today.test.tsx` timed out at 5597ms on
@@ -648,10 +656,11 @@ the tab would lose it with no trace — worse than the problem being solved.
 
 ## Known open issues
 
-**The `<input>` inside `<button>`** in the daily legend is invalid HTML and
-pre-existing. Assistive tech commonly prunes children of `role="button"`, which can
-make the label field unreachable. The `stopPropagation` on that input is what holds
-it together for mouse users. Fixing it needs a real restructure.
+**Opening the day view writes `planner-color-labels: {}` to storage.** No edit
+required — mounting is enough. It is harmless in itself, and it long predates
+the current work, but it is the same shape as the bug the autosave `dirtyRef`
+exists to prevent: a read that writes. Worth a guard on the effect that saves
+labels, next time someone is in that file.
 
 ## Discussed but not started
 

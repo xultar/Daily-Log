@@ -19,8 +19,18 @@ import { createEmptyDay, getPaletteInDisplayOrder, legendCellBorders } from "@/l
 
 const MONDAY = new Date(2026, 7, 24);
 
+/**
+ * The cell is the container, not the button inside it. It was a button until
+ * the rename field came out from inside it — a button may not contain
+ * interactive content — and this selector followed it.
+ *
+ * Note what happened when it did not: two tests failed loudly, but "draws a
+ * right border only where a cell actually sits to the right" passed, because
+ * with no cells found its loop iterated nothing. The length assertion in its
+ * sibling is what caught the breakage.
+ */
 const legendCells = (container: HTMLElement) =>
-  Array.from(container.querySelectorAll<HTMLElement>(".grid.grid-cols-2 > button"));
+  Array.from(container.querySelectorAll<HTMLElement>(".grid.grid-cols-2 > div"));
 
 /**
  * Exact class tokens, never substrings: "border-border/50" contains the
