@@ -38,6 +38,27 @@ export function removeItem(key: string): boolean {
   }
 }
 
+/**
+ * Learn when another tab changes storage.
+ *
+ * The `storage` event fires only in OTHER documents of the same origin — never
+ * in the tab that wrote — so there is no self-echo to guard against, and no
+ * test can produce it by writing to localStorage in the same document.
+ *
+ * `event.key` is null when another tab calls clear(), meaning "everything
+ * changed". It is passed through rather than filtered here: only the caller
+ * knows which keys it cares about.
+ *
+ * Returns an unsubscribe, which stays callable even where there is no window,
+ * so an effect cleanup never throws.
+ */
+export function onExternalChange(handler: (key: string | null) => void): () => void {
+  if (typeof window === "undefined") return () => {};
+  const listener = (event: StorageEvent) => handler(event.key);
+  window.addEventListener("storage", listener);
+  return () => window.removeEventListener("storage", listener);
+}
+
 /** Every key currently in storage. Empty when storage cannot be enumerated. */
 export function listKeys(): string[] {
   try {
