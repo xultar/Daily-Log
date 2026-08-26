@@ -11,8 +11,9 @@ import WeeklyColorLegend from "./WeeklyColorLegend";
 import CarryForwardBar from "./CarryForwardBar";
 import { ChevronLeft, ChevronRight, Printer, Calendar, CalendarDays, CalendarRange, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { calcWeekTotal, calcWeekColorMinutes, getWeekDates } from "@/lib/planner-data";
-import { readItem, writeItem } from "@/lib/storage";
+import { calcWeekTotal, calcWeekColorMinutes, getWeekDates, getWeekKey } from "@/lib/planner-data";
+import { readItem, writeItem, onExternalChange } from "@/lib/storage";
+import CrossTabNotice from "./CrossTabNotice";
 import { toast } from "@/hooks/use-toast";
 
 type ViewMode = "daily" | "weekly" | "monthly";
@@ -56,6 +57,24 @@ const StudyPlanner: React.FC = () => {
   const markDirty = useCallback(() => {
     dirtyRef.current = true;
   }, []);
+
+  // Another tab wrote the week on screen while this tab had edited it.
+  const [conflict, setConflict] = useState(false);
+
+  // dirtyRef picks between the two cases: a clean tab has nothing to lose and
+  // simply reloads, while a tab that has edited this week is told rather than
+  // overwritten. The conflict belongs to one week, so arriving at a week clears
+  // it. Declared after dirtyRef because it reads it.
+  useEffect(() => {
+    setConflict(false);
+    const weekKey = `planner-${getWeekKey(currentDate)}`;
+    return onExternalChange((key) => {
+      // null means another tab called clear(), so everything changed.
+      if (key !== null && key !== weekKey) return;
+      if (dirtyRef.current) setConflict(true);
+      else setRefreshKey((k) => k + 1);
+    });
+  }, [currentDate]);
 
   // Whether the last autosave was refused. A storage failure persists, so
   // warning on every keystroke would bury the message under itself; warn on the
@@ -127,6 +146,24 @@ const StudyPlanner: React.FC = () => {
     markDirty();
     setWeekData((prev) => ({ ...prev, [field]: value }));
   }, [markDirty]);
+
+  const reloadFromOtherTab = useCallback(() => {
+    // Drop the pending write BEFORE reloading. The load effect calls
+    // flushPendingSave first, so a bare refreshKey bump would write this tab's
+    // stale copy over the other tab's work and then read back its own write —
+    // Reload doing the opposite of its label.
+    //
+    // Race-free rather than lucky: flushPendingSave returns early on a null
+    // pendingRef, so a debounce timer firing in the gap is a no-op. dirtyRef is
+    // deliberately NOT cleared here — the load effect does it, and nothing
+    // reads the flag in between, so a second assignment would be dead code
+    // dressed as a safeguard. Mutation-tested: removing it changes nothing.
+    pendingRef.current = null;
+    setConflict(false);
+    setRefreshKey((k) => k + 1);
+  }, []);
+
+  const keepMine = useCallback(() => setConflict(false), []);
 
   const bringForward = useCallback((chosen: CarryCandidate[]) => {
     markDirty();
@@ -285,6 +322,10 @@ const StudyPlanner: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Both bars sit below the week chevrons on purpose — see the note on the
+          carry-forward block below. */}
+      {conflict && <CrossTabNotice onReload={reloadFromOtherTab} onKeepMine={keepMine} />}
 
       {/* Carry-forward review. Sits below both week chevrons on purpose: the
           suite reaches the next week with querySelectorAll("button")[1], so a
