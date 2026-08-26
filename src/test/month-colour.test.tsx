@@ -46,20 +46,24 @@ describe("colour in the month view", () => {
     expect(cellFor(container, "26").dataset.dominantTag).toBe("11");
   });
 
+  // Scoped to the calendar cell throughout. The tag name also appears in the
+  // "Time blocked by tag" bars below the grid, so an unscoped screen query
+  // finds two of everything and says nothing about the cell.
+
   it("names the tag, so the cell does not depend on colour alone", () => {
     seedDay(11);
-    renderMonth();
+    const { container } = renderMonth();
 
-    expect(screen.getByText("Chartreuse")).toBeInTheDocument();
+    expect(cellFor(container, "26").textContent).toContain("Chartreuse");
   });
 
   it("uses the name the user gave the tag", () => {
     seedDay(11);
     localStorage.setItem("planner-color-labels", JSON.stringify({ 11: "Thesis" }));
-    renderMonth();
+    const { container } = renderMonth();
 
-    expect(screen.getByText("Thesis")).toBeInTheDocument();
-    expect(screen.queryByText("Chartreuse")).toBeNull();
+    expect(cellFor(container, "26").textContent).toContain("Thesis");
+    expect(cellFor(container, "26").textContent).not.toContain("Chartreuse");
   });
 
   it("leaves a day with no time untinted and unnamed", () => {
@@ -68,7 +72,13 @@ describe("colour in the month view", () => {
 
     // The 27th has nothing painted.
     expect(cellFor(container, "27").dataset.dominantTag).toBeUndefined();
-    expect(screen.getAllByText("Chartreuse")).toHaveLength(1);
+    expect(cellFor(container, "27").textContent).not.toContain("Chartreuse");
+
+    // Exactly one cell carries the name, so this cannot pass by no cell doing.
+    const named = [...container.querySelectorAll(".grid.grid-cols-7 > div")].filter((c) =>
+      c.textContent?.includes("Chartreuse")
+    );
+    expect(named).toHaveLength(1);
   });
 
   it("does not hover with a background class", () => {
