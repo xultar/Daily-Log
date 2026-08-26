@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, cleanup, act, within } from "@testing-library/react";
 import CarryForwardBar from "@/components/planner/CarryForwardBar";
 import { CarryCandidate, saveWeek, createEmptyWeek, loadWeek } from "@/lib/planner-data";
-import { startOfWeek, subWeeks } from "date-fns";
+import { startOfWeek, subWeeks, addWeeks } from "date-fns";
 import StudyPlanner from "@/components/planner/StudyPlanner";
 
 const CANDIDATES: CarryCandidate[] = [
@@ -236,8 +236,36 @@ describe("StudyPlanner carry-forward", () => {
     seedLastWeekWithUnfinishedWork();
     const before = weekEntries();
     render(<StudyPlanner />);
+    // Assert the bar is actually up: without this the test passes with no bar
+    // on screen at all, which is the one test you least want self-disabling.
+    expect(screen.getByText(/unfinished from last week/)).toBeInTheDocument();
     await settle();
     expect(weekEntries()).toBe(before);
+  });
+
+  it("carries into the week on screen, not the week the planner opened on", async () => {
+    // bringForward is a useCallback with a stable dep, so it is created once at
+    // mount. Closing over weekData instead of using the updater form would
+    // capture the mount-time week forever, and pressing Bring on another week
+    // would write this week's contents under that week's key. Every other carry
+    // test acts on the mount week, so the closure is accidentally correct
+    // throughout the suite and nothing else would notice.
+    seedLastWeekWithUnfinishedWork();
+    const nextMonday = addWeeks(thisMonday(), 1);
+    const next = createEmptyWeek(nextMonday);
+    next.weekGoal = "Next week's own goal";
+    next.weeklyTodos[0] = { text: "Already planned for next week", checked: false };
+    saveWeek(nextMonday, next);
+
+    const { container } = render(<StudyPlanner />);
+    fireEvent.click(container.querySelectorAll("button")[1]); // next week
+    fireEvent.click(screen.getByRole("button", { name: /bring/i }));
+    await settle();
+
+    const written = loadWeek(nextMonday);
+    expect(written.weekGoal).toBe("Next week's own goal");
+    expect(written.weeklyTodos.map((t) => t.text)).toContain("Already planned for next week");
+    expect(written.weeklyTodos.map((t) => t.text)).toContain("Book viva slot");
   });
 
   it("brings the ticked items into this week and marks the week resolved", async () => {

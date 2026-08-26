@@ -285,10 +285,13 @@ const StudyPlanner: React.FC = () => {
         </div>
       )}
 
-      {/* Carry-forward review. Sits below both week chevrons on purpose: any
-          control inserted before them silently repoints the button-index
-          lookups in autosave.test.tsx and pending-save.test.tsx at the wrong
-          button, and they then fail looking like a save bug. */}
+      {/* Carry-forward review. Sits below both week chevrons on purpose: the
+          suite reaches the next week with querySelectorAll("button")[1], so a
+          control inserted before them repoints that lookup at the wrong button
+          and the failure reads as a rendering bug rather than a layout change.
+          The tests that would actually catch it are the navigating ones in
+          carry-bar.test.tsx — autosave.test.tsx and pending-save.test.tsx seed
+          no prior week, so no bar renders there and their indices are safe. */}
       {viewMode !== "monthly" && !weekData.carryResolved && candidates.length > 0 && (
         <CarryForwardBar
           key={format(dates[0], "yyyy-MM-dd")}
