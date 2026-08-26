@@ -1,5 +1,5 @@
 import { format, parse, isValid } from "date-fns";
-import { loadAllWeeks } from "./planner-data";
+import { loadAllWeeks, mondayOfKey } from "./planner-data";
 
 /** Ten minutes per block, as everywhere else that counts painted time. */
 const MINUTES_PER_BLOCK = 10;
@@ -103,4 +103,71 @@ export function totalsByTag(from: Date, to: Date): TagTotal[] {
   return Object.entries(minutes)
     .map(([colorId, mins]) => ({ colorId: Number(colorId), minutes: mins }))
     .sort((a, b) => b.minutes - a.minutes);
+}
+
+/** One day on which a tag was used. */
+export interface TagUse {
+  /** The week key the day was found under. Its identity, with the date. */
+  weekKey: string;
+  /** The day's own date. The fact, and what the row displays. */
+  date: string;
+  /** ISO Monday from the entry key. Where a click goes, and nothing else. */
+  monday: string;
+  /** Minutes painted against this tag that day. 0 when priority-only. */
+  minutes: number;
+  /** A priority row that day carries this tag. */
+  onPriorities: boolean;
+}
+
+/**
+ * Every day a tag was used, newest first, so the first row answers "when did I
+ * last work on this".
+ *
+ * A day counts when time was painted against the tag or when one of its
+ * priority rows carries it. Both are the goal being touched; only one of them
+ * is time, which is why they are reported in separate fields and never added.
+ *
+ * **The unit is a day within a stored week, not a calendar date.** Two stored
+ * weeks can carry the same date — that is the mis-filing `mondayOfKey` exists
+ * to survive — and merging them would add minutes from two different weeks and
+ * then have to pick one of the two to navigate to.
+ *
+ * **`date` comes from the day and `monday` from the key**, which are opposite
+ * rules and both correct. The date is the fact, so it is what the row shows.
+ * The key is what `loadWeek` is addressed by, so it is the only Monday that
+ * opens the week the row came from.
+ */
+export function tagHistory(colorId: number): TagUse[] {
+  if (!Number.isInteger(colorId) || colorId <= 0) return [];
+
+  const uses: TagUse[] = [];
+
+  for (const { weekKey, date, grid, subjects } of eachStoredDay()) {
+    // The answer is a date; a day that cannot state one has nothing to show.
+    if (!date) continue;
+    const monday = mondayOfKey(weekKey);
+    if (!monday) continue;
+
+    let minutes = 0;
+    for (const hour of grid) {
+      if (!Array.isArray(hour)) continue;
+      // Strict equality: a block stored as "1" is damage, not this tag.
+      for (const block of hour) if (block === colorId) minutes += MINUTES_PER_BLOCK;
+    }
+
+    const onPriorities = subjects.some((row) => {
+      if (!row || typeof row !== "object") return false;
+      // colorId is optional: rows saved before the field existed load unflagged.
+      return (row as Record<string, unknown>).colorId === colorId;
+    });
+
+    if (minutes === 0 && !onPriorities) continue;
+    uses.push({ weekKey, date, monday, minutes, onPriorities });
+  }
+
+  // Newest first. Rows sharing a date are ordered by key, so two weeks holding
+  // the same day come back in a stable order rather than storage order.
+  return uses.sort(
+    (a, b) => b.date.localeCompare(a.date) || b.weekKey.localeCompare(a.weekKey)
+  );
 }
