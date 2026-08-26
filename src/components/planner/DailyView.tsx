@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { format, parse } from "date-fns";
-import { DayData, calcDayTotal, calcDayColorMinutes, formatMinutes, getPaletteInDisplayOrder, loadColorLabels, saveColorLabels, getBlockColor, getBlockTint } from "@/lib/planner-data";
+import { DayData, calcDayTotal, calcDayColorMinutes, formatMinutes, getPaletteInDisplayOrder, legendCellBorders, loadColorLabels, saveColorLabels, getBlockColor, getBlockTint } from "@/lib/planner-data";
 import TimeGrid from "./TimeGrid";
 import { Flag, Plus, X } from "lucide-react";
 import ColorPicker from "./ColorPicker";
@@ -188,20 +188,14 @@ const DailyView: React.FC<DailyViewProps> = ({ day, dayIndex, onChange, activeCo
             </div>
             <div className="grid grid-cols-2 gap-0">
               {getPaletteInDisplayOrder().map((c, index, shown) => {
-                // The container draws the outer edges, so a cell adds a line
-                // only where the grid itself needs one. Nine entries in two
-                // columns leave the last row holding a single cell: its bottom
-                // border would sit on the container's, and a right border would
-                // be a stub into the empty half of the row.
-                const inLastRow = index >= shown.length - (shown.length % 2 || 2);
-                const hasCellToTheRight = index % 2 === 0 && index + 1 < shown.length;
+                const borders = legendCellBorders(index, shown.length);
                 return (
                 <button
                   key={c.id}
                   onClick={() => onActiveColorChange(c.id)}
                   className={`flex items-center gap-1.5 px-2 py-1 border-border/50 transition-all ${
-                    inLastRow ? "" : "border-b"
-                  } ${hasCellToTheRight ? "border-r" : ""} ${
+                    borders.bottom ? "border-b" : ""
+                  } ${borders.right ? "border-r" : ""} ${
                     activeColor === c.id
                       ? "bg-muted/60 ring-1 ring-inset ring-foreground/10"
                       : "hover:bg-muted/30"
@@ -231,7 +225,7 @@ const DailyView: React.FC<DailyViewProps> = ({ day, dayIndex, onChange, activeCo
             </div>
           </div>
           <div className="no-print text-[9px] text-muted-foreground/60 mt-1">
-            Press 1–9 to switch color &middot; Right-click block to pick color
+            Press 1–9 or 0 to switch color &middot; Right-click block to pick color
           </div>
         </div>
       </div>

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { loadWeek, getWeekKey, getWeekDates, createEmptyWeek } from "@/lib/planner-data";
+import { loadWeek, getWeekKey, getWeekDates, createEmptyWeek, BLOCK_COLORS } from "@/lib/planner-data";
 import { format } from "date-fns";
 
 /**
@@ -104,9 +104,14 @@ describe("loadWeek repairs damage instead of discarding the week", () => {
   it("clears block values that are not a real colour", () => {
     const week = storedWeek();
     // null is the documented failure mode of a missing colorIdForDisplayPosition
-    // guard; 10 is past the end of the palette; "3" and NaN come from hand-edited
-    // or third-party-written JSON.
-    week.days[0].timeBlocks[0] = [null, 10, -1, "3", NaN, 2];
+    // guard; "3" and NaN come from hand-edited or third-party-written JSON.
+    //
+    // The out-of-range value is computed, not literal. This line used to say
+    // 10, which stopped being damage the moment the palette grew past nine —
+    // widening a palette changes what counts as corruption, and the test then
+    // failed for a reason that had nothing to do with repair. One past the end
+    // is the boundary worth testing anyway.
+    week.days[0].timeBlocks[0] = [null, BLOCK_COLORS.length + 1, -1, "3", NaN, 2];
     store(week);
 
     expect(loadWeek(DATE).days[0].timeBlocks[0]).toEqual([0, 0, 0, 0, 0, 2]);

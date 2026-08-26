@@ -136,7 +136,7 @@
   .overflow-auto, .overflow-x-auto, .overflow-y-auto {
     overflow: visible !important;
   }
-  /* Nine colour tags arrive as nine indistinguishable grays on a mono laser.
+  /* Twelve colour tags arrive as twelve indistinguishable grays on a mono laser.
      The first block of each run carries its legend number so the sheet can be
      read back. Print-only: on screen the block stays clean.
      The tag colours themselves are restored to their light values by the

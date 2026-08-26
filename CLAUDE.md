@@ -43,12 +43,25 @@ review bar, the `StudyPlanner` wiring, the sidebar age marker — verified by
 tests and seen working in a browser in both light and dark. Spec and plan are in
 `docs/superpowers/`.
 
-**Unmerged: branch `finish-carry-forward`.** It closes the four non-blocking
-items from carry-forward's final review — the review bar's height bound, an
-ordering assertion for the age marker, a test for the quarantine write, and the
-shared `AgeMarker`. 300 tests green, lint and build clean, and the height bound
-was measured in a browser at two widths. Merging deploys, so that is the user's
-call.
+Merged into `main` on **2026-08-26**: carry-forward's four non-blocking review
+items (the review bar's height bound, an ordering assertion for the age marker,
+a test for the quarantine write, and the shared `AgeMarker`), the scoped timeout
+on `startup-migration.test.tsx`, and the `npm test` step in `deploy.yml`.
+
+**`main` is ahead of what is live.** GitHub Actions was in a major outage on
+2026-08-26 and cancelled two queued runs without executing a single step, so the
+Pages site still serves the build from before those merges. Nothing is wrong
+with the commits. Re-run the workflow — it has `workflow_dispatch`, so no empty
+commit is needed — and confirm the live bundle hash changes.
+
+That also means **the test gate has never actually run in CI**. The first run
+that completes will be its first real exercise.
+
+**Unmerged: branch `twelve-color-tags`.** Takes the palette from nine tags to
+twelve — red, chartreuse and brown — with `0` selecting the tenth and the last
+two reachable only by picker. Spec and plan are in `docs/superpowers/`. 307
+tests green, lint and build clean, and the palette was measured rather than
+eyeballed; see the palette section below for the numbers.
 
 ## Pick up here next
 
@@ -112,11 +125,38 @@ writes wrong values into weeks people have already planned.
   persisted: the values inside `timeBlocks`, the keys of `planner-color-labels`,
   and `SubjectRow.colorId`. It never changes.
 - **Display position** — the 1-based position in `COLOR_IDS_IN_DISPLAY_ORDER`
-  (`[1,2,3,4,5,7,8,9,6]`). It is what the user sees beside a swatch and what the
-  number keys select.
+  (`[1,2,3,4,5,7,8,9,6,10,11,12]`). It is what the user sees beside a swatch and
+  what the number keys select.
 
-They differ for four of the nine colours. Gray is storage id 6 but display
-position 9; yellow is 7 but 6; teal is 8 but 7; magenta is 9 but 8.
+They differ for four of the twelve colours. Gray is storage id 6 but display
+position 9; yellow is 7 but 6; teal is 8 but 7; magenta is 9 but 8. Red,
+chartreuse and brown were appended after the reordering, so 10, 11 and 12 mean
+the same thing on both sides.
+
+**Display positions 1-9 are frozen.** Changing the display order costs nothing
+in stored data, which is exactly what makes it tempting — and moving gray off
+position 9 to tidy the list would silently retrain anyone who types 9 for gray.
+Gray sits mid-list now that three colours follow it; that is the accepted price.
+A test asserts it, and the permutation test does not catch a reordering on its
+own.
+
+**Positions 11 and 12 have no key.** Twelve colours outran the number row: 1-9
+select the first nine, `0` selects position 10, and chartreuse and brown are
+reachable only from the legend or the right-click picker.
+
+**The palette's ceiling is perceptual, not arithmetic, and hue degrees are a bad
+proxy for it.** Chartreuse was specified at hue 95 on the reasoning that it sat
+45 degrees from both yellow and green. Measured as CIE Lab ΔE against the
+actually-rendered tokens, it was twice as close to green as to yellow, because
+the yellow-green region is perceptually compressed. Moving it to 85 improved
+both themes at once. Measure the next colour; do not reason about the wheel.
+
+Two numbers worth keeping. The tightest pair in the whole palette is
+**Lavender/Magenta at ΔE 7.6 in light and 21.9 in dark**, and it predates the
+twelve-tag change — every pair involving red, chartreuse or brown is better
+separated than that. And **light mode is about three times tighter than dark
+throughout**, so a new colour that survives light will survive dark, not the
+other way round.
 
 Consequences:
 
@@ -556,7 +596,7 @@ the tab would lose it with no trace — worse than the problem being solved.
 
 ## Baselines
 
-- `npm test` — 300 tests across 26 files. One of them,
+- `npm test` — 307 tests across 27 files. One of them,
   `startup-migration.test.tsx`, carries its own 20s timeout, because it is the
   only test that dynamically imports the app root and so pays the whole module
   graph's transform inside the timed body. Measured at 1.3s cold and alone and

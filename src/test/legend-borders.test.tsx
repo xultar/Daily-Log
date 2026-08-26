@@ -1,7 +1,7 @@
 import { describe, it, expect, afterEach } from "vitest";
 import { render, cleanup } from "@testing-library/react";
 import DailyView from "@/components/planner/DailyView";
-import { createEmptyDay, getPaletteInDisplayOrder } from "@/lib/planner-data";
+import { createEmptyDay, getPaletteInDisplayOrder, legendCellBorders } from "@/lib/planner-data";
 
 /**
  * The colour legend is a two-column grid inside a bordered box. Nine entries
@@ -39,24 +39,61 @@ const renderLegend = () => {
 
 afterEach(cleanup);
 
+describe("legendCellBorders", () => {
+  // Expectations are literal, never recomputed from the same formula the
+  // implementation uses. A test that mirrors the arithmetic cannot fail when
+  // the arithmetic is wrong — it reproduces the bug and agrees with it.
+
+  it("keeps the bottom border off both cells of an even grid's last row", () => {
+    // Twelve entries: indices 10 and 11 share the final row.
+    const bottoms = Array.from({ length: 12 }, (_, i) => legendCellBorders(i, 12).bottom);
+    expect(bottoms).toEqual([
+      true, true, true, true, true,
+      true, true, true, true, true,
+      false, false,
+    ]);
+  });
+
+  it("keeps it off the lone cell of an odd grid's last row", () => {
+    // Nine entries: only index 8 is on the final row, alone.
+    const bottoms = Array.from({ length: 9 }, (_, i) => legendCellBorders(i, 9).bottom);
+    expect(bottoms).toEqual([true, true, true, true, true, true, true, true, false]);
+  });
+
+  it("draws a right border only on a cell that has one beside it", () => {
+    const rights = Array.from({ length: 12 }, (_, i) => legendCellBorders(i, 12).right);
+    expect(rights).toEqual([
+      true, false, true, false, true, false,
+      true, false, true, false, true, false,
+    ]);
+  });
+
+  it("draws none on the lone cell of an odd grid, where it would stub into nothing", () => {
+    expect(legendCellBorders(8, 9).right).toBe(false);
+  });
+});
+
 describe("the colour legend's grid lines", () => {
   it("draws one cell per palette entry", () => {
     expect(renderLegend()).toHaveLength(getPaletteInDisplayOrder().length);
   });
 
-  it("leaves the bottom border off the last row, where the container's already is", () => {
+  it("asks legendCellBorders which lines to draw, rather than deciding itself", () => {
     const cells = renderLegend();
 
-    // Nine entries in two columns: the ninth sits alone on the final row.
-    expect(classesOf(cells[cells.length - 1])).not.toContain("border-b");
-  });
+    // Literal, and tied to the twelve-entry palette on purpose. If the palette
+    // changes length this fails loudly and someone rereads it — which is
+    // exactly what did not happen when nine became twelve and the lone-cell
+    // assertion quietly lost its subject.
+    expect(cells).toHaveLength(12);
 
-  it("still separates every row above the last", () => {
-    const cells = renderLegend();
+    const withBottom = cells.filter((c) => classesOf(c).includes("border-b"));
+    const withRight = cells.filter((c) => classesOf(c).includes("border-r"));
 
-    for (const cell of cells.slice(0, -1)) {
-      expect(classesOf(cell)).toContain("border-b");
-    }
+    expect(withBottom).toHaveLength(10); // all but the final row's two
+    expect(withRight).toHaveLength(6); // one per left-hand cell
+    expect(classesOf(cells[10])).not.toContain("border-b");
+    expect(classesOf(cells[11])).not.toContain("border-b");
   });
 
   it("draws a right border only where a cell actually sits to the right", () => {
@@ -68,10 +105,8 @@ describe("the colour legend's grid lines", () => {
     });
   });
 
-  it("puts no right border on the lone cell of the final row", () => {
-    const cells = renderLegend();
-
-    // Otherwise it draws a stub into the empty half of that row.
-    expect(classesOf(cells[cells.length - 1])).not.toContain("border-r");
-  });
+  // "puts no right border on the lone cell of the final row" lived here. At
+  // twelve entries there is no lone cell, so it had no subject left to assert
+  // against. That behaviour is now pinned by legendCellBorders(8, 9).right
+  // above, which can still exercise an odd palette.
 });
