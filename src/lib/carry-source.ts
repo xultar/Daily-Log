@@ -17,8 +17,10 @@ export interface CarrySource {
  * Four weeks is enough to cross a normal break without turning a dormant
  * planner into an archaeology tool.
  *
- * Reads only. Nothing here writes, which is what lets the bar be computed the
- * moment a week is opened without opening a week ever mutating it.
+ * Never writes planner data. The one write it can trigger is loadWeek's
+ * quarantine of an already-unreadable week, which copies the raw text to
+ * daily-log-unreadable-<key> before returning an empty week. No week the user
+ * can still read is modified by opening one.
  */
 export function findCarrySource(currentWeekDate: Date): CarrySource | null {
   const thisMonday = startOfWeek(currentWeekDate, { weekStartsOn: 1 });
@@ -35,9 +37,12 @@ export function findCarrySource(currentWeekDate: Date): CarrySource | null {
  *
  * Navigating back to review March must not prompt to carry February forward,
  * and must not offer to write to a week the user is only reading.
+ *
+ * `now` is a parameter rather than read from the clock internally so tests can
+ * exercise both sides of the weekStartsOn boundary without faking system time.
  */
-export function isCurrentOrFutureWeek(weekDate: Date): boolean {
+export function isCurrentOrFutureWeek(weekDate: Date, now: Date = new Date()): boolean {
   const viewed = startOfWeek(weekDate, { weekStartsOn: 1 });
-  const now = startOfWeek(new Date(), { weekStartsOn: 1 });
-  return viewed.getTime() >= now.getTime();
+  const currentWeek = startOfWeek(now, { weekStartsOn: 1 });
+  return viewed.getTime() >= currentWeek.getTime();
 }

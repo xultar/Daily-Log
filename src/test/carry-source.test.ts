@@ -1,6 +1,6 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach } from "vitest";
 import { saveWeek, createEmptyWeek } from "@/lib/planner-data";
-import { findCarrySource, isCurrentOrFutureWeek } from "@/lib/carry-forward";
+import { findCarrySource, isCurrentOrFutureWeek } from "@/lib/carry-source";
 import { subWeeks, startOfWeek } from "date-fns";
 
 const MONDAY = new Date(2026, 7, 24); // 2026-08-24
@@ -66,6 +66,11 @@ describe("findCarrySource", () => {
     saveWeek(MONDAY, w);
     expect(findCarrySource(MONDAY)).toBeNull();
   });
+
+  it("still reaches a week exactly four back", () => {
+    saveWeek(subWeeks(MONDAY, 4), createEmptyWeek(subWeeks(MONDAY, 4)));
+    expect(findCarrySource(MONDAY)!.monday).toBe("2026-07-27");
+  });
 });
 
 describe("isCurrentOrFutureWeek", () => {
@@ -86,16 +91,14 @@ describe("isCurrentOrFutureWeek", () => {
   });
 
   it("puts the Sunday before a Monday in the previous week, not the current one", () => {
-    // The only day where Monday-based and Sunday-based week starts disagree.
-    // With the clock pinned, this keeps killing the mutant forever; keyed to
-    // the real date it would stop discriminating as soon as time moved on.
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date(2026, 7, 25)); // Tue 25 Aug 2026
-    try {
-      expect(isCurrentOrFutureWeek(new Date(2026, 7, 23))).toBe(false); // Sun 23 Aug
-      expect(isCurrentOrFutureWeek(new Date(2026, 7, 24))).toBe(true); // Mon 24 Aug
-    } finally {
-      vi.useRealTimers();
-    }
+    // Sunday is the only day where Monday-based and Sunday-based week starts
+    // disagree, so it is the only day that can observe weekStartsOn here.
+    expect(isCurrentOrFutureWeek(new Date(2026, 7, 23), new Date(2026, 7, 25))).toBe(false);
+    expect(isCurrentOrFutureWeek(new Date(2026, 7, 24), new Date(2026, 7, 25))).toBe(true);
+  });
+
+  it("treats the current week as current when today is a Sunday", () => {
+    // Kills the mutant that drops weekStartsOn from the `now` side only.
+    expect(isCurrentOrFutureWeek(new Date(2026, 7, 24), new Date(2026, 7, 30))).toBe(true);
   });
 });
