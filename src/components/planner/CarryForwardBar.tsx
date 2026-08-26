@@ -62,7 +62,7 @@ const CarryForwardBar: React.FC<CarryForwardBarProps> = ({
       <div
         role="group"
         aria-labelledby={headingId}
-        className="flex flex-wrap gap-x-4 gap-y-0.5 mb-1.5"
+        className="flex flex-wrap gap-x-4 gap-y-0.5 mb-1.5 max-h-24 overflow-y-auto"
       >
         {candidates.map((c, i) => {
           const age = carriedWeeks(c.origin, mondayISO);

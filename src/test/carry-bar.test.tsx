@@ -161,6 +161,26 @@ describe("CarryForwardBar", () => {
     expect(screen.queryByText(/1 items/)).toBeNull();
   });
 
+  it("bounds the row list so a long one scrolls instead of squeezing the grid", () => {
+    // The bar is shrink-0 inside a h-screen column, so every row it renders
+    // comes out of the time grid's height. Up to 8 weekly actions plus 42
+    // flagged daily rows can be candidates at once.
+    //
+    // jsdom does no layout, so the bound is only observable as the classes
+    // that impose it — same reasoning as the no-print test below. The rows
+    // must still all be in the DOM: the cap scrolls, it does not clip.
+    const many = Array.from({ length: 20 }, (_, i) => ({
+      text: `Candidate ${i}`,
+      origin: "2026-08-17",
+    }));
+    setup({ candidates: many });
+    const group = screen.getByRole("group", { name: /unfinished from last week/ });
+    expect(group.className).toMatch(/\bmax-h-/);
+    expect(group.className).toMatch(/\boverflow-y-auto\b/);
+    expect(screen.getAllByRole("checkbox")).toHaveLength(20);
+    expect(screen.getByText("Candidate 19")).toBeInTheDocument();
+  });
+
   it("does not print", () => {
     const { container } = setup();
     expect(container.firstElementChild?.className).toContain("no-print");
