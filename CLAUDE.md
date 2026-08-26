@@ -29,7 +29,7 @@ widgets follow the colour scheme. The live site was confirmed serving them.
 **`carry-forward` is built and unmerged.** The branch carries all eight tasks
 of the carry-forward feature — schema, rules, the backwards scan, the review
 bar, the `StudyPlanner` wiring and the sidebar age marker — verified in tests
-but **not yet seen working in a browser**. Spec and plan are in
+and seen working in a browser on 2026-08-25, in both light and dark. Spec and plan are in
 `docs/superpowers/`. Merging is the user's call.
 
 Still open and untouched: the two-tab overwrite, the `<input>` inside
