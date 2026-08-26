@@ -928,8 +928,61 @@ describe("CarryForwardBar", () => {
 
   it("shows how long each item has slipped", () => {
     setup();
-    expect(screen.getByText("1w")).toBeInTheDocument();
+    // Two candidates deliberately share an origin: that is the common case,
+    // because collectCarryForward stamps the same source Monday on every item
+    // that has none of its own. getByText would throw on the duplicate — a
+    // fixture where all three ages differ would be the unrealistic one, and
+    // would quietly stop exercising what actually happens.
+    expect(screen.getAllByText("1w")).toHaveLength(2);
     expect(screen.getByText("3w")).toBeInTheDocument();
+  });
+
+  it("does not label an item that originated in the week being viewed", () => {
+    setup({ candidates: [{ text: "Fresh", origin: "2026-08-24" }] });
+    expect(screen.queryByText("0w")).toBeNull();
+  });
+
+  it("says 1 item, not 1 items", () => {
+    setup({ candidates: [{ text: "Only one", origin: "2026-08-17" }] });
+    expect(screen.getByText(/1 item/)).toBeInTheDocument();
+    expect(screen.queryByText(/1 items/)).toBeNull();
+  });
+
+  it("measures age against the week being viewed, not a fixed date", () => {
+    // Every other test uses the default mondayISO, so a component that ignored
+    // the prop entirely would pass all of them.
+    setup({ mondayISO: "2026-08-31" });
+    expect(screen.getAllByText("2w")).toHaveLength(2);
+    expect(screen.getByText("4w")).toBeInTheDocument();
+  });
+
+  it("lets an unticked item be ticked again", () => {
+    // Otherwise a user who unticks by mistake has no way back, and nothing
+    // notices — the toggle only has to work in one direction to pass.
+    const onBring = vi.fn();
+    setup({ onBring });
+    const box = screen.getAllByRole("checkbox")[1];
+    fireEvent.click(box);
+    fireEvent.click(box);
+    fireEvent.click(screen.getByRole("button", { name: /bring/i }));
+    expect(onBring.mock.calls[0][0]).toHaveLength(3);
+  });
+
+  it("keeps duplicate-text rows independent", () => {
+    // collectCarryForward can emit the same text twice — once as a weekly
+    // action, once as a flagged daily row — so the bar really does receive
+    // duplicates. Keying the list by text rather than index would collide them.
+    const onBring = vi.fn();
+    setup({
+      candidates: [
+        { text: "Draft methods", origin: "2026-08-17" },
+        { text: "Draft methods", origin: "2026-08-17" },
+      ],
+      onBring,
+    });
+    fireEvent.click(screen.getAllByRole("checkbox")[0]);
+    fireEvent.click(screen.getByRole("button", { name: /bring/i }));
+    expect(onBring.mock.calls[0][0]).toHaveLength(1);
   });
 
   it("does not print", () => {
@@ -1046,7 +1099,7 @@ export default CarryForwardBar;
 - [ ] **Step 4: Run the tests and verify they pass**
 
 Run: `npx vitest run src/test/carry-bar.test.tsx`
-Expected: PASS, 9 tests.
+Expected: PASS, 14 tests.
 
 - [ ] **Step 5: Commit**
 
@@ -1440,7 +1493,7 @@ git commit -m "Show how many weeks an action has been slipping"
 - [ ] **Step 1: Run the whole suite**
 
 Run: `npm test`
-Expected: PASS. The count rises from 186 by the tests added here — 8 schema, 24 rules, 16 source, 18 bar, 4 marker.
+Expected: PASS. The count rises from 186 by the tests added here — 8 schema, 24 rules, 16 source, 23 bar, 4 marker.
 
 - [ ] **Step 2: Lint**
 
