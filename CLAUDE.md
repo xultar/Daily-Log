@@ -11,12 +11,17 @@ Live at https://xultar.github.io/Daily-Log/
 to `main` and publishes to GitHub Pages. Work on a branch and merge only when the
 change has been seen working. Merging is the user's call, not yours.
 
-**The deploy workflow does not run the tests.** `deploy.yml` is `npm ci` →
-`npm run build` → Pages, and nothing in `.github/` invokes vitest. A red suite
-cannot stop a deploy and never could, so `npm test` passing is something you
-check before merging, not something the pipeline checks for you. Any claim that
-a test failure "will bite CI, which is what deploys" is false as things stand;
-it would only become true if a test job were added.
+**A red suite now blocks the deploy.** `deploy.yml` is `npm ci` → `npm test` →
+`npm run build` → Pages. The test step was added on 2026-08-26; until then
+nothing verified this repo before it published, and 300 failing tests would have
+deployed as cheerfully as 300 passing ones. Because the step sits before the
+build, a failure stops the artifact ever being uploaded, so the live site goes
+on serving the last good build rather than a broken one.
+
+Two consequences. A flaky test can now hold up a deploy, which is the price of
+the gate and the reason `startup-migration.test.tsx` carries its own timeout —
+see Baselines. And the runner is smaller and colder than a dev machine, so a
+test that depends on wall-clock speed will show it here first.
 
 **The base path is `/Daily-Log/`.** `vite.config.ts` sets it, and it applies in
 development too, so the dev server serves at `http://localhost:8080/Daily-Log/`,
