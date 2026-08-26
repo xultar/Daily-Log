@@ -67,6 +67,7 @@ Shipped on **2026-08-26**, all merged, pushed and confirmed live:
 - The daily legend cell split into a button and a field, which is valid HTML,
   and the label write moved off mount.
 - Text search across every stored week, from a dialog in the toolbar.
+- Colour in the month view: each cell tints with its dominant tag and names it.
 
 There is no unmerged work and nothing waiting to deploy.
 
@@ -89,8 +90,6 @@ pass before code — see the working rhythm below.
   questions are what a template *is* (a named saved week? last week? a specific
   week you point at?), whether it copies time blocks as well as text, and what
   happens to a day that already has content.
-- **Colour in the month view.** A month cell shows total minutes and an
-  intensity shade — how much, never what. `calcDayColorMinutes` already exists.
 - **Find when you last used a tag.** Came out of the search design on
   2026-08-26 and is deliberately not part of it: it is a different query.
   Text search reads prose and answers with passages; this reads `timeBlocks`
@@ -233,6 +232,34 @@ Consequences:
   `timeBlocks`, which persists and then fails silently in both directions —
   `getBlockColor(null)` returns null so the block looks unpainted, and
   `calcDayTotal`'s truthiness check skips it so the totals look right.
+
+## The month view's wash has a measured ceiling
+
+A month cell tints with its dominant tag — hue for what, alpha for how much —
+and `tintAlpha` caps that alpha at **0.45**. That number is a contrast limit,
+not a preference.
+
+The cell carries text over the wash. In dark mode the tags are lighter than the
+page, so a strong wash drags the cell toward the colour of its own text.
+Measured against `--foreground`: yellow crosses WCAG AA's 4.5:1 at alpha 0.45,
+the other eleven tags between 0.65 and 0.70. Light mode is safe at any alpha,
+because the tags are pastel and the text is near-black. **Dark is the binding
+constraint for both**, which is the opposite of the palette's own legibility,
+where light is the tight one.
+
+It shipped at 0.75 for about ten minutes, which put the minutes text at 1.65:1
+on a yellow day — perfectly legible in a screenshot and not legible in use. If
+you raise the ceiling, measure it; the eye passes this and the numbers do not.
+Light mode still has headroom if the wash is ever wanted bolder there, but that
+needs a per-theme alpha rather than one constant.
+
+**The tag's name is in the cell for a reason.** Colour alone is the one encoding
+this palette is measured to be unable to carry, and a mono print turns every
+tint into the same grey. The name is the channel that survives both.
+
+**`dominantTag` breaks ties by display position, not storage id.** Gray is id 6
+at position 9 and magenta is id 9 at position 8, so a tie between them resolves
+to magenta. A test uses exactly that pair, so comparing ids fails it.
 
 ## Search reads raw, and navigates by key
 
@@ -684,7 +711,7 @@ the tab would lose it with no trace — worse than the problem being solved.
 
 ## Baselines
 
-- `npm test` — 364 tests across 34 files. `vitest.config.ts` sets
+- `npm test` — 378 tests across 36 files. `vitest.config.ts` sets
   `testTimeout: 15000` against a 5s default, and that is load-bearing: several
   tests render the whole app and click through it, sitting at 3-4s alone. Under
   full-suite contention they cross 5s — `today.test.tsx` timed out at 5597ms on
@@ -725,29 +752,18 @@ is a write on every mount unless something stops it** — `StudyPlanner`'s
 `dirtyRef` is the same lesson, learned the expensive way when a read that wrote
 turned an unreadable week into an empty one.
 
-## Discussed but not started
+## Deliberately not doing
 
-From a review of the app in August 2026, roughly by value. None of these are
-specified; each needs a design pass before any code.
+**Cloud sync or accounts.** The localStorage-only design is why this repo can be
+public with no user data in it, and why there is no server to run.
+Export/import into a synced folder gets most of the value for none of the
+architecture.
 
-- **Search across weeks.** Months of memos and priorities are reachable only by
-  clicking week by week. `exportAllData` already enumerates every stored week, so
-  the data access is solved and this is mostly UI. See "Pick up here next".
-- **Colour in the month view.** A month cell shows total minutes and an intensity
-  shade, so it says how much but never what. `calcDayColorMinutes` already
-  exists. The weekly-legend spec listed this out of scope at the time; worth
-  revisiting now that labels exist.
-- **Trends over time.** `recharts` is a dependency and entirely unused. Per-colour
-  minutes per week across a term is the natural payoff for all this logging.
-- **Edit colour labels from the weekly strip.** Small on the surface, but doing it
-  naively replicates the `<input>` inside `<button>` problem into a second place.
-  Do the a11y restructure first.
-- **Duplicate a day, or template a week.** Written up under "Pick up here next".
-
-Deliberately not doing: **cloud sync or accounts.** The localStorage-only design
-is why this repo can be public with no user data in it, and why there is no
-server to run. Export/import into a synced folder gets most of the value for none
-of the architecture.
+This heading used to be "Discussed but not started" and carried its own copy of
+the backlog. It drifted: it went on describing search and month-view colour as
+future work after both had shipped, and repeated three items that "Pick up here
+next" already held. **One list. That one.** A second copy of a backlog is a
+second thing to keep true, and it will not be.
 
 ## Design docs
 

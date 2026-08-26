@@ -127,6 +127,73 @@ export function calcDayColorMinutes(day: DayData): Record<number, number> {
   return minutes;
 }
 
+/**
+ * The tag a day was mostly spent on, as a storage id, or null when nothing is
+ * painted. What the month view tints a cell with.
+ *
+ * **Ties break toward the earlier display position, not the lower storage id.**
+ * The two disagree for four of the twelve colours, and display position is the
+ * order the legend shows, so it is the order in which a tie-break looks
+ * deliberate rather than arbitrary. Gray and magenta are the clearest case:
+ * gray is id 6 at position 9, magenta is id 9 at position 8, so a tie between
+ * them resolves to magenta.
+ *
+ * Returns a storage id, never a display position — it indexes the palette and
+ * keys the `--tag-N` custom properties.
+ *
+ * The `timeBlocks` guard is for callers that have not been through
+ * `repairWeek`. The month view has, but the guard costs one line and this
+ * function has no way to tell.
+ */
+export function dominantTag(day: DayData): number | null {
+  if (!Array.isArray(day?.timeBlocks)) return null;
+
+  const minutes = calcDayColorMinutes(day);
+  let best: number | null = null;
+  let bestMinutes = 0;
+  let bestPosition = Infinity;
+
+  for (const [id, mins] of Object.entries(minutes)) {
+    const colorId = Number(id);
+    const position = displayPositionForColorId(colorId) ?? Infinity;
+    if (mins > bestMinutes || (mins === bestMinutes && position < bestPosition)) {
+      best = colorId;
+      bestMinutes = mins;
+      bestPosition = position;
+    }
+  }
+  return best;
+}
+
+/**
+ * How strongly a month cell washes itself with its dominant tag.
+ *
+ * Hue says which tag; this says how much of the day went to it. Four hours is
+ * treated as a full day's work, matching the intensity the cell already used
+ * before it had a colour to apply it to.
+ *
+ * **The ceiling of 0.45 is a measured contrast limit, not a taste.** The cell
+ * carries text over this wash. In dark mode the tags are lighter than the page,
+ * so a strong wash drags the cell toward the colour of its own text: measured
+ * against `--foreground`, yellow crosses WCAG AA's 4.5:1 at alpha 0.45, and the
+ * other eleven tags at 0.65 to 0.70. Light mode is safe at any alpha, because
+ * the tags are pastel and the text is near-black. Dark is therefore the binding
+ * constraint for both, and 0.45 is where the tightest tag lands.
+ *
+ * Before this was measured the ceiling was 0.75, which put the minutes text at
+ * 1.65:1 on a yellow day — legible in a screenshot at a glance, and not
+ * legible at all in use.
+ *
+ * A function rather than an expression in the view because jsdom cannot see the
+ * result: `hsl(var(--tag-N) / 0.45)` is modern colour syntax, jsdom's CSSOM
+ * drops it, and a style assertion against it reads empty. The arithmetic is
+ * testable here; that it reaches the screen is a browser's job.
+ */
+export function tintAlpha(minutes: number): number {
+  const intensity = Math.min(Math.max(minutes, 0) / 240, 1);
+  return 0.15 + intensity * 0.3;
+}
+
 /** Minutes spent on each color across a whole week, keyed by storage id. */
 export function calcWeekColorMinutes(week: WeekData): Record<number, number> {
   const minutes: Record<number, number> = {};
@@ -589,12 +656,21 @@ export function getBlockColor(value: number | undefined): string | null {
 }
 
 /**
- * The faint background wash for a tagged row. Same storage-id contract as
+ * A translucent wash of a tag's colour. Same storage-id contract as
  * getBlockColor: index 0 and out-of-range values yield null.
+ *
+ * The default is the faint wash behind a tagged row. The month view passes its
+ * own alpha, because there the strength of the wash is carrying a second piece
+ * of information — how much time the day took — on top of which tag it was.
+ * Taking alpha as a parameter keeps the range check in one place rather than
+ * having a caller build the string itself.
  */
-export function getBlockTint(value: number | undefined): string | null {
+export function getBlockTint(
+  value: number | undefined,
+  alpha: number = ROW_TINT_ALPHA
+): string | null {
   const ref = blockVar(value);
-  return ref ? `hsl(${ref} / ${ROW_TINT_ALPHA})` : null;
+  return ref ? `hsl(${ref} / ${alpha})` : null;
 }
 
 /**

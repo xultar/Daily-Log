@@ -9,7 +9,7 @@ import {
   isSameMonth,
   getISOWeek,
 } from "date-fns";
-import { loadWeek, calcDayTotal, getWeekKey, getWeekDates } from "@/lib/planner-data";
+import { loadWeek, calcDayTotal, getWeekKey, getWeekDates, dominantTag, getBlockTint, tintAlpha, loadColorLabels, BLOCK_COLORS } from "@/lib/planner-data";
 
 interface MonthlyViewProps {
   currentDate: Date;
@@ -44,6 +44,19 @@ const MonthlyView: React.FC<MonthlyViewProps> = ({ currentDate, onSelectDay }) =
     return hours * 60 + minutes;
   };
 
+  const getDayDominantTag = (date: Date): number | null => {
+    const week = weekCache[getWeekKey(date)];
+    if (!week) return null;
+    const day = week.days.find((d) => d.date === format(date, "yyyy-MM-dd"));
+    return day ? dominantTag(day) : null;
+  };
+
+  // Read once per mount, as WeeklyColorLegend does and for the same reason:
+  // loadColorLabels hits localStorage, and StudyPlanner renders the month
+  // branch conditionally rather than keeping it mounted and hidden, so
+  // switching views genuinely remounts this and picks up a renamed tag.
+  const labels = React.useMemo(() => loadColorLabels(), []);
+
   const weeks: Date[][] = [];
   for (let i = 0; i < allDays.length; i += 7) {
     weeks.push(allDays.slice(i, i + 7));
@@ -70,26 +83,41 @@ const MonthlyView: React.FC<MonthlyViewProps> = ({ currentDate, onSelectDay }) =
             const inMonth = isSameMonth(date, currentDate);
             const h = Math.floor(mins / 60);
             const m = mins % 60;
-            // Intensity based on study time (max 4h = full)
-            const intensity = Math.min(mins / 240, 1);
+
+            // Hue says what the day was spent on, strength says how much. A ten
+            // minute day is a hint; four hours is unmistakable.
+            const tag = getDayDominantTag(date);
+            const tint = tag === null ? null : getBlockTint(tag, tintAlpha(mins));
+            const tagName = tag === null ? null : labels[tag] || BLOCK_COLORS[tag - 1]?.label;
 
             return (
               <div
                 key={`${wi}-${di}`}
                 onClick={() => onSelectDay(date)}
-                className={`border-b border-r border-border p-1.5 min-h-[70px] cursor-pointer hover:bg-primary/10 transition-colors ${
+                // Hover is a ring rather than a background: an inline
+                // backgroundColor beats a hover background class, so on exactly
+                // the days that have data the hover would silently do nothing.
+                className={`border-b border-r border-border p-1.5 min-h-[70px] cursor-pointer transition-colors hover:ring-1 hover:ring-inset hover:ring-foreground/20 ${
                   !inMonth ? "opacity-40" : ""
                 }`}
+                data-dominant-tag={tag ?? undefined}
+                style={tint ? { backgroundColor: tint } : undefined}
               >
                 <div className="text-xs font-medium text-foreground">{format(date, "d")}</div>
+                {tagName && (
+                  // The non-colour channel. Several pairs in this palette are
+                  // the same colour to a deuteranope, and a mono print turns
+                  // every tint into the same grey, so the tint alone says
+                  // nothing to those readers.
+                  <div className="mt-1 text-[9px] leading-tight text-foreground truncate">
+                    {tagName}
+                  </div>
+                )}
                 {mins > 0 && (
-                  <div
-                    className="mt-1 rounded-sm px-1 py-0.5 text-[9px] font-medium text-center"
-                    style={{
-                      backgroundColor: `hsl(var(--campus-filled) / ${0.3 + intensity * 0.7})`,
-                      color: `hsl(var(--primary-foreground))`,
-                    }}
-                  >
+                  // Plain text now: the cell's own strength carries the
+                  // intensity this pill used to shade itself with, and encoding
+                  // one number twice reads as two facts.
+                  <div className="text-[9px] font-medium text-foreground">
                     {h}h{m > 0 ? ` ${m}m` : ""}
                   </div>
                 )}
