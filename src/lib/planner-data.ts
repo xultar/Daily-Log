@@ -421,6 +421,39 @@ export function weekKeyFromEntryKey(entryKey: string): string | null {
 }
 
 /**
+ * Every stored week, keyed by week key, for callers that need to look across
+ * all of them rather than open one.
+ *
+ * Entries are matched by shape, never by prefix: `planner-show-weekends` and
+ * `planner-color-labels` are settings living under the same prefix, and the
+ * exporter once collected them as weeks and then died on `week.days is not
+ * iterable` — for every user, on every run. This function exists so that loop
+ * is written once instead of once per caller.
+ *
+ * **The weeks come back exactly as stored, not repaired.** Callers here read a
+ * few fields rather than render a week, and putting every stored week through
+ * `repairWeek` to do that would be a great deal of work for no benefit. The
+ * price is that a caller must defend its own field access: `days` may be
+ * missing, `weeklyTodos` may be a string, a subject may be a number.
+ */
+export function loadAllWeeks(): Record<string, unknown> {
+  const weeks: Record<string, unknown> = {};
+  for (const key of listKeys()) {
+    const weekKey = weekKeyFromEntryKey(key);
+    if (!weekKey) continue;
+    const raw = readItem(key);
+    if (raw === null) continue;
+    try {
+      weeks[weekKey] = JSON.parse(raw);
+    } catch {
+      // Not JSON. loadWeek quarantines these when one is opened; here it is
+      // simply not a week anyone can search or export.
+    }
+  }
+  return weeks;
+}
+
+/**
  * The key a stored week belongs under, decided by the dates it carries rather
  * than by the key it was found at. Returns null when no day carries a readable
  * date, in which case the caller has nothing better to go on and should leave

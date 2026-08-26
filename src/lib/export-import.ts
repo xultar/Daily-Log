@@ -1,12 +1,12 @@
 import {
   BLOCK_COLORS,
   WeekData,
+  loadAllWeeks,
   loadColorLabels,
   saveColorLabels,
   weekKeyForStoredWeek,
-  weekKeyFromEntryKey,
 } from "./planner-data";
-import { readItem, writeItem, listKeys } from "./storage";
+import { writeItem } from "./storage";
 
 /**
  * What travels besides the weeks. Colour labels only: they are the one piece of
@@ -30,21 +30,11 @@ export interface ExportData {
 const READABLE_VERSIONS = [1, 2];
 
 export function exportAllData(): ExportData {
-  const weeks: Record<string, WeekData> = {};
-  for (const key of listKeys()) {
-    // Match the entry shape, not the prefix: planner-show-weekends and
-    // planner-color-labels are settings, and collecting them here exported them
-    // as weeks and then broke exportAsCSV on the first one it reached.
-    const weekKey = weekKeyFromEntryKey(key);
-    if (!weekKey) continue;
-    const raw = readItem(key);
-    if (raw === null) continue;
-    try {
-      weeks[weekKey] = JSON.parse(raw);
-    } catch {
-      // Ignore entries that are not valid JSON
-    }
-  }
+  // Matching the entry shape rather than the prefix is what stopped
+  // planner-show-weekends and planner-color-labels being exported as weeks and
+  // killing exportAsCSV on the first one it reached. That rule now lives in
+  // loadAllWeeks, so search does not have to reimplement it.
+  const weeks = loadAllWeeks() as Record<string, WeekData>;
   return {
     version: 2,
     exportedAt: new Date().toISOString(),

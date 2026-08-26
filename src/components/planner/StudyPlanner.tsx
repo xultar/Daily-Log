@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import { startOfWeek, addWeeks, subWeeks, addMonths, subMonths, format } from "date-fns";
+import { startOfWeek, addWeeks, subWeeks, addMonths, subMonths, format, parse } from "date-fns";
 import { WeekData, DayData, TodoItem, CarryCandidate, loadWeek, saveWeek, collectCarryForward, applyCarryForward } from "@/lib/planner-data";
 import { findCarrySource, isCurrentOrFutureWeek } from "@/lib/carry-source";
 import WeeklyTodoSidebar from "./WeeklyTodoSidebar";
@@ -7,6 +7,7 @@ import DayColumn from "./DayColumn";
 import DailyView from "./DailyView";
 import MonthlyView from "./MonthlyView";
 import ToolbarActions from "./ToolbarActions";
+import SearchDialog from "./SearchDialog";
 import WeeklyColorLegend from "./WeeklyColorLegend";
 import CarryForwardBar from "./CarryForwardBar";
 import { ChevronLeft, ChevronRight, Printer, Calendar, CalendarDays, CalendarRange, Eye, EyeOff } from "lucide-react";
@@ -291,6 +292,16 @@ const StudyPlanner: React.FC = () => {
             <Printer className="h-3 w-3" />
             Print
           </Button>
+          {/* A result always lands on the week view: one rule, no exceptions
+              to remember. The row itself names the day for a memo or priority,
+              which is what makes that rule workable when the week view shows a
+              memo as one truncated line. */}
+          <SearchDialog
+            onJump={(monday) => {
+              setCurrentDate(parse(monday, "yyyy-MM-dd", new Date()));
+              setViewMode("weekly");
+            }}
+          />
           <ToolbarActions onDataImported={() => setRefreshKey((k) => k + 1)} />
         </div>
       </div>
