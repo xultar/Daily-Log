@@ -26,9 +26,11 @@ On 2026-08-25 three things merged into `main` and **deployed**: the priority
 flag branch, dark mode with the print fix, and a follow-up making native
 widgets follow the colour scheme. The live site was confirmed serving them.
 
-**Carry-forward is specified but not built.** The design is approved and sits
-in `docs/superpowers/specs/2026-08-25-carry-forward-design.md`; there is no
-implementation plan for it yet.
+**`carry-forward` is built and unmerged.** The branch carries all eight tasks
+of the carry-forward feature — schema, rules, the backwards scan, the review
+bar, the `StudyPlanner` wiring and the sidebar age marker — verified in tests
+but **not yet seen working in a browser**. Spec and plan are in
+`docs/superpowers/`. Merging is the user's call.
 
 Still open and untouched: the two-tab overwrite, the `<input>` inside
 `<button>` in the daily legend, and the cold-run timeout flake in
@@ -205,20 +207,33 @@ rather than dropping it.
 
 ## Optional row fields are dropped unless repairSubject knows them
 
-`SubjectRow` carries two optional fields beyond the text and checkbox:
-`colorId` and `flagged`. Both are optional so that rows written before the
-field existed load without a migration — and both are therefore invisible to
-the compiler, because `strict` is off.
+`SubjectRow` carries three optional fields beyond the text and checkbox:
+`colorId`, `flagged` and `origin`. `TodoItem` carries `origin`. `WeekData`
+carries `carryResolved`. All are optional so that records written before the
+field existed load without a migration — and all are therefore invisible to the
+compiler, because `strict` is off.
 
-`repairSubject` rebuilds every row from a fixed list of fields on load. **A
-field it does not list is silently dropped on the next read**, with no type
-error and no failing test unless one exists for that field specifically. Adding
-a third optional field means adding it there too. `src/test/priority-flag.test.tsx`
-guards `flagged` the way `src/test/daily-view.test.tsx` guards `colorId`.
+`repairSubject`, `repairTodo` and `repairWeek` each rebuild from a fixed list
+of fields on load. **A field they do not list is silently dropped on the next
+read**, with no type error and no failing test unless one exists for that field
+specifically. Adding a fourth optional field means adding it there too.
 
-`flagged` is stored only when true; clearing a flag removes the field rather
-than storing `false`, so a never-flagged row and a cleared row are identical on
-disk.
+The guards, one per field: `src/test/daily-view.test.tsx` for `colorId`,
+`src/test/priority-flag.test.tsx` for `flagged`, `src/test/carry-schema.test.ts`
+for `origin` and `carryResolved`. The `origin` test asserts a row's **whole**
+shape with `toEqual` rather than checking one field, because the combination is
+what a fixed-list rebuild breaks.
+
+**Why this section exists in the shape it does:** when `origin` was added,
+`repairTodo` was a complete literal — `return { text, checked }` — and dropping
+`origin` would have left the feature *looking* like it worked. Items would
+carry, the bar would behave, and only the age marker would quietly read zero
+forever.
+
+`flagged` is stored only when true, and `carryResolved` likewise; clearing a
+flag removes the field rather than storing `false`, so a never-flagged row and
+a cleared row are identical on disk. `origin` is absent when an item originated
+in the week it is sitting in.
 
 ## The hour column's last row reads 00
 
@@ -246,11 +261,13 @@ the characters `border-b`, so a substring check discriminates nothing.
 
 ## Traps that cost time to find
 
-**Do not rewrite `updateSubject`** in `DailyView.tsx` or `DayColumn.tsx`. Its
-`{ ...s, [field]: value }` spread is the only thing preserving a row's `colorId`
-**and `flagged`** through a keystroke. Replacing it with explicit setters that list fields drops
-the tag with no type error, because the field is optional and strict is off.
-`src/test/daily-view.test.tsx` guards this — do not delete it.
+**Do not rewrite `updateSubject`** in `DailyView.tsx` or `DayColumn.tsx`, or
+`update` in `WeeklyTodoSidebar.tsx`. Their `{ ...s, [field]: value }` spread is
+the only thing preserving a row's `colorId`, `flagged` **and `origin`** through
+a keystroke. Replacing it with explicit setters that list fields drops them with
+no type error, because the fields are optional and strict is off.
+`src/test/daily-view.test.tsx` and `src/test/carry-marker.test.tsx` guard this —
+do not delete them.
 
 **Do not assert on rendered styles in tests.** This project pins jsdom v20, whose
 `cssstyle` predates CSS Color 4. Setting `style.backgroundColor = "hsl(213 60%
@@ -349,9 +366,56 @@ and registers the media listener only while the setting is `system`.
 `useIsDark` is deleted. Nothing should need the scheme at paint time again;
 `grep hslDark src --include=*.tsx` should stay empty.
 
+## Carrying unfinished work forward copies; it never moves
+
+When a week opens with unfinished work behind it, a review bar lists what was
+left over and lets the user tick what comes across. The rules are pure functions
+in `planner-data.ts`; `carry-source.ts` does the storage-facing scan.
+
+**Carrying copies.** Last week genuinely ended with those items unfinished, and
+ticking one off in the new week must leave that record true. `applyCarryForward`
+returns a new week and mutates neither argument.
+
+**Age is derived, never stored.** An item's `origin` is the ISO date of the
+Monday of the week it was first written in; `carriedWeeks` computes the gap to
+the week being viewed. A stored counter was rejected: it can be
+double-incremented by a re-run, inflated by an import, and there is no way to
+tell that it is wrong. A date can only be right or absent. An existing `origin`
+survives a second carry, which is what makes a repeated carry idempotent.
+
+**`findCarrySource` never writes planner data — but it is not "read only".**
+`hasStoredWeek` returns true for corrupt JSON, because the stored string is
+non-null, so the scan goes on to call `loadWeek`, whose catch branch quarantines
+the raw text to `daily-log-unreadable-<key>`. Do not shorten the comment there:
+the wording was corrected once already, and the wrong version is what a future
+reader would rely on to justify calling the scan during render.
+
+**The scan stops at the first week that exists, not the first with work.** An
+existing week means the user was there; if they left nothing unfinished, nothing
+carries. Scanning past it would resurrect older items they had moved on from.
+`hasStoredWeek` exists precisely because `loadWeek` returns an empty week for a
+missing key and so cannot tell absent from empty.
+
+**Opening a week still writes nothing.** Looking up candidates is a read, gated
+behind `isCurrentOrFutureWeek` so reviewing a past week never offers to write to
+it. Only the user's click marks the week dirty. `src/test/carry-bar.test.tsx`
+asserts this directly, and settles the debounce first so it cannot pass
+vacuously.
+
+**`CarryForwardBar` is mounted with `key={monday}`, and that is load-bearing.**
+It keys its tick state by array position, so without the key, moving between two
+weeks that both have candidates reuses the bar and leaves an outstanding untick
+glued to position 1 rather than to the item.
+
+**`bringForward` must keep the updater form.** It is a `useCallback` with a
+stable dependency, so its closure is created once at mount. Closing over
+`weekData` instead of `prev` captures the mount-time week forever: open on week
+A, navigate to week B, press Bring, and A's contents are written under B's key.
+The whole suite passed under that mutation until a test was added for it.
+
 ## Baselines
 
-- `npm test` — 186 tests across 20 files. One of them,
+- `npm test` — 275 tests across 25 files. One of them,
   `startup-migration.test.tsx`, renders the whole app and can cross Vitest's
   default 5s timeout on a **cold** run; it passes on a warm one. That is a
   pre-existing flake, not a regression, and it will bite on a cold CI runner.
@@ -385,13 +449,6 @@ that is normally open once.
 From a review of the app in August 2026, roughly by value. None of these are
 specified; each needs a design pass before any code.
 
-- **Carry unfinished work forward.** No longer open — designed and specified in
-  `docs/superpowers/specs/2026-08-25-carry-forward-design.md`, not yet built.
-  Copies rather than moves, prompts with a pick list rather than populating a
-  week on open, and derives an item's age from `origin`, the Monday of the week
-  it was first written in. Read the spec before touching it: the whole risk is
-  three optional fields across three repair functions, none of them visible to
-  the compiler.
 - **Search across weeks.** Months of memos and priorities are reachable only by
   clicking week by week. `exportAllData` already enumerates every stored week, so
   the data access is solved and this is mostly UI.
