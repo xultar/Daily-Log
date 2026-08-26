@@ -48,9 +48,13 @@ const CarryForwardBar: React.FC<CarryForwardBarProps> = ({
 
   return (
     <div className="no-print border-b border-border bg-accent/20 px-3 py-1.5 shrink-0">
-      <div className="flex items-center gap-1.5 text-[10px] text-foreground mb-1">
+      {/* The id names the whole sentence, not just the count. On the <strong>
+          alone a screen reader announces "group, 3 items" — a number with no
+          noun, which is the half of the context this labelling exists to give.
+          The icon contributes nothing to name-from-content. */}
+      <div id={headingId} className="flex items-center gap-1.5 text-[10px] text-foreground mb-1">
         <CornerDownRight className="h-3 w-3 shrink-0 text-muted-foreground" />
-        <strong id={headingId}>
+        <strong>
           {candidates.length} item{candidates.length === 1 ? "" : "s"}
         </strong>
         <span className="text-muted-foreground">unfinished from last week</span>

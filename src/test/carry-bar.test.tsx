@@ -58,7 +58,12 @@ describe("CarryForwardBar", () => {
 
   it("names each checkbox by its row", () => {
     setup();
-    expect(screen.getByRole("checkbox", { name: /Book viva slot/ })).toBeInTheDocument();
+    // Exact, not a regex: a loose match passes with the age token unhidden
+    // ("Book viva slot 1w carried 1 week") and with the sr-only phrase deleted
+    // ("Book viva slot 1w"), so it would defend neither half of the age wiring.
+    expect(
+      screen.getByRole("checkbox", { name: "Book viva slot carried 1 week" })
+    ).toBeInTheDocument();
   });
 
   it("unticks a row when its text is clicked", () => {
@@ -76,7 +81,9 @@ describe("CarryForwardBar", () => {
     // role="group" + aria-labelledby ties the rows to the "3 items" heading so
     // a screen-reader user landing on a checkbox has context.
     setup();
-    expect(screen.getByRole("group", { name: "3 items" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("group", { name: "3 items unfinished from last week" })
+    ).toBeInTheDocument();
   });
 
   it("keeps duplicate-text rows independent", () => {
