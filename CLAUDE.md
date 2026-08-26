@@ -66,6 +66,7 @@ Shipped on **2026-08-26**, all merged, pushed and confirmed live:
   to a deuteranope at ΔE 0.7.
 - The daily legend cell split into a button and a field, which is valid HTML,
   and the label write moved off mount.
+- Text search across every stored week, from a dialog in the toolbar.
 
 There is no unmerged work and nothing waiting to deploy.
 
@@ -88,9 +89,6 @@ pass before code — see the working rhythm below.
   questions are what a template *is* (a named saved week? last week? a specific
   week you point at?), whether it copies time blocks as well as text, and what
   happens to a day that already has content.
-- **Search across weeks.** The most-wanted of the older backlog. `exportAllData`
-  already enumerates every stored week, so the data access is solved and this is
-  mostly UI plus a result-to-week jump.
 - **Colour in the month view.** A month cell shows total minutes and an
   intensity shade — how much, never what. `calcDayColorMinutes` already exists.
 - **Find when you last used a tag.** Came out of the search design on
@@ -235,6 +233,33 @@ Consequences:
   `timeBlocks`, which persists and then fails silently in both directions —
   `getBlockColor(null)` returns null so the block looks unpainted, and
   `calcDayTotal`'s truthiness check skips it so the totals look right.
+
+## Search reads raw, and navigates by key
+
+Search is the only feature that reads every stored week **without** repairing
+it. Putting every week through `repairWeek` to grep five strings would be a
+great deal of work for no benefit, so `searchWeeks` defends every field access
+instead: `days` may be missing, `weeklyTodos` may be a string, a subject may be
+a number, a memo may be null. One damaged week must cost its own matches and
+nothing else. The test for this feeds it a week broken in every way at once,
+beside a healthy one that still has to match — because the last thing to read
+stored weeks raw was `exportAsCSV`, and one bad entry took the whole export
+down for every user.
+
+**A result's Monday comes from the entry key, which is the opposite of
+`weekKeyForStoredWeek`, and deliberately.** That function decides where a week
+*belongs* from the dates it carries, because a key can be wrong. Search is
+answering a different question: `loadWeek` is key-addressed, so the key is the
+only Monday that opens the week the match actually came from. Deriving it from
+the dates inside would, for a week whose key and contents disagree, land the
+user on a different week than their search hit — and would make a week too
+damaged to state its own dates unsearchable, which is when finding your text
+matters most.
+
+**`loadAllWeeks` is the one place that enumerates stored weeks.** It matches
+entries by shape rather than by the `planner-` prefix, which is what stopped
+settings being treated as weeks. `exportAllData` was rewritten onto it when
+search arrived rather than letting a third hand-written copy of that loop exist.
 
 ## A stored week is repaired, never replaced
 
@@ -659,7 +684,7 @@ the tab would lose it with no trace — worse than the problem being solved.
 
 ## Baselines
 
-- `npm test` — 343 tests across 31 files. `vitest.config.ts` sets
+- `npm test` — 364 tests across 34 files. `vitest.config.ts` sets
   `testTimeout: 15000` against a 5s default, and that is load-bearing: several
   tests render the whole app and click through it, sitting at 3-4s alone. Under
   full-suite contention they cross 5s — `today.test.tsx` timed out at 5597ms on
