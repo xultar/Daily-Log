@@ -19,9 +19,9 @@ build, a failure stops the artifact ever being uploaded, so the live site goes
 on serving the last good build rather than a broken one.
 
 Two consequences. A flaky test can now hold up a deploy, which is the price of
-the gate and the reason `startup-migration.test.tsx` carries its own timeout —
-see Baselines. And the runner is smaller and colder than a dev machine, so a
-test that depends on wall-clock speed will show it here first.
+the gate and the reason the test timeout was raised in `vitest.config.ts` — see
+Baselines. And the runner is smaller and colder than a dev machine, so a test
+that depends on wall-clock speed will show it here first.
 
 **The base path is `/Daily-Log/`.** `vite.config.ts` sets it, and it applies in
 development too, so the dev server serves at `http://localhost:8080/Daily-Log/`,
@@ -57,11 +57,13 @@ commit is needed — and confirm the live bundle hash changes.
 That also means **the test gate has never actually run in CI**. The first run
 that completes will be its first real exercise.
 
-**Unmerged: branch `twelve-color-tags`.** Takes the palette from nine tags to
-twelve — red, chartreuse and brown — with `0` selecting the tenth and the last
-two reachable only by picker. Spec and plan are in `docs/superpowers/`. 307
-tests green, lint and build clean, and the palette was measured rather than
-eyeballed; see the palette section below for the numbers.
+Merged into `main` locally and **not pushed**: the twelve-tag palette, and the
+global test timeout. Spec and plan for the palette are in `docs/superpowers/`.
+
+**Unmerged: branch `labels-in-backups`.** Three things, each with its own
+commit: colour labels now travel in a backup (export format version 2), a
+ratchet on how alike any two tags may look, and magenta moved off lavender with
+colourblindness measured for the first time. See the palette section below.
 
 ## Pick up here next
 
