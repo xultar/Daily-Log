@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { format, parse } from "date-fns";
 import { DayData, calcDayTotal, calcDayColorMinutes, formatMinutes, getPaletteInDisplayOrder, legendCellBorders, loadColorLabels, saveColorLabels, getBlockColor, getBlockTint } from "@/lib/planner-data";
 import TimeGrid from "./TimeGrid";
@@ -24,12 +24,24 @@ const DailyView: React.FC<DailyViewProps> = ({ day, dayIndex, onChange, activeCo
 
   const colorMinutes = calcDayColorMinutes(day);
 
-  useEffect(() => {
-    saveColorLabels(colorLabels);
-  }, [colorLabels]);
-
+  /**
+   * Saved here rather than from an effect on `colorLabels`.
+   *
+   * That effect ran on mount as well as on change, so opening the day view
+   * wrote the labels it had just loaded straight back — `planner-color-labels:
+   * {}` on a planner where nobody had ever named a tag. Harmless in itself, and
+   * the same shape as the bug `dirtyRef` exists to prevent in `StudyPlanner`,
+   * where a read that writes turned an unreadable week into an empty one 300ms
+   * after it was viewed.
+   *
+   * A guard would have worked. Removing the effect is better: this is the only
+   * thing that changes the labels, so writing where the change happens leaves
+   * nothing to guard and no way for a mount to write at all.
+   */
   const updateLabel = (id: number, value: string) => {
-    setColorLabels((prev) => ({ ...prev, [id]: value }));
+    const next = { ...colorLabels, [id]: value };
+    setColorLabels(next);
+    saveColorLabels(next);
   };
 
   const updateSubject = (idx: number, field: "subject" | "checked", value: string | boolean) => {
