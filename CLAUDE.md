@@ -53,21 +53,8 @@ none blocking, all small:
   different classes. A shared `AgeMarker` would stop the two drifting; both call
   sites already have tests that would keep it honest.
 
-**Two tabs overwriting each other — designed, planned, being built.** Nothing
-listens for the `storage` event, so a second tab holding a stale copy reverts
-the first tab's work on its next keystroke, silently. This is the largest
-remaining correctness gap and it is no longer an open question:
-
-- Spec: `docs/superpowers/specs/2026-08-25-cross-tab-safety-design.md`
-- Plan: `docs/superpowers/plans/2026-08-25-cross-tab-safety.md`
-
-A clean tab reloads silently; a tab that has edited the week keeps its work and
-says so. Two traps are written up in both documents and are invisible in the
-code: bumping `refreshKey` is **not** a reload on its own, because the load
-effect flushes the pending write first and would send the stale copy over the
-other tab's work; and `dirtyRef` means *edited since loaded*, not *unsaved*, so
-a tab whose write already landed is still the tab whose work may have just been
-overwritten.
+**Two tabs overwriting each other is fixed** — see the section below. The
+remaining polish items are the four carry-forward ones above.
 
 **The `<input>` inside `<button>`** in the daily legend is invalid HTML and
 blocks "edit colour labels from the weekly strip", which would replicate it into
@@ -469,9 +456,50 @@ stable dependency, so its closure is created once at mount. Closing over
 A, navigate to week B, press Bring, and A's contents are written under B's key.
 The whole suite passed under that mutation until a test was added for it.
 
+## A second tab reloads, or says so — it never overwrites in silence
+
+Nothing used to listen for the `storage` event, so a stale second tab reverted
+the first tab's work on its next keystroke, silently. `onExternalChange` in
+`storage.ts` now reports cross-tab writes, and `StudyPlanner` uses `dirtyRef` to
+pick between two responses: a clean tab reloads, a tab that has edited the week
+keeps its work and shows `CrossTabNotice`.
+
+**`saveWeek` writes one key**, so the failure was always narrower than "two tabs
+open": only two tabs on the *same* week can lose data. The settings are single
+values where last write wins harmlessly, and are deliberately ignored.
+
+**The `storage` event fires only in other documents**, never in the tab that
+wrote — which is why the tests dispatch a synthetic `StorageEvent` rather than
+writing to `localStorage`. That is not a jsdom workaround; no environment would
+fire it for the writing document.
+
+**`event.key` is null when another tab calls `clear()`.** That counts as
+relevant. Filtering it out is a mutation the tests catch.
+
+**Reload drops the pending write before bumping `refreshKey`.** The load effect
+calls `flushPendingSave` first, so a bare bump writes this tab's stale copy over
+the other tab's work and then reads back its own write — the button doing the
+opposite of its label. Two tests fail with `expected 'Mine' to be 'Theirs'` if
+that line goes. It is race-free rather than lucky: `flushPendingSave` returns
+early on a null `pendingRef`, so a debounce timer firing in the gap is a no-op.
+
+**`dirtyRef` is deliberately not cleared in that handler.** The load effect does
+it and nothing reads the flag in between, so a second assignment would be dead
+code dressed as a safeguard. Mutation-tested: removing it changes nothing.
+
+**`dirtyRef` means edited-since-loaded, not unsaved.** It is never cleared by a
+successful write, so the notice can appear for a tab whose own edits are already
+stored — which is exactly the tab whose work the other one may have just
+overwritten. Hence the wording "This week was changed in another tab" and not
+"you have unsaved changes"; a test pins the difference.
+
+**Accepted residue:** a user who ignores the notice and keeps typing still wins.
+Withholding their writes would mean the typing lived only in memory, and closing
+the tab would lose it with no trace — worse than the problem being solved.
+
 ## Baselines
 
-- `npm test` — 275 tests across 25 files. One of them,
+- `npm test` — 297 tests across 26 files. One of them,
   `startup-migration.test.tsx`, renders the whole app and can cross Vitest's
   default 5s timeout on a **cold** run; it passes on a warm one. That is a
   pre-existing flake, not a regression, and it will bite on a cold CI runner.
