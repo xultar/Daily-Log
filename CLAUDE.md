@@ -18,10 +18,15 @@ deployed as cheerfully as 300 passing ones. Because the step sits before the
 build, a failure stops the artifact ever being uploaded, so the live site goes
 on serving the last good build rather than a broken one.
 
-Two consequences. A flaky test can now hold up a deploy, which is the price of
-the gate and the reason the test timeout was raised in `vitest.config.ts` — see
-Baselines. And the runner is smaller and colder than a dev machine, so a test
-that depends on wall-clock speed will show it here first.
+A flaky test can now hold up a deploy. That is the price of the gate, and the
+reason the test timeout was raised in `vitest.config.ts` — see Baselines.
+
+**The runner is not the slow environment.** This said the opposite until the
+gate actually ran: 342 tests took **19s** on the runner against 70s on an
+8-core dev machine, because `npm ci` leaves a warm cache and nothing there
+competes for cores. A wall-clock-sensitive test will show itself on a loaded
+dev machine first, which is exactly where `today.test.tsx` timed out. Do not
+reason about CI being slower; it measured faster on every step.
 
 **The base path is `/Daily-Log/`.** `vite.config.ts` sets it, and it applies in
 development too, so the dev server serves at `http://localhost:8080/Daily-Log/`,
@@ -664,6 +669,10 @@ the tab would lose it with no trace — worse than the problem being solved.
   dynamically. That mechanism is real but the scope was wrong, and the override
   came off when a second test proved it. Do not re-scope it without evidence
   that the class has shrunk to one.
+
+  For comparison, the same suite on a GitHub runner: `npm ci` 5s, `npm test`
+  19s, `npm run build` 3s, whole workflow 90s including the Pages deploy. The
+  runner is the comfortable environment, not the constrained one.
 - **`eslint` ignores `.claude`.** Background tasks create git worktrees at
   `.claude/worktrees/<name>`, which are full copies of the codebase. Without
   the ignore, lint reports all ten warnings twice, which reads exactly like a
