@@ -225,7 +225,7 @@ const DailyView: React.FC<DailyViewProps> = ({ day, dayIndex, onChange, activeCo
             </div>
           </div>
           <div className="no-print text-[9px] text-muted-foreground/60 mt-1">
-            Press 1–9 to switch color &middot; Right-click block to pick color
+            Press 1–9 or 0 to switch color &middot; Right-click block to pick color
           </div>
         </div>
       </div>
