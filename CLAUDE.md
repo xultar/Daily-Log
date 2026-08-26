@@ -24,49 +24,26 @@ storage guards and the autosave flush.
 
 Everything below merged into `main` and **deployed on 2026-08-25**: the priority
 flag, dark mode with the print fix, native widgets following the colour scheme,
-and the whole of carry-forward. There is no unmerged work.
+the whole of carry-forward, and the cross-tab reload notice.
 
 Carry-forward shipped as eight tasks — schema, rules, the backwards scan, the
 review bar, the `StudyPlanner` wiring, the sidebar age marker — verified by
 tests and seen working in a browser in both light and dark. Spec and plan are in
 `docs/superpowers/`.
 
+**Unmerged: branch `finish-carry-forward`.** It closes the four non-blocking
+items from carry-forward's final review — the review bar's height bound, an
+ordering assertion for the age marker, a test for the quarantine write, and the
+shared `AgeMarker`. 300 tests green, lint and build clean, and the height bound
+was measured in a browser at two widths. Merging deploys, so that is the user's
+call.
+
 ## Pick up here next
 
 Nothing is half-finished. Every item below can start cold, and they are grouped
-in the order they are wanted: finish the copy feature, clear the small polish,
-then add new functions.
+in the order they are wanted: clear the small polish, then add new functions.
 
-### 1. Finish the copy feature (carry-forward)
-
-Carry-forward works and is deployed. These four came out of its final review as
-non-blocking, and they are what "finishing" it means. All small; any one is a
-sensible single sitting.
-
-- **Cap the review bar's height.** `CarryForwardBar.tsx` renders the rows in a
-  `flex-wrap` list with no bound, and the bar is `shrink-0` in a `h-screen`
-  column — so a week where you flagged a lot of rows squeezes the grid. Up to 8
-  weekly actions plus 42 flagged daily rows can be candidates.
-  `max-h-24 overflow-y-auto` on the rows container. Add a test with ~20
-  candidates so the bound is pinned, not just applied.
-- **Pin the age marker's position in the row.** In `WeeklyTodoSidebar.tsx` the
-  `{age > 0 && …}` block sits after the text input. Moving it before the input
-  leaves all 297 tests green while shoving every row's text sideways in a 128px
-  column. Needs an ordering assertion — `compareDocumentPosition`, or an index
-  check within the row's children.
-- **Test the quarantine write.** `findCarrySource` → `loadWeek` writes
-  `daily-log-unreadable-<key>` when a prior week holds corrupt JSON. It is
-  correct and documented, and it is the *only* write the carry path can trigger,
-  so it should not be the one thing untested. Write junk to a prior week's key,
-  mount, assert the quarantine key appears and the original is untouched.
-- **Extract a shared `AgeMarker`.** The `aria-hidden` token plus `sr-only`
-  phrase is duplicated between `CarryForwardBar.tsx` and
-  `WeeklyTodoSidebar.tsx` — same logic, same pluralisation, different classes.
-  Both call sites already have tests that would keep the extraction honest.
-  Take the class names as a prop; do not try to unify the styling.
-
-### 2. The other small polish
-
+### 1. Small polish
 - **The `<input>` inside `<button>`** in the daily legend is invalid HTML, and
   assistive tech commonly prunes children of `role="button"`, which can make the
   label field unreachable. The `stopPropagation` on that input is what holds it
@@ -79,7 +56,7 @@ sensible single sitting.
   A `testTimeout` bump in `vitest.config.ts` is probably the whole fix. Do not
   change what the test asserts — the week-key migration it pins is load-bearing.
 
-### 3. New functions
+### 2. New functions
 
 Least specified, most freedom. Each needs a design pass before code — see the
 working rhythm below.
@@ -506,6 +483,29 @@ stable dependency, so its closure is created once at mount. Closing over
 A, navigate to week B, press Bring, and A's contents are written under B's key.
 The whole suite passed under that mutation until a test was added for it.
 
+**The age marker lives in `AgeMarker.tsx`, and both the bar and the sidebar use
+it.** The visible token is `aria-hidden` because "1w" is announced as "one w",
+and the `sr-only` phrase says it in words. The two drifting apart — the token
+silently unhidden, or the phrase deleted — is what keeping them in one component
+prevents. Styling arrives as a prop rather than being unified: the sidebar's
+column is 128px at 9px text and the bar's rows are not. There is no test file
+for the component itself; the call sites' tests cover it, and each of the three
+mutations tried against it — pluralisation, the zero guard, the `aria-hidden` —
+fails tests in **both** files.
+
+**Where the marker sits in a sidebar row is pinned by an index assertion.**
+Every other test there asks whether it renders, never where, so moving the block
+above the text input left all of them green while shoving each row's text
+sideways in a 128px column.
+
+**The bar's rows are capped at `max-h-24 overflow-y-auto`.** The bar is
+`shrink-0` inside a `h-screen` column, so every row it renders comes out of the
+time grid's height. At the worst case the feature can produce — 8 weekly actions
+plus 42 flagged daily rows — the list wants 134px at desktop width and 168px at
+tablet, and the cap holds the bar at 154px instead, handing 38px and 55px back
+to the grid. jsdom does no layout, so the test can only pin the classes that
+impose the bound; those numbers were measured in a browser.
+
 ## A second tab reloads, or says so — it never overwrites in silence
 
 Nothing used to listen for the `storage` event, so a stale second tab reverted
@@ -549,7 +549,7 @@ the tab would lose it with no trace — worse than the problem being solved.
 
 ## Baselines
 
-- `npm test` — 297 tests across 26 files. One of them,
+- `npm test` — 300 tests across 26 files. One of them,
   `startup-migration.test.tsx`, renders the whole app and can cross Vitest's
   default 5s timeout on a **cold** run; it passes on a warm one. That is a
   pre-existing flake, not a regression, and it will bite on a cold CI runner.
@@ -570,13 +570,6 @@ the tab would lose it with no trace — worse than the problem being solved.
 pre-existing. Assistive tech commonly prunes children of `role="button"`, which can
 make the label field unreachable. The `stopPropagation` on that input is what holds
 it together for mouse users. Fixing it needs a real restructure.
-
-**Two tabs overwrite each other.** Nothing listens for the `storage` event, and
-every edit serialises and writes the whole week from in-memory state. A second
-tab holding a stale copy therefore reverts the first tab's work on its next
-keystroke. Last writer wins, silently. Fixing it means either reloading on the
-`storage` event or merging per field; neither is obviously right for a planner
-that is normally open once.
 
 ## Discussed but not started
 
