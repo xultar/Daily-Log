@@ -84,16 +84,22 @@ describe("twelve tags under colourblindness", () => {
   // Measured, then rounded down. Compare with 12.1 and 23.5 for normal vision:
   //
   //   protanopia    light  4.2  Gray/Teal        dark  6.7  Blue/Lavender
-  //   deuteranopia  light  0.7  Pink/Gray        dark  5.2  Pink/Gray
+  //   deuteranopia  light  2.8  Lavender/Magenta dark  6.0  Red/Brown
   //   tritanopia    light  1.1  Blue/Teal        dark  2.4  Magenta/Red
   //
-  // Pink and Gray at 0.7 are the same colour to a deuteranope. That pair is
-  // pink id 2 and gray id 6 — both original, neither added when the palette
-  // grew — so this is not a cost of twelve tags, it is a cost the palette has
-  // always carried and nobody had measured.
+  // Deuteranopia used to read 0.7 Pink/Gray in light: the two were the same
+  // colour. Pink moved to 340 65% 76% / 340 65% 48%, which raised it fourfold
+  // and left every other vision untouched. Gray stayed put — it is the neutral
+  // tag, and a neutral that has to carry a hue to be legible is not neutral.
+  //
+  // Light now bottoms out at Lavender/Magenta. Going further means moving
+  // magenta again, since lavender is a system colour and cannot move.
+  //
+  // Pink's lightness is load-bearing in a way that is easy to undo: at 54% in
+  // dark it drops tritanopia from 2.4 to 0.2. Re-measure before touching it.
   const FLOORS: Record<Vision, { light: number; dark: number }> = {
     protanopia: { light: 4.0, dark: 6.5 },
-    deuteranopia: { light: 0.6, dark: 5.0 },
+    deuteranopia: { light: 2.5, dark: 5.5 },
     tritanopia: { light: 1.0, dark: 2.3 },
   };
 

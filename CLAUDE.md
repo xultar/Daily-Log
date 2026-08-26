@@ -77,15 +77,6 @@ Nothing is half-finished. Two known defects first, then new functionality.
 
 ### 1. Small polish
 
-- **Pink and gray are the same colour to a deuteranope.** ΔE 0.7 in light, 5.2
-  in dark — measured, not guessed, by `palette-colourblind.test.ts`. Both are
-  original entries, so this is not what twelve tags cost; it is what the palette
-  has always cost and nobody had measured. Pink at `340 55% 82%` keeps almost no
-  chroma once the red-green axis is gone, and lands on gray at `0 0% 78%`.
-  Separating them means lightness, not hue: the two are already 82% and 78%, so
-  four points apart. Whichever moves, `palette-distance.test.ts` guards the
-  normal-vision floors while you do it, and the colourblind floors can then be
-  raised. Do not move lavender — it is a system colour elsewhere.
 - **Opening the day view writes `planner-color-labels: {}`.** Mounting is
   enough; no edit required. Harmless in itself and long pre-existing, but it is
   a read that writes, which is the exact shape of the bug the autosave
@@ -211,14 +202,25 @@ it.** `src/test/palette-colourblind.test.ts` simulates the three dichromacies:
 | | light | dark |
 | --- | --- | --- |
 | protanopia | 4.2 Gray/Teal | 6.7 Blue/Lavender |
-| deuteranopia | **0.7 Pink/Gray** | 5.2 Pink/Gray |
+| deuteranopia | 2.8 Lavender/Magenta | 6.0 Red/Brown |
 | tritanopia | 1.1 Blue/Teal | 2.4 Magenta/Red |
 
-Pink and gray are the same colour to a deuteranope. Both are original entries,
-so this is not what twelve tags cost — it is what the palette has always cost
-and nobody had measured. The printed run-numbers are the existing mitigation and
-they only help on paper. Those floors are a ratchet too: they do not demand the
-palette improve, only that it stop getting quietly worse.
+Deuteranopia read **0.7 Pink/Gray** until pink moved to `340 65% 76%` /
+`340 65% 48%`. Pink at `340 55% 82%` kept almost no chroma once the red-green
+axis was gone and landed straight on gray, which is to say the two were the same
+colour. Gray did not move: it is the neutral tag, and a neutral that has to
+carry a hue to be legible is not neutral. Nothing else regressed — every other
+vision measured identically before and after.
+
+**Pink's lightness is load-bearing, and not in an obvious direction.** At 54% in
+dark it drops tritanopia from 2.4 to 0.2. Re-measure rather than nudge.
+
+Light now bottoms out at Lavender/Magenta. Going further means moving magenta
+again, because lavender cannot move.
+
+The printed run-numbers remain the only mitigation that survives a mono print.
+These floors are a ratchet like the others: they do not demand the palette
+improve, only that it stop getting quietly worse.
 
 Consequences:
 

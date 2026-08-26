@@ -511,7 +511,7 @@ export const MINUTE_LABELS = [10, 20, 30, 40, 50, 60];
  */
 export const BLOCK_COLORS: readonly BlockColor[] = [
   { id: 1, label: "Blue",     hsl: "213 60% 80%",  hslDark: "213 60% 52%" },
-  { id: 2, label: "Pink",     hsl: "340 55% 82%",  hslDark: "340 55% 60%" },
+  { id: 2, label: "Pink",     hsl: "340 65% 76%",  hslDark: "340 65% 48%" },
   { id: 3, label: "Green",    hsl: "140 35% 75%",  hslDark: "140 40% 42%" },
   { id: 4, label: "Lavender", hsl: "270 40% 80%",  hslDark: "270 45% 64%" },
   { id: 5, label: "Orange",   hsl: "25 65% 78%",   hslDark: "25 70% 50%" },

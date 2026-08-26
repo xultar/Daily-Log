@@ -36,7 +36,7 @@ describe("BLOCK_COLORS", () => {
   it("pins every entry to its storage position", () => {
     expect(BLOCK_COLORS.map((c) => [c.id, c.label, c.hsl, c.hslDark])).toEqual([
       [1, "Blue",     "213 60% 80%", "213 60% 52%"],
-      [2, "Pink",     "340 55% 82%", "340 55% 60%"],
+      [2, "Pink",     "340 65% 76%", "340 65% 48%"],
       [3, "Green",    "140 35% 75%", "140 40% 42%"],
       [4, "Lavender", "270 40% 80%", "270 45% 64%"],
       [5, "Orange",   "25 65% 78%",  "25 70% 50%"],
