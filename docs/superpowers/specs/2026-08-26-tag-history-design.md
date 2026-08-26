@@ -60,6 +60,8 @@ Rejected alternatives:
 
 ```ts
 export interface TagUse {
+  /** The week key the day was found under. Its identity, with the date. */
+  weekKey: string;
   /** The day's own date. The fact, and what the row displays. */
   date: string;
   /** ISO Monday from the entry key. Where a click goes, and nothing else. */
