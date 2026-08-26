@@ -235,6 +235,28 @@ Consequences:
   `getBlockColor(null)` returns null so the block looks unpainted, and
   `calcDayTotal`'s truthiness check skips it so the totals look right.
 
+## The colour tags are the user's goals
+
+Not categories, not colours. The user names each tag after a goal or project —
+Thesis, Teaching, Supervision — and reads time against those names. The app
+holds no separate notion of a goal or a project, and does not need one: the
+palette is it.
+
+That is the reason behind several things that otherwise look like polish, and
+they should not be undone without understanding it:
+
+- **The tag's name appears wherever its colour does** — month cells, report
+  bars, the legends. A swatch alone says nothing when the thing it stands for is
+  "Thesis".
+- **Colour labels travel in a backup.** Losing them does not lose a preference,
+  it loses the mapping from colours to the user's goals, which is the only thing
+  that makes the stored numbers mean anything.
+- **Twelve tags rather than nine.** The ceiling was a real constraint, because
+  the number of tags is the number of things being tracked.
+
+There is deliberately no feature aligning time against the `weekGoal` text. The
+alignment happens in what the tags are called.
+
 ## Time reporting reports blocked time, not spent time
 
 `totalsByTag(from, to)` sums painted blocks per tag over a date range, and the
