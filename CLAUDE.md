@@ -596,12 +596,17 @@ the tab would lose it with no trace — worse than the problem being solved.
 
 ## Baselines
 
-- `npm test` — 307 tests across 27 files. One of them,
-  `startup-migration.test.tsx`, carries its own 20s timeout, because it is the
-  only test that dynamically imports the app root and so pays the whole module
-  graph's transform inside the timed body. Measured at 1.3s cold and alone and
-  0.9s cold inside the full suite on an 8-core machine; the margin is for a
-  slower runner. Nothing here is known to flake.
+- `npm test` — 307 tests across 27 files. `vitest.config.ts` sets
+  `testTimeout: 15000` against a 5s default, and that is load-bearing: several
+  tests render the whole app and click through it, sitting at 3-4s alone. Under
+  full-suite contention they cross 5s — `today.test.tsx` timed out at 5597ms on
+  a run where the identical code had passed minutes earlier.
+
+  The ceiling was briefly scoped to `startup-migration.test.tsx` alone, on the
+  theory that only it was exposed because only it imports the app root
+  dynamically. That mechanism is real but the scope was wrong, and the override
+  came off when a second test proved it. Do not re-scope it without evidence
+  that the class has shrunk to one.
 - **`eslint` ignores `.claude`.** Background tasks create git worktrees at
   `.claude/worktrees/<name>`, which are full copies of the codebase. Without
   the ignore, lint reports all ten warnings twice, which reads exactly like a
