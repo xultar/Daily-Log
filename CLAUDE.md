@@ -68,9 +68,30 @@ into sibling controls. Specs are in `docs/superpowers/`.
 
 ## Pick up here next
 
-Nothing is half-finished, and the polish list is empty for the first time in a
-while. What is left is new functionality. Each item is least specified and most
-free, and each needs a design pass before code — see the working rhythm below.
+Nothing is half-finished. Two known defects first, then new functionality.
+
+### 1. Small polish
+
+- **Pink and gray are the same colour to a deuteranope.** ΔE 0.7 in light, 5.2
+  in dark — measured, not guessed, by `palette-colourblind.test.ts`. Both are
+  original entries, so this is not what twelve tags cost; it is what the palette
+  has always cost and nobody had measured. Pink at `340 55% 82%` keeps almost no
+  chroma once the red-green axis is gone, and lands on gray at `0 0% 78%`.
+  Separating them means lightness, not hue: the two are already 82% and 78%, so
+  four points apart. Whichever moves, `palette-distance.test.ts` guards the
+  normal-vision floors while you do it, and the colourblind floors can then be
+  raised. Do not move lavender — it is a system colour elsewhere.
+- **Opening the day view writes `planner-color-labels: {}`.** Mounting is
+  enough; no edit required. Harmless in itself and long pre-existing, but it is
+  a read that writes, which is the exact shape of the bug the autosave
+  `dirtyRef` exists to prevent — and that one turned an unreadable week into an
+  empty one 300ms after it was viewed. The fix is a guard on the effect in
+  `DailyView` that saves labels, so it writes on change rather than on mount.
+
+### 2. New functions
+
+Least specified, most free. Each needs a design pass before code — see the
+working rhythm below.
 
 - **Duplicate a day, or template a week.** The natural follow-on from
   carry-forward, and the other copy-shaped idea: recurring schedules get retyped
