@@ -1239,14 +1239,55 @@ describe("StudyPlanner carry-forward", () => {
 
   it("does not offer the bar on a past week", () => {
     seedLastWeekWithUnfinishedWork();
-    render(<StudyPlanner />);
-    // Two chevrons precede everything else; [0] is "previous".
-    fireEvent.click(document.querySelectorAll("button")[0]);
-    fireEvent.click(document.querySelectorAll("button")[0]);
+    const { container } = render(<StudyPlanner />);
+    // Two chevrons lead the toolbar; [0] is "previous".
+    fireEvent.click(container.querySelectorAll("button")[0]);
+    fireEvent.click(container.querySelectorAll("button")[0]);
     expect(screen.queryByText(/unfinished from last week/)).toBeNull();
+  });
+
+  it("does not offer the bar on a past week even when there is work behind it", () => {
+    // The test above is green for the WRONG REASON: navigating two weeks back
+    // puts the seeded week outside findCarrySource's backward-only reach, so it
+    // passes with the isCurrentOrFutureWeek guard deleted. This one places the
+    // work exactly one week behind the week being viewed, so only the guard can
+    // hide the bar. Keep both — the first covers navigating well into the past.
+    const twoBack = subWeeks(thisMonday(), 2);
+    const w = createEmptyWeek(twoBack);
+    w.weeklyTodos[0] = { text: "Older unfinished work", checked: false };
+    saveWeek(twoBack, w);
+    const { container } = render(<StudyPlanner />);
+    fireEvent.click(container.querySelectorAll("button")[0]);
+    expect(screen.queryByText(/unfinished from last week/)).toBeNull();
+  });
+
+  it("hides the bar in the month view", () => {
+    seedLastWeekWithUnfinishedWork();
+    render(<StudyPlanner />);
+    fireEvent.click(screen.getByRole("button", { name: /month/i }));
+    expect(screen.queryByText(/unfinished from last week/)).toBeNull();
+  });
+
+  it("resets the ticks when moving to another week that also has candidates", () => {
+    // Pins the key prop. Without it the bar is reused across the navigation and
+    // an outstanding untick stays glued to position 1 rather than to the item.
+    // Both weeks need candidates of their own, so the current week is seeded as
+    // well as the previous one.
+    seedLastWeekWithUnfinishedWork();
+    const now = createEmptyWeek(thisMonday());
+    now.weeklyTodos[0] = { text: "This week's own leftover", checked: false };
+    saveWeek(thisMonday(), now);
+    const { container } = render(<StudyPlanner />);
+    fireEvent.click(screen.getAllByRole("checkbox")[0]); // untick, do not bring
+    fireEvent.click(container.querySelectorAll("button")[1]); // forward one week
+    expect(
+      screen.getAllByRole("checkbox").every((b) => (b as HTMLInputElement).checked)
+    ).toBe(true);
   });
 });
 ```
+
+**Mutation-test this task's own tests.** Eight worth running: removing `markDirty()` from each handler; dropping `carryResolved: true` from `bringForward`; dropping each of the three render-guard conditions; removing the `key`; and changing the effect deps to `[]`. The two that the obvious tests miss are the `isCurrentOrFutureWeek` guard and the `key` — and the first is missed because the past-week test is green for a reason unrelated to its name.
 
 Because these tests use fake timers, `CarryForwardBar`'s own tests earlier in the file must not — keep the two `describe` blocks' `beforeEach` hooks separate, as written.
 
@@ -1330,7 +1371,7 @@ Insert directly **after** the Goal/Review row's closing `)}` and before the `{/*
 - [ ] **Step 7: Run the tests and verify they pass**
 
 Run: `npx vitest run src/test/carry-bar.test.tsx`
-Expected: PASS, 18 tests.
+Expected: PASS, 30 tests.
 
 - [ ] **Step 8: Confirm the button-index tests still pass**
 
@@ -1496,7 +1537,7 @@ git commit -m "Show how many weeks an action has been slipping"
 - [ ] **Step 1: Run the whole suite**
 
 Run: `npm test`
-Expected: PASS. The count rises from 186 by the tests added here — 8 schema, 24 rules, 16 source, 23 bar, 4 marker.
+Expected: PASS. The count rises from 186 by the tests added here — 8 schema, 24 rules, 16 source, 30 bar, 4 marker.
 
 - [ ] **Step 2: Lint**
 
