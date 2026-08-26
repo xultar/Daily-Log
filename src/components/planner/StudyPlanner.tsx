@@ -1,12 +1,14 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { startOfWeek, addWeeks, subWeeks, addMonths, subMonths, format } from "date-fns";
-import { WeekData, DayData, TodoItem, loadWeek, saveWeek } from "@/lib/planner-data";
+import { WeekData, DayData, TodoItem, CarryCandidate, loadWeek, saveWeek, collectCarryForward, applyCarryForward } from "@/lib/planner-data";
+import { findCarrySource, isCurrentOrFutureWeek } from "@/lib/carry-source";
 import WeeklyTodoSidebar from "./WeeklyTodoSidebar";
 import DayColumn from "./DayColumn";
 import DailyView from "./DailyView";
 import MonthlyView from "./MonthlyView";
 import ToolbarActions from "./ToolbarActions";
 import WeeklyColorLegend from "./WeeklyColorLegend";
+import CarryForwardBar from "./CarryForwardBar";
 import { ChevronLeft, ChevronRight, Printer, Calendar, CalendarDays, CalendarRange, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { calcWeekTotal, calcWeekColorMinutes, getWeekDates } from "@/lib/planner-data";
@@ -28,6 +30,20 @@ const StudyPlanner: React.FC = () => {
   });
   // Storage id of the armed color, shared by every view. Not a display position.
   const [activeColor, setActiveColor] = useState(1);
+
+  // Candidates are looked up per week, not per edit: recomputing on every
+  // weekData change would re-scan storage on every keystroke. This reads only,
+  // so it cannot write to a week the user has merely opened.
+  const [candidates, setCandidates] = useState<CarryCandidate[]>([]);
+
+  useEffect(() => {
+    if (!isCurrentOrFutureWeek(currentDate)) {
+      setCandidates([]);
+      return;
+    }
+    const source = findCarrySource(currentDate);
+    setCandidates(source ? collectCarryForward(source.week, source.monday) : []);
+  }, [currentDate, refreshKey]);
 
   // Two separate questions, both refs so that neither causes a render:
   //   dirtyRef   — does weekData hold a change the user made? This gates saving
@@ -110,6 +126,16 @@ const StudyPlanner: React.FC = () => {
   const updateField = useCallback((field: "weekGoal" | "weekReview", value: string) => {
     markDirty();
     setWeekData((prev) => ({ ...prev, [field]: value }));
+  }, [markDirty]);
+
+  const bringForward = useCallback((chosen: CarryCandidate[]) => {
+    markDirty();
+    setWeekData((prev) => ({ ...applyCarryForward(prev, chosen), carryResolved: true }));
+  }, [markDirty]);
+
+  const dismissCarry = useCallback(() => {
+    markDirty();
+    setWeekData((prev) => ({ ...prev, carryResolved: true }));
   }, [markDirty]);
 
   /**
@@ -257,6 +283,20 @@ const StudyPlanner: React.FC = () => {
             />
           </div>
         </div>
+      )}
+
+      {/* Carry-forward review. Sits below both week chevrons on purpose: any
+          control inserted before them silently repoints the button-index
+          lookups in autosave.test.tsx and pending-save.test.tsx at the wrong
+          button, and they then fail looking like a save bug. */}
+      {viewMode !== "monthly" && !weekData.carryResolved && candidates.length > 0 && (
+        <CarryForwardBar
+          key={format(dates[0], "yyyy-MM-dd")}
+          candidates={candidates}
+          mondayISO={format(dates[0], "yyyy-MM-dd")}
+          onBring={bringForward}
+          onDismiss={dismissCarry}
+        />
       )}
 
       {/* View content */}

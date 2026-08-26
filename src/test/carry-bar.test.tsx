@@ -1,7 +1,9 @@
-import { describe, it, expect, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { render, screen, fireEvent, cleanup, act } from "@testing-library/react";
 import CarryForwardBar from "@/components/planner/CarryForwardBar";
-import { CarryCandidate } from "@/lib/planner-data";
+import { CarryCandidate, saveWeek, createEmptyWeek, loadWeek } from "@/lib/planner-data";
+import { startOfWeek, subWeeks } from "date-fns";
+import StudyPlanner from "@/components/planner/StudyPlanner";
 
 const CANDIDATES: CarryCandidate[] = [
   { text: "Book viva slot", origin: "2026-08-17" },
@@ -170,5 +172,126 @@ describe("CarryForwardBar", () => {
     // sits inside.
     const { container } = setup();
     expect(container.querySelector('[role="menu"], [role="dialog"], [role="listbox"]')).toBeNull();
+  });
+});
+
+const NOW = new Date(2026, 7, 26); // Wed 26 Aug 2026
+const thisMonday = () => startOfWeek(NOW, { weekStartsOn: 1 });
+
+/** Let the debounce elapse, matching autosave.test.tsx. */
+const settle = async () => { await act(async () => { vi.advanceTimersByTime(400); }); };
+
+function seedLastWeekWithUnfinishedWork() {
+  const last = subWeeks(thisMonday(), 1);
+  const w = createEmptyWeek(last);
+  w.weeklyTodos[0] = { text: "Book viva slot", checked: false };
+  saveWeek(last, w);
+}
+
+/**
+ * Only the week entries. StudyPlanner writes planner-show-weekends from an
+ * effect on mount, so snapshotting the whole of localStorage would fail on a
+ * write this test does not care about.
+ */
+const weekEntries = () =>
+  JSON.stringify(
+    Object.keys(localStorage)
+      .filter((k) => /^planner-\d{4}-W\d{2}$/.test(k))
+      .sort()
+      .map((k) => [k, localStorage.getItem(k)])
+  );
+
+describe("StudyPlanner carry-forward", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    vi.useFakeTimers();
+    vi.setSystemTime(NOW);
+  });
+  afterEach(() => { cleanup(); vi.useRealTimers(); });
+
+  it("offers the bar when last week left work unfinished", () => {
+    seedLastWeekWithUnfinishedWork();
+    render(<StudyPlanner />);
+    expect(screen.getByText(/unfinished from last week/)).toBeInTheDocument();
+  });
+
+  it("stays silent when there is nothing behind this week", () => {
+    render(<StudyPlanner />);
+    expect(screen.queryByText(/unfinished from last week/)).toBeNull();
+  });
+
+  it("stays silent when last week finished everything", () => {
+    const last = subWeeks(thisMonday(), 1);
+    const w = createEmptyWeek(last);
+    w.weeklyTodos[0] = { text: "Book viva slot", checked: true };
+    saveWeek(last, w);
+    render(<StudyPlanner />);
+    expect(screen.queryByText(/unfinished from last week/)).toBeNull();
+  });
+
+  it("writes to no week merely by opening one that has candidates", async () => {
+    // The dirtyRef guarantee. The autosave effect runs on mount, not only on
+    // edit, and opening a week used to write it straight back. Settling the
+    // debounce is the point: without it this would pass vacuously.
+    seedLastWeekWithUnfinishedWork();
+    const before = weekEntries();
+    render(<StudyPlanner />);
+    await settle();
+    expect(weekEntries()).toBe(before);
+  });
+
+  it("brings the ticked items into this week and marks the week resolved", async () => {
+    seedLastWeekWithUnfinishedWork();
+    render(<StudyPlanner />);
+    fireEvent.click(screen.getByRole("button", { name: /bring/i }));
+    await settle();
+    const now = loadWeek(thisMonday());
+    expect(now.weeklyTodos[0].text).toBe("Book viva slot");
+    expect(now.weeklyTodos[0].origin).toBe("2026-08-17");
+    expect(now.carryResolved).toBe(true);
+  });
+
+  it("leaves last week untouched, because carrying copies", async () => {
+    seedLastWeekWithUnfinishedWork();
+    render(<StudyPlanner />);
+    fireEvent.click(screen.getByRole("button", { name: /bring/i }));
+    await settle();
+    const last = loadWeek(subWeeks(thisMonday(), 1));
+    expect(last.weeklyTodos[0]).toEqual({ text: "Book viva slot", checked: false });
+  });
+
+  it("dismissing marks the week resolved and adds nothing", async () => {
+    seedLastWeekWithUnfinishedWork();
+    render(<StudyPlanner />);
+    fireEvent.click(screen.getByRole("button", { name: /not now/i }));
+    await settle();
+    const now = loadWeek(thisMonday());
+    expect(now.carryResolved).toBe(true);
+    expect(now.weeklyTodos.every((t) => t.text === "")).toBe(true);
+  });
+
+  it("does not offer the bar again once the week is resolved", () => {
+    seedLastWeekWithUnfinishedWork();
+    const now = createEmptyWeek(thisMonday());
+    now.carryResolved = true;
+    saveWeek(thisMonday(), now);
+    render(<StudyPlanner />);
+    expect(screen.queryByText(/unfinished from last week/)).toBeNull();
+  });
+
+  it("does not offer the bar on a past week", () => {
+    seedLastWeekWithUnfinishedWork();
+    const { container } = render(<StudyPlanner />);
+    // Two chevrons lead the toolbar; [0] is "previous".
+    fireEvent.click(container.querySelectorAll("button")[0]);
+    fireEvent.click(container.querySelectorAll("button")[0]);
+    expect(screen.queryByText(/unfinished from last week/)).toBeNull();
+  });
+
+  it("hides the bar in the month view", () => {
+    seedLastWeekWithUnfinishedWork();
+    render(<StudyPlanner />);
+    fireEvent.click(screen.getByRole("button", { name: /month/i }));
+    expect(screen.queryByText(/unfinished from last week/)).toBeNull();
   });
 });
