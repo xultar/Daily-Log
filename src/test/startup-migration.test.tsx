@@ -15,6 +15,18 @@ beforeEach(() => {
 });
 
 describe("application startup", () => {
+  // 20s rather than the default 5s, and scoped here rather than raised in
+  // vitest.config.ts. This is the only test that dynamically imports the app
+  // root, so React, the router and every component are transformed inside the
+  // timed body; a static import would have been paid during collection, which
+  // no timeout governs. It has to stay dynamic — main.tsx runs the migration at
+  // module scope, so a static import would fire before beforeEach seeds the
+  // week, and the test would assert nothing.
+  //
+  // Measured on an 8-core dev machine: 1.3s cold and alone, 0.9s cold inside
+  // the full suite. The margin is for a slower or loaded runner, not for this
+  // machine. Raising it globally would buy this one test some safety at the
+  // cost of every other test taking four times as long to report a real hang.
   it("refiles a misplaced week before the app reads one", async () => {
     const week = createEmptyWeek(DEC_WEEK);
     week.weekGoal = "Finish before term starts";
@@ -26,5 +38,5 @@ describe("application startup", () => {
     expect(JSON.parse(localStorage.getItem("planner-2025-W01")!).weekGoal).toBe(
       "Finish before term starts"
     );
-  });
+  }, 20000);
 });

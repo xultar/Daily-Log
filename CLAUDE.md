@@ -11,6 +11,13 @@ Live at https://xultar.github.io/Daily-Log/
 to `main` and publishes to GitHub Pages. Work on a branch and merge only when the
 change has been seen working. Merging is the user's call, not yours.
 
+**The deploy workflow does not run the tests.** `deploy.yml` is `npm ci` →
+`npm run build` → Pages, and nothing in `.github/` invokes vitest. A red suite
+cannot stop a deploy and never could, so `npm test` passing is something you
+check before merging, not something the pipeline checks for you. Any claim that
+a test failure "will bite CI, which is what deploys" is false as things stand;
+it would only become true if a test job were added.
+
 **The base path is `/Daily-Log/`.** `vite.config.ts` sets it, and it applies in
 development too, so the dev server serves at `http://localhost:8080/Daily-Log/`,
 not at `/`. If this ever disagrees with the repository name, every asset 404s and
@@ -50,11 +57,6 @@ in the order they are wanted: clear the small polish, then add new functions.
   together for mouse users. **This blocks "edit colour labels from the weekly
   strip"**, which would replicate the same mistake in a second place — so do
   this first if that feature is wanted. Needs a real restructure, not a patch.
-- **The cold-run test flake.** `startup-migration.test.tsx` renders the whole
-  app through the router and can cross Vitest's default 5s timeout on a cold
-  run; it passes warm. It will bite on a cold CI runner, which is what deploys.
-  A `testTimeout` bump in `vitest.config.ts` is probably the whole fix. Do not
-  change what the test asserts — the week-key migration it pins is load-bearing.
 
 ### 2. New functions
 
@@ -550,9 +552,11 @@ the tab would lose it with no trace — worse than the problem being solved.
 ## Baselines
 
 - `npm test` — 300 tests across 26 files. One of them,
-  `startup-migration.test.tsx`, renders the whole app and can cross Vitest's
-  default 5s timeout on a **cold** run; it passes on a warm one. That is a
-  pre-existing flake, not a regression, and it will bite on a cold CI runner.
+  `startup-migration.test.tsx`, carries its own 20s timeout, because it is the
+  only test that dynamically imports the app root and so pays the whole module
+  graph's transform inside the timed body. Measured at 1.3s cold and alone and
+  0.9s cold inside the full suite on an 8-core machine; the margin is for a
+  slower runner. Nothing here is known to flake.
 - **`eslint` ignores `.claude`.** Background tasks create git worktrees at
   `.claude/worktrees/<name>`, which are full copies of the codebase. Without
   the ignore, lint reports all ten warnings twice, which reads exactly like a
