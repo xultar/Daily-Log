@@ -1,6 +1,7 @@
 import React, { useId, useState } from "react";
 import { CarryCandidate, carriedWeeks } from "@/lib/planner-data";
 import { CornerDownRight } from "lucide-react";
+import AgeMarker from "./AgeMarker";
 
 interface CarryForwardBarProps {
   candidates: CarryCandidate[];
@@ -75,16 +76,7 @@ const CarryForwardBar: React.FC<CarryForwardBarProps> = ({
                 className="h-3 w-3 shrink-0 accent-campus-blue-dark"
               />
               <span className="text-foreground">{c.text}</span>
-              {age > 0 && (
-                <>
-                  <span aria-hidden="true" className="text-muted-foreground tabular-nums">
-                    {age}w
-                  </span>
-                  <span className="sr-only">
-                    carried {age} week{age === 1 ? "" : "s"}
-                  </span>
-                </>
-              )}
+              <AgeMarker age={age} className="text-muted-foreground tabular-nums" />
             </label>
           );
         })}
