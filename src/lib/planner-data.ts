@@ -520,7 +520,7 @@ export const BLOCK_COLORS: readonly BlockColor[] = [
   { id: 8, label: "Teal",     hsl: "178 40% 74%",  hslDark: "178 45% 38%" },
   { id: 9, label: "Magenta",  hsl: "305 40% 80%",  hslDark: "305 45% 56%" },
   { id: 10, label: "Red",        hsl: "4 65% 74%",   hslDark: "4 65% 52%" },
-  { id: 11, label: "Chartreuse", hsl: "95 45% 74%",  hslDark: "95 45% 40%" },
+  { id: 11, label: "Chartreuse", hsl: "85 45% 74%",  hslDark: "85 45% 40%" },
   // Brown is five degrees from orange, so hue does almost none of the work
   // here: the separation is 27 points of saturation and 14 of lightness. That
   // makes it the only tag added in this batch that survives a greyscale print,
