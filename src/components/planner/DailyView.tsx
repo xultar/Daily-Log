@@ -189,10 +189,18 @@ const DailyView: React.FC<DailyViewProps> = ({ day, dayIndex, onChange, activeCo
             <div className="grid grid-cols-2 gap-0">
               {getPaletteInDisplayOrder().map((c, index, shown) => {
                 const borders = legendCellBorders(index, shown.length);
+                // The name the user knows this colour by, custom or default —
+                // the same value the weekly legend shows, so the two agree.
+                const name = colorLabels[c.id] || c.label;
+                // Display position, never the storage id: this is what the
+                // number keys actually select. Position 10 is the 0 key, and
+                // 11 and 12 have none, so they promise none.
+                const position = index + 1;
+                const keyHint =
+                  position < 10 ? ` (key ${position})` : position === 10 ? " (key 0)" : "";
                 return (
-                <button
+                <div
                   key={c.id}
-                  onClick={() => onActiveColorChange(c.id)}
                   className={`flex items-center gap-1.5 px-2 py-1 border-border/50 transition-all ${
                     borders.bottom ? "border-b" : ""
                   } ${borders.right ? "border-r" : ""} ${
@@ -201,16 +209,36 @@ const DailyView: React.FC<DailyViewProps> = ({ day, dayIndex, onChange, activeCo
                       : "hover:bg-muted/30"
                   }`}
                 >
-                  <span
-                    className="inline-block w-3 h-3 rounded-sm border border-border/50 shrink-0"
-                    style={{ backgroundColor: `hsl(var(--tag-${c.id}))` }}
-                  />
-                  <span className="text-[10px] font-medium text-foreground/50 w-3">{index + 1}</span>
+                  {/* Arming and renaming are two controls, not one. A button
+                      may not contain interactive content, and the field used to
+                      sit inside this button held in place by a stopPropagation.
+                      aria-label names the button outright, so the swatch and the
+                      number inside it need no treatment of their own. */}
+                  <button
+                    type="button"
+                    onClick={() => onActiveColorChange(c.id)}
+                    aria-pressed={activeColor === c.id}
+                    aria-label={`Use ${name}${keyHint}`}
+                    // Stretched to the cell's full height, and its padding
+                    // pulled back out with negative margins, so the hit area
+                    // covers the row without moving anything. Splitting the
+                    // cell shrank this target from the whole cell to a swatch
+                    // and a number; at py-0.5 it measured 19px tall, under the
+                    // 24px minimum. An accessibility fix should not leave a
+                    // target too small to hit.
+                    className="flex items-center gap-1.5 shrink-0 self-stretch -mx-1 -my-1 px-1 py-1 rounded cursor-pointer"
+                  >
+                    <span
+                      className="inline-block w-3 h-3 rounded-sm border border-border/50 shrink-0"
+                      style={{ backgroundColor: `hsl(var(--tag-${c.id}))` }}
+                    />
+                    <span className="text-[10px] font-medium text-foreground/50 w-3">{position}</span>
+                  </button>
                   <input
                     type="text"
                     value={colorLabels[c.id] ?? ""}
                     onChange={(e) => updateLabel(c.id, e.target.value)}
-                    onClick={(e) => e.stopPropagation()}
+                    aria-label={`Rename ${name}`}
                     placeholder={c.label}
                     className="flex-1 text-[11px] bg-transparent border-none outline-none min-w-0 text-foreground placeholder:text-muted-foreground/40"
                   />
@@ -219,7 +247,7 @@ const DailyView: React.FC<DailyViewProps> = ({ day, dayIndex, onChange, activeCo
                       {formatMinutes(colorMinutes[c.id])}
                     </span>
                   )}
-                </button>
+                </div>
                 );
               })}
             </div>

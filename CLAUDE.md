@@ -19,9 +19,9 @@ build, a failure stops the artifact ever being uploaded, so the live site goes
 on serving the last good build rather than a broken one.
 
 Two consequences. A flaky test can now hold up a deploy, which is the price of
-the gate and the reason `startup-migration.test.tsx` carries its own timeout —
-see Baselines. And the runner is smaller and colder than a dev machine, so a
-test that depends on wall-clock speed will show it here first.
+the gate and the reason the test timeout was raised in `vitest.config.ts` — see
+Baselines. And the runner is smaller and colder than a dev machine, so a test
+that depends on wall-clock speed will show it here first.
 
 **The base path is `/Daily-Log/`.** `vite.config.ts` sets it, and it applies in
 development too, so the dev server serves at `http://localhost:8080/Daily-Log/`,
@@ -57,28 +57,40 @@ commit is needed — and confirm the live bundle hash changes.
 That also means **the test gate has never actually run in CI**. The first run
 that completes will be its first real exercise.
 
-**Unmerged: branch `twelve-color-tags`.** Takes the palette from nine tags to
-twelve — red, chartreuse and brown — with `0` selecting the tenth and the last
-two reachable only by picker. Spec and plan are in `docs/superpowers/`. 307
-tests green, lint and build clean, and the palette was measured rather than
-eyeballed; see the palette section below for the numbers.
+Merged into `main` locally and **not pushed**: the twelve-tag palette, and the
+global test timeout. Spec and plan for the palette are in `docs/superpowers/`.
+
+**Unmerged: branch `labels-in-backups`.** Four things, each with its own
+commit: colour labels now travel in a backup (export format version 2), a
+ratchet on how alike any two tags may look, magenta moved off lavender with
+colourblindness measured for the first time, and the daily legend cell split
+into sibling controls. Specs are in `docs/superpowers/`.
 
 ## Pick up here next
 
-Nothing is half-finished. Every item below can start cold, and they are grouped
-in the order they are wanted: clear the small polish, then add new functions.
+Nothing is half-finished. Two known defects first, then new functionality.
 
 ### 1. Small polish
-- **The `<input>` inside `<button>`** in the daily legend is invalid HTML, and
-  assistive tech commonly prunes children of `role="button"`, which can make the
-  label field unreachable. The `stopPropagation` on that input is what holds it
-  together for mouse users. **This blocks "edit colour labels from the weekly
-  strip"**, which would replicate the same mistake in a second place — so do
-  this first if that feature is wanted. Needs a real restructure, not a patch.
+
+- **Pink and gray are the same colour to a deuteranope.** ΔE 0.7 in light, 5.2
+  in dark — measured, not guessed, by `palette-colourblind.test.ts`. Both are
+  original entries, so this is not what twelve tags cost; it is what the palette
+  has always cost and nobody had measured. Pink at `340 55% 82%` keeps almost no
+  chroma once the red-green axis is gone, and lands on gray at `0 0% 78%`.
+  Separating them means lightness, not hue: the two are already 82% and 78%, so
+  four points apart. Whichever moves, `palette-distance.test.ts` guards the
+  normal-vision floors while you do it, and the colourblind floors can then be
+  raised. Do not move lavender — it is a system colour elsewhere.
+- **Opening the day view writes `planner-color-labels: {}`.** Mounting is
+  enough; no edit required. Harmless in itself and long pre-existing, but it is
+  a read that writes, which is the exact shape of the bug the autosave
+  `dirtyRef` exists to prevent — and that one turned an unreadable week into an
+  empty one 300ms after it was viewed. The fix is a guard on the effect in
+  `DailyView` that saves labels, so it writes on change rather than on mount.
 
 ### 2. New functions
 
-Least specified, most freedom. Each needs a design pass before code — see the
+Least specified, most free. Each needs a design pass before code — see the
 working rhythm below.
 
 - **Duplicate a day, or template a week.** The natural follow-on from
@@ -97,8 +109,9 @@ working rhythm below.
 - **Trends over time.** `recharts` is a dependency and entirely unused.
   Per-colour minutes per week across a term is the natural payoff for all this
   logging.
-- **Edit colour labels from the weekly strip.** Blocked on the a11y restructure
-  above; doing it naively replicates the `<input>`-inside-`<button>` problem.
+- **Edit colour labels from the weekly strip.** No longer blocked: the daily
+  legend now splits arming and renaming into sibling controls, so the strip has
+  a correct pattern to copy rather than a mistake to replicate.
 
 ### The working rhythm in this repo
 
@@ -144,6 +157,24 @@ own.
 select the first nine, `0` selects position 10, and chartreuse and brown are
 reachable only from the legend or the right-click picker.
 
+**A daily legend cell is two controls, not one.** A button arms the colour and a
+field beside it renames the colour; the cell itself is a plain container. The
+field used to sit *inside* the button, which is invalid — a button may not
+contain interactive content, and assistive tech commonly prunes the children of
+`role="button"`, so the field could be unreachable. An `onClick` with
+`stopPropagation` was what held it together for mouse users; it is gone, because
+the structure now does that job.
+
+Two things follow, and both are easy to undo by accident:
+
+- **The button's `aria-label` carries the key hint, and the digit in it is the
+  display position.** Positions 11 and 12 name no key, because they have none.
+  A test asserts `Use Gray (key 9)`, and using `c.id` there fails it twice over.
+- **Do not make the cell container clickable.** It would restore the large click
+  target and reintroduce exactly what this removed: something clickable that the
+  keyboard cannot reach. The button instead stretches to the cell's full height,
+  which brings the target to 25px — the 24px minimum — without moving anything.
+
 **The palette's ceiling is perceptual, not arithmetic, and hue degrees are a bad
 proxy for it.** Chartreuse was specified at hue 95 on the reasoning that it sat
 45 degrees from both yellow and green. Measured as CIE Lab ΔE against the
@@ -151,12 +182,38 @@ actually-rendered tokens, it was twice as close to green as to yellow, because
 the yellow-green region is perceptually compressed. Moving it to 85 improved
 both themes at once. Measure the next colour; do not reason about the wheel.
 
-Two numbers worth keeping. The tightest pair in the whole palette is
-**Lavender/Magenta at ΔE 7.6 in light and 21.9 in dark**, and it predates the
-twelve-tag change — every pair involving red, chartreuse or brown is better
-separated than that. And **light mode is about three times tighter than dark
-throughout**, so a new colour that survives light will survive dark, not the
-other way round.
+**Light mode is about three times tighter than dark throughout**, so a colour
+that survives light will survive dark and not the other way round. Judge light
+first.
+
+`src/test/palette-distance.test.ts` now enforces this rather than leaving it to
+whoever remembers. It computes ΔE from the HSL strings — pure arithmetic, no
+browser — and reproduces the in-browser measurements to three significant
+figures. The floors are a ratchet: raise them when the palette improves, never
+lower them to make a new colour fit. The instrument has its own tests, because
+an untested ruler measures nothing.
+
+Current worst pairs: **Orange/Brown at 12.1 in light, Green/Chartreuse at 23.5
+in dark**. Lavender/Magenta used to hold both at 7.6 and 21.9 — the tightest in
+the palette, separated on hue alone with identical saturation and lightness.
+Magenta moved to `305 45% 76%` / `305 45% 52%` rather than lavender, because
+lavender is a system colour elsewhere in the user's setup and because magenta
+was the one squeezed between two neighbours.
+
+**Under colourblindness the palette collapses, and now there are numbers for
+it.** `src/test/palette-colourblind.test.ts` simulates the three dichromacies:
+
+| | light | dark |
+| --- | --- | --- |
+| protanopia | 4.2 Gray/Teal | 6.7 Blue/Lavender |
+| deuteranopia | **0.7 Pink/Gray** | 5.2 Pink/Gray |
+| tritanopia | 1.1 Blue/Teal | 2.4 Magenta/Red |
+
+Pink and gray are the same colour to a deuteranope. Both are original entries,
+so this is not what twelve tags cost — it is what the palette has always cost
+and nobody had measured. The printed run-numbers are the existing mitigation and
+they only help on paper. Those floors are a ratchet too: they do not demand the
+palette improve, only that it stop getting quietly worse.
 
 Consequences:
 
@@ -596,7 +653,7 @@ the tab would lose it with no trace — worse than the problem being solved.
 
 ## Baselines
 
-- `npm test` — 307 tests across 27 files. `vitest.config.ts` sets
+- `npm test` — 342 tests across 31 files. `vitest.config.ts` sets
   `testTimeout: 15000` against a 5s default, and that is load-bearing: several
   tests render the whole app and click through it, sitting at 3-4s alone. Under
   full-suite contention they cross 5s — `today.test.tsx` timed out at 5597ms on
@@ -620,10 +677,11 @@ the tab would lose it with no trace — worse than the problem being solved.
 
 ## Known open issues
 
-**The `<input>` inside `<button>`** in the daily legend is invalid HTML and
-pre-existing. Assistive tech commonly prunes children of `role="button"`, which can
-make the label field unreachable. The `stopPropagation` on that input is what holds
-it together for mouse users. Fixing it needs a real restructure.
+**Opening the day view writes `planner-color-labels: {}` to storage.** No edit
+required — mounting is enough. It is harmless in itself, and it long predates
+the current work, but it is the same shape as the bug the autosave `dirtyRef`
+exists to prevent: a read that writes. Worth a guard on the effect that saves
+labels, next time someone is in that file.
 
 ## Discussed but not started
 

@@ -518,7 +518,7 @@ export const BLOCK_COLORS: readonly BlockColor[] = [
   { id: 6, label: "Gray",     hsl: "0 0% 78%",     hslDark: "0 0% 46%" },
   { id: 7, label: "Yellow",   hsl: "50 70% 76%",   hslDark: "50 70% 58%" },
   { id: 8, label: "Teal",     hsl: "178 40% 74%",  hslDark: "178 45% 38%" },
-  { id: 9, label: "Magenta",  hsl: "305 40% 80%",  hslDark: "305 45% 56%" },
+  { id: 9, label: "Magenta",  hsl: "305 45% 76%",  hslDark: "305 45% 52%" },
   { id: 10, label: "Red",        hsl: "4 65% 74%",   hslDark: "4 65% 52%" },
   { id: 11, label: "Chartreuse", hsl: "85 45% 74%",  hslDark: "85 45% 40%" },
   // Brown is five degrees from orange, so hue does almost none of the work

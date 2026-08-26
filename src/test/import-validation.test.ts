@@ -43,9 +43,12 @@ describe("a file that cannot be trusted is refused whole", () => {
   });
 
   it("refuses a file of the wrong version", () => {
-    const result = importFromJSON(file({ "2026-W35": validWeek() }, 2));
-
-    expect(result.success).toBe(false);
+    // This said 2 until version 2 existed, at which point it asserted that a
+    // perfectly valid file was refused — and passed, because the feature had
+    // not shipped yet. Widening what is accepted changes what counts as
+    // invalid, so pick versions that cannot plausibly become real.
+    expect(importFromJSON(file({ "2026-W35": validWeek() }, 99)).success).toBe(false);
+    expect(importFromJSON(file({ "2026-W35": validWeek() }, 0)).success).toBe(false);
   });
 
   it("refuses a file with no weeks object", () => {
