@@ -6,8 +6,12 @@ Status: approved
 ## Summary
 
 Add three color tags, taking the palette from nine to twelve: red, chartreuse
-and indigo. Twelve is where hue alone runs out. Past this, more tags would need
-a second axis such as light and dark tiers of the same hue, or patterns.
+and brown.
+
+Two of the three are new hues. The third is not: the wheel had only two
+comfortable gaps left, so brown arrives as a darkened, desaturated orange rather
+than as a hue of its own. That is a deliberate one-off, not the start of a
+light-and-dark tier system.
 
 Twelve tags exceed the ten available number keys, so the last two display
 positions are reachable only by clicking the legend or right-clicking a block.
@@ -23,8 +27,8 @@ categories. Nine tags is limiting for a term with more than nine things in it.
 
 | Decision | Choice | Reason |
 | --- | --- | --- |
-| How many to add | 3 (twelve total) | The practical ceiling for hue alone |
-| Which hues | Red 4, chartreuse 95, indigo 240 | The only gaps left on the wheel |
+| How many to add | 3 (twelve total) | The practical ceiling for this palette |
+| Which colors | Red 4, chartreuse 95, brown | The only two gaps left, plus one off-hue |
 | Keyboard | 1-9 unchanged, 0 selects position 10 | Preserves existing muscle memory |
 | Positions 11-12 | No key; picker and legend only | Ten keys, twelve colors |
 | Which color gets key 0 | Red | The one reached for fastest |
@@ -34,6 +38,10 @@ categories. Nine tags is limiting for a term with more than nine things in it.
 
 Rejected alternatives:
 
+- **Indigo at hue 240.** The original third candidate, and the one brown
+  replaced. It sits 27 degrees from blue and 30 from lavender, squeezed between
+  two neighbours rather than filling a gap, and it separates from both on hue
+  alone — which is exactly the separation that disappears in a greyscale print.
 - **Shift+digit for positions 10-12.** Gives every tag a key, but needs
   `e.code` rather than `e.key`, because Shift+1 yields an exclamation mark, and
   it is a shortcut nobody discovers without being told. Two picker-only colors
@@ -43,9 +51,6 @@ Rejected alternatives:
 - **Reordering the display order so the new colors take low positions.** Display
   order is free to change without touching stored data, but anyone who types 3
   for green would have to relearn it. Muscle memory is worth more than tidiness.
-- **Brown instead of indigo.** Held in reserve. Brown is a darkened,
-  desaturated orange rather than a new hue, but it separates cleanly at 10px. If
-  indigo fails the visual check against blue and lavender, brown replaces it.
 
 ## The palette
 
@@ -55,7 +60,7 @@ Appended to `BLOCK_COLORS` in `src/lib/planner-data.ts`:
 | --- | --- | --- | --- |
 | 10 | Red | `4 65% 74%` | `4 65% 52%` |
 | 11 | Chartreuse | `95 45% 74%` | `95 45% 40%` |
-| 12 | Indigo | `240 45% 74%` | `240 50% 56%` |
+| 12 | Brown | `30 38% 64%` | `30 42% 34%` |
 
 Red sits 24 degrees from the existing pink at 340, which the earlier spec judged
 too close. It is included here because the wheel offers nothing better, and it
@@ -65,9 +70,14 @@ well as by hue.
 Chartreuse fills the only comfortable gap: 45 degrees from both yellow at 50 and
 green at 140.
 
-Indigo at 240 is the weakest of the three, 27 degrees from blue and 30 from
-lavender. It is the one most likely to be replaced by brown after the visual
-check.
+Brown is the deliberate exception. At hue 30 it is five degrees from orange at
+25, so hue does almost none of the work: the separation is 27 points of
+saturation and 14 of lightness. Brown is therefore the darkest and least
+saturated entry in the light palette, which is what makes it legible next to
+orange at 10px.
+
+That also makes it the only new tag that survives a greyscale print. Two hues at
+matched lightness collapse to the same gray; brown and orange do not.
 
 ## Data compatibility
 
@@ -89,7 +99,7 @@ display position.
     [1, 2, 3, 4, 5, 7, 8, 9, 6, 10, 11, 12]
 
 Positions 1-9 are exactly what they are today. Position 10 is red, position 11
-chartreuse, position 12 indigo.
+chartreuse, position 12 brown.
 
 The keydown handler in `TimeGrid` maps a pressed digit to a display position. It
 gains one case: the key `0` means display position 10. Positions 11 and 12 have
@@ -133,9 +143,9 @@ positively; `DailyView` adds the class when the field is true.
 It lives in `planner-data.ts` beside `getPaletteInDisplayOrder`, which is the
 other function that exists solely to present the palette.
 
-`DailyView` consumes it. The existing rendering tests stay, re-pointed at the
-new cell markup; new unit tests exercise the function at odd and even counts
-without depending on the live palette's length.
+The existing rendering tests stay, re-pointed at the new cell markup; new unit
+tests exercise the function at odd and even counts without depending on the live
+palette's length.
 
 ## Print
 
@@ -196,15 +206,14 @@ Visual verification, in the browser at the grid's real 10px size, in both light
 and dark:
 
 - red against pink,
-- indigo against blue and lavender,
+- brown against orange,
 - chartreuse against yellow and green,
 - a print preview showing a two-digit run label.
 
-Indigo is replaced by brown if it fails.
-
 ## Out of scope
 
-- Any thirteenth color. Hue is exhausted; more would need a second axis.
+- Any thirteenth color. Hue is exhausted, so a thirteenth would mean committing
+  to the light-and-dark tier system that brown deliberately stops short of.
 - Editing color labels from the weekly strip, and the restructure of the
   `<input>` nested inside a `<button>` in the daily legend. Both are wanted,
   both are separate, and the legend restructure should be designed against
@@ -214,15 +223,19 @@ Indigo is replaced by brown if it fails.
 
 ## Risks
 
-**Twelve hues is worse for colorblind users than nine.** Each addition narrows
+**Twelve tags is worse for colorblind users than nine.** Each addition narrows
 the gaps that remain, and red against green is the classic confusion. The print
 run-numbers mitigate this on paper; nothing mitigates it on screen. Accepted
 rather than solved, and recorded here so the next palette request can weigh it.
 
-**Red against pink, and indigo against blue and lavender.** Both pairs were
-rejected on these grounds in the 2026-08-24 spec. They are accepted now because
-the alternative is not expanding at all, and both are gated on the visual check
-above rather than on this document's confidence.
+**Red against pink.** Rejected on these grounds in the 2026-08-24 spec, accepted
+now because the alternative is not expanding at all, and gated on the visual
+check above rather than on this document's confidence.
+
+**Brown against orange at 10px.** Brown carries almost no hue separation, so if
+the saturation and lightness gap proves too subtle at block size the fix is to
+widen that gap rather than to move the hue — moving it toward yellow would run
+into chartreuse.
 
 **The vacuous test.** Twelve entries silently retire an assertion. Extracting
 `legendCellBorders` is what keeps the odd-length behaviour pinned. Without it,
