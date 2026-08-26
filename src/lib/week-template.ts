@@ -87,12 +87,44 @@ function fillDay(target: DayData, source: DayData): DayFill {
     })
   );
 
+  let rowsToFill = 0;
+  let rowsDropped = 0;
+
+  const subjects = target.subjects.map((r) => ({ ...r }));
+  // Seeded from the target's own rows, then added to as rows land, so text
+  // listed twice in the source arrives once.
+  const present = new Set(subjects.map((r) => r.subject.trim()).filter((t) => t !== ""));
+
+  for (const from of source.subjects) {
+    const text = from.subject.trim();
+    if (text === "") continue;
+    if (present.has(text)) {
+      rowsDropped++;
+      continue;
+    }
+    const blank = subjects.findIndex((r) => r.subject.trim() === "");
+    // Counted rather than broken out of, so the number is right for every
+    // remaining row instead of only the first one that could not land.
+    if (blank === -1) {
+      rowsDropped++;
+      continue;
+    }
+    present.add(text);
+    rowsToFill++;
+    // colorId is optional. Writing the key as undefined is exactly what
+    // repairSubject exists to prevent, so the field is omitted instead.
+    subjects[blank] =
+      from.colorId === undefined
+        ? { subject: text, checked: false }
+        : { subject: text, checked: false, colorId: from.colorId };
+  }
+
   return {
-    day: { ...target, timeBlocks },
+    day: { ...target, timeBlocks, subjects },
     blocksToFill,
     blocksKept,
-    rowsToFill: 0,
-    rowsDropped: 0,
+    rowsToFill,
+    rowsDropped,
   };
 }
 

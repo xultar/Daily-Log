@@ -66,3 +66,151 @@ describe("applyTemplate — the grid", () => {
     expect(JSON.stringify(target)).toBe(targetBefore);
   });
 });
+
+describe("applyTemplate — the priority rows", () => {
+  it("lands a row in the first blank row, compacting rather than by position", () => {
+    // Matches applyCarryForward, which fills a blank before appending.
+    const source = createEmptyWeek(SOURCE_MONDAY);
+    source.days[0].subjects[3] = { subject: "Teaching", checked: false };
+    const target = createEmptyWeek(TARGET_MONDAY);
+
+    const result = applyTemplate(target, source);
+
+    expect(result.days[0].subjects[0].subject).toBe("Teaching");
+    expect(result.days[0].subjects[3].subject).toBe("");
+  });
+
+  it("keeps source order when several rows land", () => {
+    const source = createEmptyWeek(SOURCE_MONDAY);
+    source.days[0].subjects[1] = { subject: "Teaching", checked: false };
+    source.days[0].subjects[4] = { subject: "Supervision", checked: false };
+
+    const result = applyTemplate(createEmptyWeek(TARGET_MONDAY), source);
+
+    expect(result.days[0].subjects.map((r) => r.subject).slice(0, 2)).toEqual([
+      "Teaching",
+      "Supervision",
+    ]);
+  });
+
+  it("lands a row unchecked and keeps its colour tag", () => {
+    const source = createEmptyWeek(SOURCE_MONDAY);
+    source.days[0].subjects[0] = { subject: "Teaching", checked: true, colorId: 3 };
+
+    const result = applyTemplate(createEmptyWeek(TARGET_MONDAY), source);
+
+    expect(result.days[0].subjects[0]).toEqual({
+      subject: "Teaching",
+      checked: false,
+      colorId: 3,
+    });
+  });
+
+  it("never copies flagged or origin", () => {
+    // flagged is the user saying "this one matters THIS week"; origin drives
+    // the age marker, and a templated row is new work rather than a commitment
+    // that has been slipping. Stamping it would render "1w" on a fresh row.
+    const source = createEmptyWeek(SOURCE_MONDAY);
+    source.days[0].subjects[0] = {
+      subject: "Teaching",
+      checked: false,
+      flagged: true,
+      origin: "2026-08-10",
+    };
+
+    const result = applyTemplate(createEmptyWeek(TARGET_MONDAY), source);
+
+    expect(result.days[0].subjects[0].flagged).toBeUndefined();
+    expect(result.days[0].subjects[0].origin).toBeUndefined();
+  });
+
+  it("lands a row with no colour tag without writing the field", () => {
+    // colorId is optional, and rows saved before it existed load unflagged.
+    // Writing undefined into the field is what repairSubject exists to stop.
+    const source = createEmptyWeek(SOURCE_MONDAY);
+    source.days[0].subjects[0] = { subject: "Teaching", checked: false };
+
+    const result = applyTemplate(createEmptyWeek(TARGET_MONDAY), source);
+
+    expect("colorId" in result.days[0].subjects[0]).toBe(false);
+  });
+
+  it("does not land a row whose text is already in that day", () => {
+    const source = createEmptyWeek(SOURCE_MONDAY);
+    source.days[0].subjects[0] = { subject: "Teaching", checked: false };
+    const target = createEmptyWeek(TARGET_MONDAY);
+    target.days[0].subjects[2] = { subject: "Teaching", checked: false };
+
+    const result = applyTemplate(target, source);
+
+    expect(result.days[0].subjects.filter((r) => r.subject === "Teaching")).toHaveLength(1);
+  });
+
+  it("lands text listed twice in the source only once", () => {
+    // The duplicate check must see rows landed earlier in the same pass, not
+    // only the rows the target started with.
+    const source = createEmptyWeek(SOURCE_MONDAY);
+    source.days[0].subjects[0] = { subject: "Teaching", checked: false };
+    source.days[0].subjects[1] = { subject: "Teaching", checked: false };
+
+    const result = applyTemplate(createEmptyWeek(TARGET_MONDAY), source);
+
+    expect(result.days[0].subjects.filter((r) => r.subject === "Teaching")).toHaveLength(1);
+  });
+
+  it("drops what will not fit when the day has no blank row left", () => {
+    const source = createEmptyWeek(SOURCE_MONDAY);
+    source.days[0].subjects[0] = { subject: "Teaching", checked: false };
+    const target = createEmptyWeek(TARGET_MONDAY);
+    target.days[0].subjects = target.days[0].subjects.map((_, i) => ({
+      subject: `Mine ${i}`,
+      checked: false,
+    }));
+
+    const result = applyTemplate(target, source);
+
+    expect(result.days[0].subjects.map((r) => r.subject)).toEqual([
+      "Mine 0",
+      "Mine 1",
+      "Mine 2",
+      "Mine 3",
+      "Mine 4",
+      "Mine 5",
+    ]);
+  });
+
+  it("leaves memos, the goal, the review, weekly actions and carryResolved alone", () => {
+    const source = createEmptyWeek(SOURCE_MONDAY);
+    source.days[0].memo = "Source memo";
+    source.weekGoal = "Source goal";
+    source.weekReview = "Source review";
+    source.weeklyTodos[0] = { text: "Source action", checked: false };
+    paint(source, 0, 0, 0, 1);
+
+    const target = createEmptyWeek(TARGET_MONDAY);
+    target.weekGoal = "My goal";
+    target.carryResolved = true;
+
+    const result = applyTemplate(target, source);
+
+    expect(result.days[0].memo).toBe("");
+    expect(result.weekGoal).toBe("My goal");
+    expect(result.weekReview).toBe("");
+    expect(result.weeklyTodos.every((t) => t.text === "")).toBe(true);
+    expect(result.carryResolved).toBe(true);
+  });
+
+  it("changes nothing the second time it is applied", () => {
+    // Emergent rather than enforced: after the first pass there are no empty
+    // slots left to fill. Tested because emergent properties are the ones a
+    // later change breaks without noticing.
+    const source = createEmptyWeek(SOURCE_MONDAY);
+    paint(source, 0, 3, 2, 5);
+    source.days[0].subjects[0] = { subject: "Teaching", checked: false };
+
+    const once = applyTemplate(createEmptyWeek(TARGET_MONDAY), source);
+    const twice = applyTemplate(once, source);
+
+    expect(twice).toEqual(once);
+  });
+});
