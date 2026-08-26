@@ -94,7 +94,11 @@ const TimeGrid: React.FC<TimeGridProps> = ({
       ) {
         return;
       }
-      const colorId = colorIdForDisplayPosition(parseInt(e.key));
+      // "0" is the tenth key on the number row, so it means display position
+      // 10. Positions 11 and 12 have no key at all: twelve colours outran the
+      // row, and Shift+digit was rejected as a shortcut nobody discovers.
+      const position = e.key === "0" ? 10 : parseInt(e.key);
+      const colorId = colorIdForDisplayPosition(position);
       if (colorId !== null) {
         setActiveColor(colorId);
       }
@@ -133,7 +137,7 @@ const TimeGrid: React.FC<TimeGridProps> = ({
           {[0, 1, 2, 3, 4, 5].map((blockIdx) => {
             const val = timeBlocks[hourIdx]?.[blockIdx] ?? 0;
             const bg = getBlockColor(val);
-            // Nine colour tags arrive as nine indistinguishable grays on a
+            // Twelve colour tags arrive as twelve indistinguishable grays on a
             // mono laser, so each run carries its legend number. Only the
             // first block of a run does, or a full hour would print six
             // identical digits. Invisible on screen; index.css reveals it in
