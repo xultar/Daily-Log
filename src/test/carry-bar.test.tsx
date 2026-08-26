@@ -49,12 +49,39 @@ describe("CarryForwardBar", () => {
     ]);
   });
 
+  it("keeps duplicate-text rows independent", () => {
+    // collectCarryForward can emit the same text twice — once as a weekly
+    // action, once as a flagged daily row — so the bar really does receive
+    // duplicates. Keying by text would collide them.
+    const onBring = vi.fn();
+    setup({
+      candidates: [
+        { text: "Draft methods", origin: "2026-08-17" },
+        { text: "Draft methods", origin: "2026-08-17" },
+      ],
+      onBring,
+    });
+    fireEvent.click(screen.getAllByRole("checkbox")[0]);
+    fireEvent.click(screen.getByRole("button", { name: /bring/i }));
+    expect(onBring.mock.calls[0][0]).toHaveLength(1);
+  });
+
   it("reports nothing to bring when everything is unticked", () => {
     const onBring = vi.fn();
     setup({ onBring });
     screen.getAllByRole("checkbox").forEach((b) => fireEvent.click(b));
     fireEvent.click(screen.getByRole("button", { name: /bring/i }));
     expect(onBring.mock.calls[0][0]).toEqual([]);
+  });
+
+  it("lets an unticked item be ticked again", () => {
+    const onBring = vi.fn();
+    setup({ onBring });
+    const box = screen.getAllByRole("checkbox")[1];
+    fireEvent.click(box); // untick
+    fireEvent.click(box); // re-tick
+    fireEvent.click(screen.getByRole("button", { name: /bring/i }));
+    expect(onBring.mock.calls[0][0]).toHaveLength(3);
   });
 
   it("dismisses without bringing anything", () => {
@@ -73,6 +100,14 @@ describe("CarryForwardBar", () => {
     // that has none of its own. getByText would throw on the duplicate.
     expect(screen.getAllByText("1w")).toHaveLength(2);
     expect(screen.getByText("3w")).toBeInTheDocument();
+  });
+
+  it("measures age against the week being viewed, not a fixed date", () => {
+    // Every other test uses the default mondayISO, so a component that ignored
+    // the prop would pass all of them.
+    setup({ mondayISO: "2026-08-31" });
+    expect(screen.getAllByText("2w")).toHaveLength(2); // origin 2026-08-17
+    expect(screen.getByText("4w")).toBeInTheDocument(); // origin 2026-08-03
   });
 
   it("does not label an item that originated in the week being viewed", () => {
