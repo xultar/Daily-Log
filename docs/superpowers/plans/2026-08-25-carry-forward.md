@@ -4,7 +4,7 @@
 
 **Goal:** When a week opens with unfinished work behind it, offer a review bar that copies chosen items into this week's Weekly Actions, and show how long each carried item has been slipping.
 
-**Architecture:** All the rules are pure functions in `planner-data.ts` — collect candidates from a week, apply a chosen subset to another — so they are testable without a DOM or storage. A thin `carry-forward.ts` does the storage-facing scan backwards through weeks. Carrying **copies**; the source week is never rewritten. An item's age is **derived** from `origin`, the Monday of the week it was first written in, so re-running a carry cannot inflate it.
+**Architecture:** All the rules are pure functions in `planner-data.ts` — collect candidates from a week, apply a chosen subset to another — so they are testable without a DOM or storage. A thin `carry-source.ts` does the storage-facing scan backwards through weeks. Carrying **copies**; the source week is never rewritten. An item's age is **derived** from `origin`, the Monday of the week it was first written in, so re-running a carry cannot inflate it.
 
 **Tech Stack:** React 18, TypeScript (strict off), Vite, Tailwind, date-fns v3, Vitest with jsdom.
 
@@ -43,7 +43,7 @@ A promoted daily row becomes a `TodoItem`, so its `colorId` does not survive. Th
 | File | Responsibility | Action |
 | --- | --- | --- |
 | `src/lib/planner-data.ts` | Schema, repair, carry rules, age | Modify |
-| `src/lib/carry-forward.ts` | Scan storage backwards for the source week | Create |
+| `src/lib/carry-source.ts` | Scan storage backwards for the source week | Create |
 | `src/components/planner/CarryForwardBar.tsx` | The review bar | Create |
 | `src/components/planner/StudyPlanner.tsx` | Look up candidates, render the bar, apply the result | Modify |
 | `src/components/planner/WeeklyTodoSidebar.tsx` | The age marker | Modify |
@@ -641,7 +641,7 @@ git commit -m "Collect unfinished work, and land it in the weekly actions"
 
 **Files:**
 - Modify: `src/lib/planner-data.ts` (one new export)
-- Create: `src/lib/carry-forward.ts`
+- Create: `src/lib/carry-source.ts`
 - Test: `src/test/carry-source.test.ts` (create)
 
 - [ ] **Step 1: Write the failing tests**
@@ -651,7 +651,7 @@ Create `src/test/carry-source.test.ts`:
 ```ts
 import { describe, it, expect, beforeEach } from "vitest";
 import { saveWeek, createEmptyWeek } from "@/lib/planner-data";
-import { findCarrySource, isCurrentOrFutureWeek } from "@/lib/carry-forward";
+import { findCarrySource, isCurrentOrFutureWeek } from "@/lib/carry-source";
 import { subWeeks, startOfWeek } from "date-fns";
 
 const MONDAY = new Date(2026, 7, 24); // 2026-08-24
@@ -724,31 +724,36 @@ Two more, both closing mutants the obvious tests leave alive:
     expect(findCarrySource(MONDAY)).toBeNull();
   });
 
+  it("still reaches a week exactly four back", () => {
+    // The lookback ceiling needs pinning from BELOW as well as above. A test
+    // that only stores a week five back proves the scan stops, but not that it
+    // reaches four — the scan silently degrading to three is invisible to it.
+    saveWeek(subWeeks(MONDAY, 4), createEmptyWeek(subWeeks(MONDAY, 4)));
+    expect(findCarrySource(MONDAY)!.monday).toBe("2026-07-27");
+  });
+
   it("puts the Sunday before a Monday in the previous week, not the current one", () => {
     // Sunday is the only day where Monday-based and Sunday-based week starts
     // disagree, so it is the only day that can observe weekStartsOn here.
-    // The clock is pinned deliberately: keyed to the real date, this would stop
-    // discriminating as soon as time moved past that week — a test that looks
-    // like coverage and is not.
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date(2026, 7, 25)); // Tue 25 Aug 2026
-    try {
-      expect(isCurrentOrFutureWeek(new Date(2026, 7, 23))).toBe(false); // Sun 23 Aug
-      expect(isCurrentOrFutureWeek(new Date(2026, 7, 24))).toBe(true);  // Mon 24 Aug
-    } finally {
-      vi.useRealTimers();
-    }
+    expect(isCurrentOrFutureWeek(new Date(2026, 7, 23), new Date(2026, 7, 25))).toBe(false);
+    expect(isCurrentOrFutureWeek(new Date(2026, 7, 24), new Date(2026, 7, 25))).toBe(true);
+  });
+
+  it("treats the current week as current when today is a Sunday", () => {
+    // Kills the mutant that drops weekStartsOn from the `now` side only —
+    // unreachable while every test runs with a weekday "today".
+    expect(isCurrentOrFutureWeek(new Date(2026, 7, 24), new Date(2026, 7, 30))).toBe(true);
   });
 ```
 
-`try/finally` matters: the other `isCurrentOrFutureWeek` tests use the real clock, and a failure that leaked fake timers into them would produce confusing downstream failures.
+Keep the two real-clock tests (`accepts this week`, `accepts a mid-week day of this week`) exactly as they are. They assert the function behaves sanely *whenever it is actually run*, and pinning them would silently delete that property.
 
-**Mutation-test this task's own tests before calling it done.** Six worth running: `MAX_WEEKS_BACK` 4→5; `continue`→`break`; `back = 1`→`back = 0`; `>=`→`>` in `isCurrentOrFutureWeek`; and dropping `{ weekStartsOn: 1 }` from each of the two `startOfWeek` calls. The third and sixth are the ones the obvious tests miss.
+**Mutation-test this task's own tests before calling it done.** Worth running: `MAX_WEEKS_BACK` 4→5; `back <= MAX` → `back < MAX`; `continue`→`break`; `back = 1`→`back = 0`; `>=`→`>`; and dropping `{ weekStartsOn: 1 }` from **each of the three** `startOfWeek` calls **individually**, not two of them together. The ones the obvious tests miss are `back = 0`, `back < MAX`, and the `now`-side `weekStartsOn` — and the last two were each initially reported as covered by a mutation run that had actually tested something else.
 
 - [ ] **Step 2: Run them and watch them fail**
 
 Run: `npx vitest run src/test/carry-source.test.ts`
-Expected: FAIL — "Failed to resolve import @/lib/carry-forward".
+Expected: FAIL — "Failed to resolve import @/lib/carry-source".
 
 - [ ] **Step 3: Add the storage-presence helper**
 
@@ -767,7 +772,7 @@ export function hasStoredWeek(date: Date): boolean {
 
 - [ ] **Step 4: Write the scan module**
 
-Create `src/lib/carry-forward.ts`:
+Create `src/lib/carry-source.ts`:
 
 ```ts
 import { startOfWeek, subWeeks, format } from "date-fns";
@@ -786,8 +791,15 @@ export interface CarrySource {
  * The week to carry from: the most recent one that exists in storage, scanning
  * back from the previous week.
  *
- * Reads only. Nothing here writes, which is what lets the bar be computed the
- * moment a week is opened without opening a week ever mutating it.
+ * Never writes planner data, which is what lets the bar be computed the moment
+ * a week is opened. The one write it can trigger is loadWeek's quarantine of
+ * an already-unreadable week — the raw text is copied to
+ * daily-log-unreadable-<key> before an empty week is returned. No week the
+ * user can still read is modified by opening one.
+ *
+ * Do not shorten that to "reads only". It is reachable: hasStoredWeek returns
+ * true for corrupt JSON, because the stored string is non-null, so the scan
+ * goes on to call loadWeek and the quarantine happens.
  */
 export function findCarrySource(currentWeekDate: Date): CarrySource | null {
   const thisMonday = startOfWeek(currentWeekDate, { weekStartsOn: 1 });
@@ -805,27 +817,31 @@ export function findCarrySource(currentWeekDate: Date): CarrySource | null {
  * Navigating back to review March must not prompt to carry February forward,
  * and must not offer to write to a week the user is only reading.
  */
-export function isCurrentOrFutureWeek(weekDate: Date): boolean {
+export function isCurrentOrFutureWeek(weekDate: Date, now: Date = new Date()): boolean {
   const viewed = startOfWeek(weekDate, { weekStartsOn: 1 });
-  const now = startOfWeek(new Date(), { weekStartsOn: 1 });
-  return viewed.getTime() >= now.getTime();
+  const current = startOfWeek(now, { weekStartsOn: 1 });
+  return viewed.getTime() >= current.getTime();
 }
 ```
+
+**`now` is a parameter with a default, not a bare `new Date()`.** Every call site works unchanged, but the boundary cases become one-liners instead of needing `vi.setSystemTime`. That matters: `weekStartsOn` on the `now` side is only observable when *today* is a Sunday, and a suite that cannot express "today is a Sunday" cannot see that mutant at all.
+
+**On the filename.** `collectCarryForward`, `applyCarryForward`, `carriedWeeks` and `CarryCandidate` all live in `planner-data.ts`. A module called `carry-forward.ts` owning two of the six carry-forward functions misleads — someone opening it for `applyCarryForward` would not find it and would reasonably conclude it does not exist. `carry-source.ts` names what this file actually owns: finding the week to carry *from*.
 
 - [ ] **Step 5: Run the tests and verify they pass**
 
 Run: `npx vitest run src/test/carry-source.test.ts`
-Expected: PASS, 14 tests.
+Expected: PASS, 16 tests.
 
 - [ ] **Step 6: Confirm the storage rule still holds**
 
 Run: `grep -rn "localStorage" src --include=*.ts --include=*.tsx | grep -v "src/lib/storage.ts" | grep -v "src/test/"`
-Expected: only comment lines. `carry-forward.ts` reaches storage through `loadWeek` and `hasStoredWeek`.
+Expected: only comment lines. `carry-source.ts` reaches storage through `loadWeek` and `hasStoredWeek`.
 
 - [ ] **Step 7: Commit**
 
 ```bash
-git add src/lib/planner-data.ts src/lib/carry-forward.ts src/test/carry-source.test.ts
+git add src/lib/planner-data.ts src/lib/carry-source.ts src/test/carry-source.test.ts
 git commit -m "Scan back for the week to carry from"
 ```
 
@@ -1192,7 +1208,7 @@ In `src/components/planner/StudyPlanner.tsx`, extend the existing imports:
 
 ```ts
 import { WeekData, DayData, TodoItem, CarryCandidate, loadWeek, saveWeek, collectCarryForward, applyCarryForward } from "@/lib/planner-data";
-import { findCarrySource, isCurrentOrFutureWeek } from "@/lib/carry-forward";
+import { findCarrySource, isCurrentOrFutureWeek } from "@/lib/carry-source";
 import CarryForwardBar from "./CarryForwardBar";
 ```
 
@@ -1424,7 +1440,7 @@ git commit -m "Show how many weeks an action has been slipping"
 - [ ] **Step 1: Run the whole suite**
 
 Run: `npm test`
-Expected: PASS. The count rises from 186 by the tests added here — 8 schema, 24 rules, 14 source, 18 bar, 4 marker.
+Expected: PASS. The count rises from 186 by the tests added here — 8 schema, 24 rules, 16 source, 18 bar, 4 marker.
 
 - [ ] **Step 2: Lint**
 
