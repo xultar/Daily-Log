@@ -1,5 +1,4 @@
-import { setISOWeek, startOfISOWeek, format, isValid } from "date-fns";
-import { loadAllWeeks } from "./planner-data";
+import { loadAllWeeks, mondayOfKey } from "./planner-data";
 
 /** Which field a match came from, for the label a result row shows. */
 export type SearchField = "goal" | "review" | "action" | "priority" | "memo";
@@ -23,30 +22,6 @@ const MIN_QUERY = 2;
 const SNIPPET_PAD = 32;
 
 const asText = (value: unknown): string => (typeof value === "string" ? value : "");
-
-/**
- * The Monday to send a click to, derived from the entry key.
- *
- * Note that this is the opposite of `weekKeyForStoredWeek`, which decides where
- * a week *belongs* from the dates it carries, on the grounds that a key can be
- * wrong. That rule is about filing. This is about navigation, and the question
- * is different: the match was found in the entry stored at this key, and
- * `loadWeek` is key-addressed, so this is the only Monday that opens the week
- * the user just matched. Deriving it from the dates inside would, for a week
- * whose key and contents disagree, land them on a different week than the one
- * their search hit.
- *
- * It also means a week too damaged to state its own dates is still searchable,
- * which is when finding your text matters most.
- */
-function mondayOfKey(weekKey: string): string | null {
-  const m = weekKey.match(/^(\d{4})-W(\d{2})$/);
-  if (!m) return null;
-  // Jan 4th is always in ISO week 1, so it is a safe anchor to count from.
-  const anchor = setISOWeek(new Date(Number(m[1]), 0, 4), Number(m[2]));
-  if (!isValid(anchor)) return null;
-  return format(startOfISOWeek(anchor), "yyyy-MM-dd");
-}
 
 function snippetAround(text: string, at: number, length: number): string {
   const start = Math.max(0, at - SNIPPET_PAD);

@@ -1,4 +1,4 @@
-import { startOfWeek, addDays, format, parse, isValid, getISOWeek, getISOWeekYear, differenceInCalendarWeeks } from "date-fns";
+import { startOfWeek, addDays, format, parse, isValid, getISOWeek, getISOWeekYear, differenceInCalendarWeeks, setISOWeek, startOfISOWeek } from "date-fns";
 import { readItem, writeItem, removeItem, listKeys } from "./storage";
 
 export interface TodoItem {
@@ -506,6 +506,30 @@ const WEEK_ENTRY = /^planner-(\d{4}-W\d{2})$/;
  */
 export function weekKeyFromEntryKey(entryKey: string): string | null {
   return entryKey.match(WEEK_ENTRY)?.[1] ?? null;
+}
+
+/**
+ * The Monday a week key opens, for callers that need to navigate to a stored
+ * week rather than file one.
+ *
+ * Note that this is the opposite of `weekKeyForStoredWeek`, which decides where
+ * a week *belongs* from the dates it carries, on the grounds that a key can be
+ * wrong. That rule is about filing. This is about navigation, and the question
+ * is different: `loadWeek` is key-addressed, so this is the only Monday that
+ * opens the week found at this key. Deriving it from the dates inside would,
+ * for a week whose key and contents disagree, land the user somewhere other
+ * than the week they asked for.
+ *
+ * It also means a week too damaged to state its own dates can still be opened,
+ * which is when reaching it matters most.
+ */
+export function mondayOfKey(weekKey: string): string | null {
+  const m = weekKey.match(/^(\d{4})-W(\d{2})$/);
+  if (!m) return null;
+  // Jan 4th is always in ISO week 1, so it is a safe anchor to count from.
+  const anchor = setISOWeek(new Date(Number(m[1]), 0, 4), Number(m[2]));
+  if (!isValid(anchor)) return null;
+  return format(startOfISOWeek(anchor), "yyyy-MM-dd");
 }
 
 /**

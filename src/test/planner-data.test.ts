@@ -14,6 +14,7 @@ import {
   saveWeek,
   loadWeek,
   getBlockTint,
+  mondayOfKey,
 } from "@/lib/planner-data";
 
 describe("BLOCK_COLORS", () => {
@@ -293,5 +294,25 @@ describe("SubjectRow.colorId", () => {
     week.days[3].subjects[2] = { subject: "Buffer", checked: false, colorId: 6 };
     saveWeek(MONDAY, week);
     expect(loadWeek(MONDAY).days[3].subjects[2].colorId).toBe(6);
+  });
+});
+
+describe("mondayOfKey", () => {
+  it("gives the Monday a week key opens", () => {
+    expect(mondayOfKey("2026-W35")).toBe("2026-08-24");
+  });
+
+  it("crosses the week-year boundary, where the calendar year is no guide", () => {
+    // ISO week 1 of 2026 starts in December 2025. A naive implementation that
+    // counted from 1 January would be a week out here and nowhere else.
+    expect(mondayOfKey("2026-W01")).toBe("2025-12-29");
+  });
+
+  it("returns null for anything that is not a week key", () => {
+    // The entry key, rather than the week key, is the likeliest thing to
+    // arrive here by mistake.
+    expect(mondayOfKey("planner-2026-W35")).toBeNull();
+    expect(mondayOfKey("2026-W5")).toBeNull();
+    expect(mondayOfKey("")).toBeNull();
   });
 });
