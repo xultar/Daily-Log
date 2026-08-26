@@ -148,7 +148,7 @@ The review bar renders in the weekly view above the grid, and carries
 - It lists each candidate with a checkbox — all ticked by default, so the fast
   path is one click — and shows each item's age marker.
 - **Bring N forward** copies the ticked items and sets `carryResolved`.
-- **Not now** sets `carryResolved` and writes nothing else.
+- **Skip** sets `carryResolved` and writes nothing else. It discards: see Risks.
 
 Both are user actions, so both legitimately mark the week dirty. Opening a week
 still writes nothing, and `dirtyRef` keeps doing the job it was added for.
@@ -229,7 +229,7 @@ Component:
 - The bar appears for a current-or-later week with candidates, and not for a past
   week, a resolved week, or a week with no candidates.
 - **Bring forward** adds only ticked items and sets `carryResolved`.
-- **Not now** adds nothing and sets `carryResolved`.
+- **Skip** adds nothing and sets `carryResolved`.
 - Opening a week with candidates and touching nothing writes nothing to storage —
   the `dirtyRef` guarantee, asserted directly.
 
@@ -256,6 +256,20 @@ a layout change. Verify both still pass.
 - **Duplicate detection is by exact trimmed text.** Retyping an item with
   different wording will still produce a near-duplicate. Accepted: the
   alternative is fuzzy matching, which is worse when wrong.
-- **`carryResolved` is per week, not per item.** Dismissing hides the bar for
-  that week entirely; an item left behind is still available from the following
-  week's scan, but only while it remains within the four-week window.
+- **`carryResolved` is per week, not per item, and skipping discards.** This
+  paragraph originally claimed an item left behind was "still available from
+  the following week's scan". That was wrong, and the code was right.
+
+  Skipping marks the week resolved *and dirty*, so week N gets written. The
+  scan then stops at the first week that **exists**, which from week N+1 is
+  week N — a week that never received the items. So pressing Skip once removes
+  last week's unfinished work from the feature permanently. The same happens if
+  the user simply types anything in the new week without answering the bar.
+
+  This is a consequence of the stop-at-the-first-stored-week rule, which is
+  itself deliberate: an existing week means the user was there, and scanning
+  past it would resurrect items they had already moved on from. The two cannot
+  both hold.
+
+  The button therefore reads **Skip**, not "Not now" — "not now" promises a
+  later that does not come.

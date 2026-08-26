@@ -127,7 +127,7 @@ describe("CarryForwardBar", () => {
     const onBring = vi.fn();
     const onDismiss = vi.fn();
     setup({ onBring, onDismiss });
-    fireEvent.click(screen.getByRole("button", { name: /not now/i }));
+    fireEvent.click(screen.getByRole("button", { name: /skip/i }));
     expect(onDismiss).toHaveBeenCalledTimes(1);
     expect(onBring).not.toHaveBeenCalled();
   });
@@ -291,7 +291,7 @@ describe("StudyPlanner carry-forward", () => {
   it("dismissing marks the week resolved and adds nothing", async () => {
     seedLastWeekWithUnfinishedWork();
     render(<StudyPlanner />);
-    fireEvent.click(screen.getByRole("button", { name: /not now/i }));
+    fireEvent.click(screen.getByRole("button", { name: /skip/i }));
     await settle();
     const now = loadWeek(thisMonday());
     expect(now.carryResolved).toBe(true);

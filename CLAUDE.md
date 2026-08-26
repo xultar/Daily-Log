@@ -396,6 +396,16 @@ carries. Scanning past it would resurrect older items they had moved on from.
 `hasStoredWeek` exists precisely because `loadWeek` returns an empty week for a
 missing key and so cannot tell absent from empty.
 
+**"Skip" discards, and the button is named for that.** Skipping marks the week
+resolved *and* dirty, so week N gets written — and the scan then stops at week N
+from week N+1, a week that never received the items. So skipping once removes
+last week's unfinished work from the feature for good, as does simply typing
+anything in the new week without answering the bar. This falls directly out of
+the stop-at-the-first-stored-week rule above; the two cannot both hold. The
+button read "Not now" until 2026-08-25, which promised a later that does not
+come. The spec's Risks section claimed the opposite and was corrected, not the
+code.
+
 **Opening a week still writes nothing.** Looking up candidates is a read, gated
 behind `isCurrentOrFutureWeek` so reviewing a past week never offers to write to
 it. Only the user's click marks the week dirty. `src/test/carry-bar.test.tsx`

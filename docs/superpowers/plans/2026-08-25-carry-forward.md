@@ -921,7 +921,7 @@ describe("CarryForwardBar", () => {
     const onBring = vi.fn();
     const onDismiss = vi.fn();
     setup({ onBring, onDismiss });
-    fireEvent.click(screen.getByRole("button", { name: /not now/i }));
+    fireEvent.click(screen.getByRole("button", { name: /skip/i }));
     expect(onDismiss).toHaveBeenCalledTimes(1);
     expect(onBring).not.toHaveBeenCalled();
   });
@@ -1086,7 +1086,7 @@ const CarryForwardBar: React.FC<CarryForwardBarProps> = ({
           onClick={onDismiss}
           className="text-[10px] px-2 py-0.5 rounded border border-border text-muted-foreground hover:text-foreground transition-colors"
         >
-          Not now
+          Skip
         </button>
       </div>
     </div>
@@ -1221,7 +1221,7 @@ describe("StudyPlanner carry-forward", () => {
   it("dismissing marks the week resolved and adds nothing", async () => {
     seedLastWeekWithUnfinishedWork();
     render(<StudyPlanner />);
-    fireEvent.click(screen.getByRole("button", { name: /not now/i }));
+    fireEvent.click(screen.getByRole("button", { name: /skip/i }));
     await settle();
     const now = loadWeek(thisMonday());
     expect(now.carryResolved).toBe(true);
@@ -1632,7 +1632,7 @@ Spec sections and the task that implements each:
 | Landing — fill blanks first, duplicates, promotion to a todo | 3 |
 | Which week is the source, the four-week limit | 4 |
 | When the bar may appear (current-or-later) | 4, 6 |
-| Interaction — pick list, Bring / Not now, `no-print`, roles | 5, 6 |
+| Interaction — pick list, Bring / Skip, `no-print`, roles | 5, 6 |
 | Copy, never move | 3 (pure), 6 (asserted end to end) |
 | Resolution memory | 1, 6 |
 | The age marker | 7 |

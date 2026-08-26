@@ -100,7 +100,7 @@ const CarryForwardBar: React.FC<CarryForwardBarProps> = ({
           onClick={onDismiss}
           className="text-[10px] px-2 py-0.5 rounded border border-border text-muted-foreground hover:text-foreground transition-colors"
         >
-          Not now
+          Skip
         </button>
       </div>
     </div>
