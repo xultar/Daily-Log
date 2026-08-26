@@ -189,9 +189,30 @@ export function dominantTag(day: DayData): number | null {
  * drops it, and a style assertion against it reads empty. The arithmetic is
  * testable here; that it reaches the screen is a browser's job.
  */
-export function tintAlpha(minutes: number): number {
+export const WASH_FLOOR = 0.15;
+
+/**
+ * How strong the wash may get, per theme. These are measured contrast limits.
+ *
+ * In dark mode the tags are lighter than the page, so the wash drags the cell
+ * toward the colour of its own text: measured against `--foreground`, yellow
+ * crosses WCAG AA's 4.5:1 at 0.45 and the other eleven between 0.65 and 0.70.
+ * In light mode the tags are pastel and the text is near-black, so every tag
+ * clears 4.5:1 at full opacity — 0.75 is chosen for looks, with margin left,
+ * rather than forced.
+ *
+ * Dark is the tighter theme here. Note that this is the opposite way round from
+ * the palette's own legibility, where light is the tight one because pastels
+ * crowd together. Same twelve colours, opposite worst case, depending on
+ * whether the question is "can I tell these apart" or "can I read text on
+ * this".
+ */
+export const WASH_CEILING_DARK = 0.45;
+export const WASH_CEILING_LIGHT = 0.75;
+
+export function tintAlpha(minutes: number, ceiling: number): number {
   const intensity = Math.min(Math.max(minutes, 0) / 240, 1);
-  return 0.15 + intensity * 0.3;
+  return WASH_FLOOR + intensity * (ceiling - WASH_FLOOR);
 }
 
 /** Minutes spent on each color across a whole week, keyed by storage id. */

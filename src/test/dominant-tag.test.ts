@@ -1,5 +1,13 @@
 import { describe, it, expect } from "vitest";
-import { createEmptyDay, dominantTag, tintAlpha, DayData } from "@/lib/planner-data";
+import {
+  createEmptyDay,
+  dominantTag,
+  tintAlpha,
+  WASH_FLOOR,
+  WASH_CEILING_DARK,
+  WASH_CEILING_LIGHT,
+  DayData,
+} from "@/lib/planner-data";
 
 const DATE = new Date(2026, 7, 26);
 
@@ -56,21 +64,35 @@ describe("tintAlpha", () => {
   // `hsl(var(--tag-N) / 0.45)` as modern colour syntax, so a style assertion
   // against the rendered cell reads empty whatever the component did.
 
-  it("gives an untouched day the faintest wash", () => {
-    expect(tintAlpha(0)).toBeCloseTo(0.15, 5);
+  it("starts at the floor whatever the ceiling", () => {
+    expect(tintAlpha(0, WASH_CEILING_DARK)).toBeCloseTo(WASH_FLOOR, 5);
+    expect(tintAlpha(0, WASH_CEILING_LIGHT)).toBeCloseTo(WASH_FLOOR, 5);
   });
 
   it("gets stronger with more time", () => {
-    expect(tintAlpha(60)).toBeGreaterThan(tintAlpha(10));
-    expect(tintAlpha(180)).toBeGreaterThan(tintAlpha(60));
+    expect(tintAlpha(60, WASH_CEILING_DARK)).toBeGreaterThan(tintAlpha(10, WASH_CEILING_DARK));
+    expect(tintAlpha(180, WASH_CEILING_DARK)).toBeGreaterThan(tintAlpha(60, WASH_CEILING_DARK));
   });
 
   it("treats four hours as a full day and does not go past it", () => {
-    expect(tintAlpha(240)).toBeCloseTo(0.45, 5);
-    expect(tintAlpha(600)).toBeCloseTo(0.45, 5);
+    expect(tintAlpha(240, WASH_CEILING_DARK)).toBeCloseTo(WASH_CEILING_DARK, 5);
+    expect(tintAlpha(600, WASH_CEILING_DARK)).toBeCloseTo(WASH_CEILING_DARK, 5);
+  });
+
+  it("washes light mode harder than dark, at every level above the floor", () => {
+    // Dark caps at 0.45 because the tags are lighter than the page and drag a
+    // washed cell toward the colour of its own text. Light clears WCAG AA at
+    // full opacity, so it is free to be bolder. Same twelve colours, opposite
+    // constraint.
+    expect(WASH_CEILING_LIGHT).toBeGreaterThan(WASH_CEILING_DARK);
+    for (const mins of [60, 120, 240]) {
+      expect(tintAlpha(mins, WASH_CEILING_LIGHT)).toBeGreaterThan(
+        tintAlpha(mins, WASH_CEILING_DARK)
+      );
+    }
   });
 
   it("does not go below the floor for a nonsense total", () => {
-    expect(tintAlpha(-30)).toBeCloseTo(0.15, 5);
+    expect(tintAlpha(-30, WASH_CEILING_DARK)).toBeCloseTo(WASH_FLOOR, 5);
   });
 });
