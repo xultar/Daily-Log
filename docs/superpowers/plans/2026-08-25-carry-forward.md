@@ -1314,6 +1314,7 @@ Insert directly **after** the Goal/Review row's closing `)}` and before the `{/*
           button, and they then fail looking like a save bug. */}
       {viewMode !== "monthly" && !weekData.carryResolved && candidates.length > 0 && (
         <CarryForwardBar
+          key={format(dates[0], "yyyy-MM-dd")}
           candidates={candidates}
           mondayISO={format(dates[0], "yyyy-MM-dd")}
           onBring={bringForward}
@@ -1323,6 +1324,8 @@ Insert directly **after** the Goal/Review row's closing `)}` and before the `{/*
 ```
 
 `format` and `dates` are both already in scope.
+
+**The `key` is load-bearing, not decoration.** `CarryForwardBar` keys its tick state by array position (`excluded: Set<number>`), which is sound only while `candidates` is stable for the bar's mounted lifetime. Without the `key`, navigating between two weeks that both have candidates would reuse the same mounted bar, and an outstanding untick would stay glued to *position 1* rather than to the item the user unticked. Keying on the week's Monday forces a remount whenever the week changes, which resets the ticks to "all selected" — the correct starting state for a fresh week's review.
 
 - [ ] **Step 7: Run the tests and verify they pass**
 
