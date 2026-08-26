@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useId, useState } from "react";
 import { CarryCandidate, carriedWeeks } from "@/lib/planner-data";
 import { CornerDownRight } from "lucide-react";
 
@@ -16,6 +16,14 @@ interface CarryForwardBarProps {
  * what stops the list growing into a wall of things the user has silently
  * decided not to do.
  *
+ * State tracks what got unticked rather than what's chosen, so "everything
+ * ticked" is simply an empty set on mount — there is nothing to seed from
+ * `candidates` and nothing to keep in sync with it afterwards.
+ *
+ * The tick state is keyed by position, so a parent must remount this bar
+ * rather than swap `candidates` in place — otherwise an outstanding untick
+ * stays glued to the index rather than the item.
+ *
  * Purely presentational: it reports the chosen subset and never touches storage.
  */
 const CarryForwardBar: React.FC<CarryForwardBarProps> = ({
@@ -25,6 +33,7 @@ const CarryForwardBar: React.FC<CarryForwardBarProps> = ({
   onDismiss,
 }) => {
   const [excluded, setExcluded] = useState<Set<number>>(new Set());
+  const headingId = useId();
 
   const toggle = (idx: number) => {
     setExcluded((prev) => {
@@ -41,12 +50,16 @@ const CarryForwardBar: React.FC<CarryForwardBarProps> = ({
     <div className="no-print border-b border-border bg-accent/20 px-3 py-1.5 shrink-0">
       <div className="flex items-center gap-1.5 text-[10px] text-foreground mb-1">
         <CornerDownRight className="h-3 w-3 shrink-0 text-muted-foreground" />
-        <strong>
+        <strong id={headingId}>
           {candidates.length} item{candidates.length === 1 ? "" : "s"}
         </strong>
         <span className="text-muted-foreground">unfinished from last week</span>
       </div>
-      <div className="flex flex-wrap gap-x-4 gap-y-0.5 mb-1.5">
+      <div
+        role="group"
+        aria-labelledby={headingId}
+        className="flex flex-wrap gap-x-4 gap-y-0.5 mb-1.5"
+      >
         {candidates.map((c, i) => {
           const age = carriedWeeks(c.origin, mondayISO);
           return (
@@ -58,7 +71,16 @@ const CarryForwardBar: React.FC<CarryForwardBarProps> = ({
                 className="h-3 w-3 shrink-0 accent-campus-blue-dark"
               />
               <span className="text-foreground">{c.text}</span>
-              {age > 0 && <span className="text-muted-foreground tabular-nums">{age}w</span>}
+              {age > 0 && (
+                <>
+                  <span aria-hidden="true" className="text-muted-foreground tabular-nums">
+                    {age}w
+                  </span>
+                  <span className="sr-only">
+                    carried {age} week{age === 1 ? "" : "s"}
+                  </span>
+                </>
+              )}
             </label>
           );
         })}

@@ -49,6 +49,36 @@ describe("CarryForwardBar", () => {
     ]);
   });
 
+  it("counts down the button as rows are unticked", () => {
+    setup();
+    expect(screen.getByRole("button", { name: "Bring 3 forward" })).toBeInTheDocument();
+    fireEvent.click(screen.getAllByRole("checkbox")[1]);
+    expect(screen.getByRole("button", { name: "Bring 2 forward" })).toBeInTheDocument();
+  });
+
+  it("names each checkbox by its row", () => {
+    setup();
+    expect(screen.getByRole("checkbox", { name: /Book viva slot/ })).toBeInTheDocument();
+  });
+
+  it("unticks a row when its text is clicked", () => {
+    const onBring = vi.fn();
+    setup({ onBring });
+    fireEvent.click(screen.getByText("Draft methods"));
+    fireEvent.click(screen.getByRole("button", { name: /bring/i }));
+    expect(onBring.mock.calls[0][0].map((c: CarryCandidate) => c.text)).toEqual([
+      "Book viva slot",
+      "Email supervisor",
+    ]);
+  });
+
+  it("labels the checkbox group with the unfinished-items count", () => {
+    // role="group" + aria-labelledby ties the rows to the "3 items" heading so
+    // a screen-reader user landing on a checkbox has context.
+    setup();
+    expect(screen.getByRole("group", { name: "3 items" })).toBeInTheDocument();
+  });
+
   it("keeps duplicate-text rows independent", () => {
     // collectCarryForward can emit the same text twice — once as a weekly
     // action, once as a flagged daily row — so the bar really does receive
@@ -112,12 +142,13 @@ describe("CarryForwardBar", () => {
 
   it("does not label an item that originated in the week being viewed", () => {
     setup({ candidates: [{ text: "Fresh", origin: "2026-08-24" }] });
+    expect(screen.getByText("Fresh")).toBeInTheDocument();
     expect(screen.queryByText("0w")).toBeNull();
   });
 
   it("says 1 item, not 1 items", () => {
     setup({ candidates: [{ text: "Only one", origin: "2026-08-17" }] });
-    expect(screen.getByText(/1 item/)).toBeInTheDocument();
+    expect(screen.getByText("1 item")).toBeInTheDocument();
     expect(screen.queryByText(/1 items/)).toBeNull();
   });
 
