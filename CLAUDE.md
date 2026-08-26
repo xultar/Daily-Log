@@ -78,7 +78,13 @@ day and cancelled two queued runs without executing a step, reporting one as
 `failure` and one as `startup_failure`. Neither was a real failure. A superseded
 or cancelled run in this repo does not always say so.
 
-## Pick up here next
+## Pick up here next — the backlog
+
+**This section is the backlog.** If you were asked for "the backlog", "what's
+next", "the todo list" or "outstanding work", it is the four numbered items
+below and there is no other list. One other paragraph in this file mentions a
+backlog being retired; that refers to a duplicate of this one that was deleted
+on 2026-08-26, not to this.
 
 Nothing is half-finished and there are no known defects outstanding. What is
 left is new functionality. Each item below carries what it needs to start cold.
@@ -932,11 +938,14 @@ public with no user data in it, and why there is no server to run.
 Export/import into a synced folder gets most of the value for none of the
 architecture.
 
-This heading used to be "Discussed but not started" and carried its own copy of
-the backlog. It drifted: it went on describing search and month-view colour as
-future work after both had shipped, and repeated three items that "Pick up here
-next" already held. **One list. That one.** A second copy of a backlog is a
-second thing to keep true, and it will not be.
+This heading used to be "Discussed but not started" and held a second copy of
+the outstanding work. It drifted: it went on describing search and month-view
+colour as future work after both had shipped, and repeated three items that
+"Pick up here next" already carried. It was deleted on 2026-08-26.
+
+**The live list is "Pick up here next" and there is no other.** A second copy is
+a second thing to keep true, and it will not be. Nothing here says the work
+itself went away — only this duplicate of it did.
 
 ## Design docs
 
