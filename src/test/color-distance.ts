@@ -58,3 +58,51 @@ export function deltaE(a: string, b: string): number {
   const [l2, a2, b2] = toLab(hslToRgb(b));
   return Math.hypot(l1 - l2, a1 - a2, b1 - b2);
 }
+
+export type Vision = "normal" | "protanopia" | "deuteranopia" | "tritanopia";
+
+// Viénot, Brettel and Mollon (1999), in the form that is applied to
+// gamma-encoded RGB. Dichromacy is modelled as a projection: the three cone
+// responses collapse onto a plane, so two colours that differ only along the
+// lost axis become the same colour.
+const TO_LMS = [
+  [17.8824, 43.5161, 4.11935],
+  [3.45565, 27.1554, 3.86714],
+  [0.0299566, 0.184309, 1.46709],
+];
+const FROM_LMS = [
+  [0.0809444479, -0.130504409, 0.116721066],
+  [-0.0102485335, 0.0540193266, -0.113614708],
+  [-0.000365296938, -0.00412161469, 0.693511405],
+];
+
+const apply = (m: number[][], [x, y, z]: number[]): [number, number, number] => [
+  m[0][0] * x + m[0][1] * y + m[0][2] * z,
+  m[1][0] * x + m[1][1] * y + m[1][2] * z,
+  m[2][0] * x + m[2][1] * y + m[2][2] * z,
+];
+
+/**
+ * How a colour looks to a dichromat.
+ *
+ * An approximation, and treated as one: it is used to compare the palette
+ * against itself over time, not to make claims about any individual's vision.
+ * What it is good for is noticing that two tags which look distinct to us have
+ * collapsed into each other.
+ */
+export function simulate(rgb: [number, number, number], vision: Vision): [number, number, number] {
+  if (vision === "normal") return rgb;
+  const [L, M, S] = apply(TO_LMS, rgb);
+  const lms: [number, number, number] =
+    vision === "protanopia" ? [2.02344 * M - 2.52581 * S, M, S] :
+    vision === "deuteranopia" ? [L, 0.494207 * L + 1.24827 * S, S] :
+    [L, M, -0.395913 * L + 0.801109 * M];
+  return apply(FROM_LMS, lms).map((v) => Math.max(0, Math.min(255, v))) as [number, number, number];
+}
+
+/** CIE76 difference as a dichromat would see it. */
+export function deltaEAs(a: string, b: string, vision: Vision): number {
+  const [l1, a1, b1] = toLab(simulate(hslToRgb(a), vision));
+  const [l2, a2, b2] = toLab(simulate(hslToRgb(b), vision));
+  return Math.hypot(l1 - l2, a1 - a2, b1 - b2);
+}

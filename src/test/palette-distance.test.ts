@@ -73,8 +73,20 @@ describe("no two tags may look too alike", () => {
   // Light is roughly three times tighter than dark throughout, so the two
   // floors are far apart. A colour that survives light will survive dark; the
   // reverse does not hold, which is why light is the one to judge first.
-  const LIGHT_FLOOR = 7.5;
-  const DARK_FLOOR = 21.5;
+  // Raised from 7.5/21.5 when magenta moved. Lavender/Magenta was the tightest
+  // pair in the palette and separated on hue alone — identical saturation and
+  // lightness, 35 degrees apart in a region where that buys very little.
+  //
+  // Magenta moved rather than lavender because lavender is a system colour
+  // elsewhere in the user's setup, and because magenta was the one squeezed
+  // between two neighbours: lavender at 270 on one side, pink at 340 on the
+  // other, 35 degrees to each.
+  //
+  // Both floors are now set by other pairs — Orange/Brown in light,
+  // Green/Chartreuse in dark — which is the point. No pair should be the
+  // obvious weakest link.
+  const LIGHT_FLOOR = 12.0;
+  const DARK_FLOOR = 23.0;
 
   it("keeps every light-mode pair above the floor", () => {
     const worst = worstPair("light");

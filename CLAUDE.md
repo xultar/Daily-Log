@@ -151,12 +151,38 @@ actually-rendered tokens, it was twice as close to green as to yellow, because
 the yellow-green region is perceptually compressed. Moving it to 85 improved
 both themes at once. Measure the next colour; do not reason about the wheel.
 
-Two numbers worth keeping. The tightest pair in the whole palette is
-**Lavender/Magenta at ΔE 7.6 in light and 21.9 in dark**, and it predates the
-twelve-tag change — every pair involving red, chartreuse or brown is better
-separated than that. And **light mode is about three times tighter than dark
-throughout**, so a new colour that survives light will survive dark, not the
-other way round.
+**Light mode is about three times tighter than dark throughout**, so a colour
+that survives light will survive dark and not the other way round. Judge light
+first.
+
+`src/test/palette-distance.test.ts` now enforces this rather than leaving it to
+whoever remembers. It computes ΔE from the HSL strings — pure arithmetic, no
+browser — and reproduces the in-browser measurements to three significant
+figures. The floors are a ratchet: raise them when the palette improves, never
+lower them to make a new colour fit. The instrument has its own tests, because
+an untested ruler measures nothing.
+
+Current worst pairs: **Orange/Brown at 12.1 in light, Green/Chartreuse at 23.5
+in dark**. Lavender/Magenta used to hold both at 7.6 and 21.9 — the tightest in
+the palette, separated on hue alone with identical saturation and lightness.
+Magenta moved to `305 45% 76%` / `305 45% 52%` rather than lavender, because
+lavender is a system colour elsewhere in the user's setup and because magenta
+was the one squeezed between two neighbours.
+
+**Under colourblindness the palette collapses, and now there are numbers for
+it.** `src/test/palette-colourblind.test.ts` simulates the three dichromacies:
+
+| | light | dark |
+| --- | --- | --- |
+| protanopia | 4.2 Gray/Teal | 6.7 Blue/Lavender |
+| deuteranopia | **0.7 Pink/Gray** | 5.2 Pink/Gray |
+| tritanopia | 1.1 Blue/Teal | 2.4 Magenta/Red |
+
+Pink and gray are the same colour to a deuteranope. Both are original entries,
+so this is not what twelve tags cost — it is what the palette has always cost
+and nobody had measured. The printed run-numbers are the existing mitigation and
+they only help on paper. Those floors are a ratchet too: they do not demand the
+palette improve, only that it stop getting quietly worse.
 
 Consequences:
 
@@ -596,7 +622,7 @@ the tab would lose it with no trace — worse than the problem being solved.
 
 ## Baselines
 
-- `npm test` — 307 tests across 27 files. `vitest.config.ts` sets
+- `npm test` — 333 tests across 30 files. `vitest.config.ts` sets
   `testTimeout: 15000` against a 5s default, and that is load-bearing: several
   tests render the whole app and click through it, sitting at 3-4s alone. Under
   full-suite contention they cross 5s — `today.test.tsx` timed out at 5597ms on
