@@ -862,3 +862,61 @@ children are empty equivalents of a real row's — the colour stripe, the checkb
 the text input — and if a real row's markup changes, the spacer can silently stop
 matching with the whole suite green. Re-measure `TimeGrid`'s `offsetTop` across
 columns after touching either.
+
+## Why a backup does not carry the show-weekends preference
+
+Decided 2026-08-27, after the shakedown filed the absence as a defect. Recording
+it because this is the second decision in `export-import.ts` to be re-raised as
+a bug, and a decision nobody can find is a decision that gets made again.
+
+### The argument for including it was real
+
+Export/import is the only migration path this app has. CLAUDE.md rules out cloud
+sync on the grounds that "export/import into a synced folder gets most of the
+value for none of the architecture" — which makes a backup the thing a user
+carries to a new machine. On that reading, anything they would otherwise re-set
+by hand has a claim to travel, and "I don't work weekends" is a fact about the
+person, not about the laptop.
+
+### Why it loses anyway
+
+**The colour labels are not a precedent for it.** They travel because losing them
+loses what the colours *stand for*: the stored `timeBlocks` values are bare
+numbers, and without the labels the whole record stops meaning anything. That is
+data loss wearing the costume of a preference. Weekend visibility carries no
+information and costs one click.
+
+**A restore should not repaint the app.** Import is what someone runs to get
+their data back, usually onto a machine they have already set up. Silently
+changing the layout is a surprise in an operation chosen for recovery.
+
+### The compromise that is not available
+
+The obvious third answer — restore the preference only onto a device that has
+never expressed one — cannot be built as things stand. `StudyPlanner` persists
+it from an effect keyed on the value:
+
+```ts
+useEffect(() => {
+  writeItem("planner-show-weekends", String(showWeekends));
+}, [showWeekends]);
+```
+
+That runs on mount, writing back the value it just read, so the key exists from
+the first launch and "this device has no opinion" is unobservable. It is the
+same shape as the two mount-write bugs this file records elsewhere, and benign
+for the same reason it is useless here: it writes the value that was already
+there. `carry-bar.test.tsx` and `export-import.test.ts` both work around it in
+comments.
+
+Making that compromise possible would mean fixing the effect first — saving where
+the toggle happens — which is two changes to win a case that arises only when
+someone has deliberately set a *different* preference on the target device before
+importing.
+
+### The decision is enforced, not merely written down
+
+`export-import.test.ts` asserts the whole `settings` object by equality against
+`{ colorLabels }`, with `planner-show-weekends` and `planner-theme` both present
+in storage. A preference cannot drift into a backup without someone deciding to,
+and the comment on `ExportSettings` is no longer the only thing holding the line.
