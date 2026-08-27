@@ -14,6 +14,17 @@ import { isMonthKey, loadAllMonthNotes, saveMonthNote } from "./month-notes";
  * user-typed content that does not live inside a week. Whether weekends are
  * showing, and which theme is on, are properties of a device rather than of the
  * data, and restoring last month's planning should not repaint the app.
+ *
+ * **Reviewed again on 2026-08-27 and kept**, after a shakedown filed the
+ * absence of `planner-show-weekends` as a defect. The argument against was
+ * real — export/import is this app's only migration path, so anything a user
+ * would otherwise re-set by hand has a claim to travel. It loses because
+ * weekend visibility costs one click and carries no information, where losing
+ * the colour labels loses what the colours stand for and the stored numbers
+ * stop meaning anything.
+ *
+ * `src/test/export-import.test.ts` now asserts this object exactly, so a
+ * setting cannot be added here without someone deciding to.
  */
 export interface ExportSettings {
   /** Keyed by storage id, never display position — as planner-color-labels is. */

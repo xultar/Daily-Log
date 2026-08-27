@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { exportAllData, exportAsCSV, exportAsJSON, importFromJSON } from "@/lib/export-import";
-import { createEmptyWeek, getWeekKey } from "@/lib/planner-data";
+import { createEmptyWeek, getWeekKey, saveColorLabels } from "@/lib/planner-data";
 
 /**
  * exportAllData used to treat every `planner-*` entry as a week. Two settings
@@ -139,5 +139,34 @@ describe("exportAsJSON", () => {
 
     expect(result.success).toBe(true);
     expect(JSON.parse(localStorage.getItem(`planner-${WEEK_KEY}`)!)).toEqual(before);
+  });
+});
+
+/**
+ * A characterisation test, not a new requirement.
+ *
+ * `settings` carries the colour labels and nothing else, and leaving
+ * `planner-show-weekends` and `planner-theme` out of it is a decision rather
+ * than an oversight — reviewed again on 2026-08-27 and kept. Colour labels earn
+ * their place because losing them loses what the colours *stand for*, which is
+ * the only thing that makes the stored numbers mean anything. Weekend
+ * visibility and the theme cost one click and carry no information, and a
+ * restore that silently repaints the app is a surprise in an operation someone
+ * ran to get their data back.
+ *
+ * This is asserted rather than left to the comment on `ExportSettings` because
+ * the 2026-08-27 shakedown filed the absence as a defect, which is the second
+ * time a deliberate decision in this file has been re-raised as a bug. An
+ * equality assertion on the whole object also means a future setting cannot be
+ * added here without someone deciding to.
+ */
+describe("what travels besides the weeks", () => {
+  it("carries the colour labels, and no device preferences", () => {
+    storeWeek();
+    localStorage.setItem("planner-show-weekends", "false");
+    localStorage.setItem("planner-theme", "sakura-pink");
+    saveColorLabels({ 1: "Thesis" });
+
+    expect(exportAllData().settings).toEqual({ colorLabels: { 1: "Thesis" } });
   });
 });

@@ -9,17 +9,19 @@ Live at https://xultar.github.io/Daily-Log/
 
 **This file is already in your context.** It loads automatically every session,
 so never open it again to "check" something; scroll it. The outstanding work is
-in "Pick up here next" below, and each item there is written to be started cold.
+in "Pick up here next" below, where each item is written to be started cold —
+and where an empty list means there is genuinely nothing queued, not that you
+should go looking elsewhere.
 
 Two habits keep a session cheap:
 
-**Read one design note, not the file.** `docs/design-notes.md` is 49 KB —
+**Read one design note, not the file.** `docs/design-notes.md` is 51 KB —
 *larger than this file* — and reading it end to end is the single most expensive
 mistake available here. Every bullet under "Area notes" names the note that
 explains it. Open that one section and stop.
 
 **Specs and plans are history, not orientation.** `docs/superpowers/specs/` holds
-seventeen approved designs and `plans/` twelve task lists. Read one when you are
+eighteen approved designs and `plans/` twelve task lists. Read one when you are
 about to change behaviour it describes. Never read them to find out what the app
 does — this file already says.
 
@@ -73,12 +75,8 @@ the page renders blank.
 
 ## Where things stand
 
-`main` is deployed and `origin/main` is level with it. **There is one unmerged
-branch: `week-row-alignment`** — the week's priority rows lining up across days,
-built, tested and measured in a browser, but deliberately not merged, because
-merging is the user's call. Its backlog item has already been struck from the
-list below, so do not go looking for it there. What is left is in "Pick up here
-next".
+`main` is deployed, `origin/main` is level with it, and there is no unmerged
+work. The backlog below is empty.
 
 **What shipped, and when, is `git log` — not this section.** It used to carry a
 hand-written list of every feature and its date. That list drifted within a day
@@ -96,16 +94,22 @@ or cancelled run in this repo does not always say so.
 
 ## Pick up here next — the backlog
 
-**This section is the backlog.** If you were asked for "the backlog", "what's
-next", "the todo list" or "outstanding work", it is the single numbered item
-below and there is no other list. One other paragraph in this file mentions a
-backlog being retired; that refers to a duplicate of this one that was deleted
-on 2026-08-26, not to this.
+**This section is the backlog, and it is currently empty.** If you were asked
+for "the backlog", "what's next", "the todo list" or "outstanding work", the
+answer is that there is none, and this is the only list there would be. One
+other paragraph in this file mentions a backlog being retired; that refers to a
+duplicate of this one deleted on 2026-08-26, not to this.
 
-Nothing is half-finished. The one item left is a gap found by the 2026-08-27
-shakedown; it does not crash anything or risk stored data.
+Nothing is half-finished and nothing is known-broken. The last three items were
+closed on 2026-08-27: month notes shipped, the week's row alignment was fixed in
+the view, and backing up the show-weekends preference was decided against. See
+"Deliberately not doing" for that last one — it is a decision, not a gap.
 
-**Each item below is written to be started cold** — what it is, where the code
+**An empty backlog is not an invitation to invent work.** Ask what is wanted.
+If something is agreed, write it here first, in the form described below, and
+then start it.
+
+**Each item here is written to be started cold** — what it is, where the code
 is, what is already there to build on, the open questions, and the traps. If you
 find yourself exploring the codebase to understand an item before starting it,
 the item is underwritten; fix the item.
@@ -132,30 +136,6 @@ the item is underwritten; fix the item.
    layout.
 5. **Work on a branch.** Pushing `main` deploys, and the deploy is gated on
    `npm test`. Merging is the user's call.
-
-### 1. Back up the "show weekends" preference, or decide not to
-
-A backup does not carry it. `exportAllData` writes `settings: { colorLabels }`
-and nothing else, so exporting, clearing and re-importing silently resets
-weekend visibility to the default.
-
-**Found by** the 2026-08-27 shakedown. Eighteen weeks and the colour labels
-round-tripped byte-identical; `planner-show-weekends` was the only key that did
-not come back.
-
-**Where:** `exportAllData` in `src/lib/export-import.ts` builds `settings`; the
-importer reads `parsed.settings.colorLabels` and would need the matching field.
-
-**The open question is whether it should be in a backup at all.** Colour labels
-earned their place because they carry meaning — losing them loses what the
-colours stand for. Weekend visibility is a view preference, and a backup
-restored onto a different device might reasonably keep that device's setting.
-Decide that before writing code; either answer is defensible and only one of
-them is work.
-
-**Trap:** `planner-show-weekends` is deliberately excluded from being collected
-*as a week* — see the comment near the top of `exportAllData`. Adding it to
-`settings` must not undo that.
 
 ### The working rhythm in this repo
 
@@ -495,7 +475,7 @@ rather than dropping it.
 
 ## Baselines
 
-- `npm test` — 534 tests across 53 files. `vitest.config.ts` sets
+- `npm test` — 535 tests across 53 files. `vitest.config.ts` sets
   `testTimeout: 15000` against a 5s default, and that is load-bearing: several
   tests render the whole app and click through it, sitting at 3-4s alone. Under
   full-suite contention they cross 5s — `today.test.tsx` timed out at 5597ms on
@@ -523,14 +503,19 @@ rather than dropping it.
 
 ## Known open issues
 
-One, found by the 2026-08-27 shakedown and carried as backlog item 1 rather
-than described twice here: a backup does not include the show-weekends
-preference. It does not crash anything and does not risk stored data.
+None.
 
-The shakedown's other finding — a short `subjects` array rendering fewer rows
-than its neighbours — turned out not to be a repair bug at all, and the fix the
-backlog proposed for it would have resurrected rows users deleted on purpose.
-See `docs/superpowers/specs/2026-08-27-week-row-alignment-design.md`.
+Both 2026-08-27 shakedown findings are closed, and neither was the bug it was
+filed as. The short `subjects` array was not a repair fault: a day may hold any
+number of rows, and the fix the backlog proposed would have resurrected rows
+users deleted on purpose — it was fixed in the view instead. The absent
+show-weekends preference was not an omission: leaving it out of a backup is a
+decision, reviewed on 2026-08-27 and kept.
+
+The pattern is worth more than either finding. **Twice, a deliberate decision
+recorded in a code comment was re-filed as a defect.** Both comments sat in the
+file the item named. A root cause written into a backlog item is a hypothesis
+with a citation; read the citation before building anything.
 
 Before those, the last two — the `<input>` nested inside a `<button>` in the
 daily legend, and the label write that happened on mount — were both fixed on
@@ -551,6 +536,22 @@ turned an unreadable week into an empty one.
 public with no user data in it, and why there is no server to run.
 Export/import into a synced folder gets most of the value for none of the
 architecture.
+
+**Backing up the show-weekends preference, or the theme.** `ExportSettings`
+carries the colour labels and nothing else. Decided on 2026-08-27 after a
+shakedown filed the absence as a defect, and the argument against was real:
+export/import is the only migration path this app has, so anything a user would
+otherwise re-set by hand has some claim to travel. It loses because weekend
+visibility costs one click and carries no information, where losing the colour
+labels loses what the colours stand for — the stored numbers stop meaning
+anything without them. A restore should also not silently repaint an app
+someone opened to get their data back.
+
+`export-import.test.ts` asserts the whole `settings` object by equality, so a
+preference cannot drift into it without someone deciding to. If this is ever
+revisited: applying a restored preference only to a device that has never set
+one is *not* available, because `StudyPlanner` writes `planner-show-weekends`
+from an effect on mount, so the key exists from first launch.
 
 **The live list is "Pick up here next" and there is no other.** This heading
 once held a second copy of the outstanding work and drifted, describing shipped
