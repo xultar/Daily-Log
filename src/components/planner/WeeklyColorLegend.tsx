@@ -1,5 +1,11 @@
-import React, { useMemo } from "react";
-import { getPaletteInDisplayOrder, loadColorLabels, formatMinutes } from "@/lib/planner-data";
+import React, { useState } from "react";
+import {
+  getPaletteInDisplayOrder,
+  loadColorLabels,
+  saveColorLabels,
+  formatMinutes,
+} from "@/lib/planner-data";
+import RenameTagsDialog from "./RenameTagsDialog";
 
 interface WeeklyColorLegendProps {
   colorMinutes: Record<number, number>;
@@ -9,17 +15,34 @@ interface WeeklyColorLegendProps {
 
 const WeeklyColorLegend: React.FC<WeeklyColorLegendProps> = ({ colorMinutes, activeColor, onSelect }) => {
   // Read once per mount, not per render: loadColorLabels() hits localStorage
-  // and this component re-renders at drag-paint rate. The weekly branch in
-  // StudyPlanner is conditionally rendered (not kept mounted with `hidden`),
-  // so switching to daily and back genuinely remounts this component and a
-  // label edited in the daily view still shows up here. If that conditional
-  // rendering is ever changed to an always-mounted/hidden pattern, this memo
-  // would silently keep showing whatever labels existed at first mount.
-  const labels = useMemo(() => loadColorLabels(), []);
+  // and this component re-renders at drag-paint rate. A useState initialiser
+  // runs exactly once, so that property is unchanged — what it adds is that
+  // the strip can now update itself when the rename dialog edits a label.
+  //
+  // The weekly branch in StudyPlanner is conditionally rendered (not kept
+  // mounted with `hidden`), so switching to daily and back genuinely remounts
+  // this component and a label edited in the daily view still shows up here.
+  // If that conditional rendering is ever changed to an always-mounted/hidden
+  // pattern, this would silently keep showing whatever labels existed at first
+  // mount.
+  const [labels, setLabels] = useState<Record<number, string>>(() => loadColorLabels());
+
+  /**
+   * Saved here rather than from an effect on `labels`, matching
+   * DailyView.updateLabel. That effect ran on mount as well as on change, so
+   * opening the view wrote back the labels it had just read — writing where
+   * the change happens leaves nothing for a mount to trigger.
+   */
+  const updateLabel = (id: number, value: string) => {
+    const next = { ...labels, [id]: value };
+    setLabels(next);
+    saveColorLabels(next);
+  };
 
 
   return (
-    <div className="shrink-0 border-t border-border bg-muted/20 overflow-x-auto">
+    <div className="shrink-0 border-t border-border bg-muted/20 flex items-center">
+      <div className="overflow-x-auto flex-1 min-w-0">
       {/* w-max keeps this row at its content width so the parent's
           overflow-x-auto scrolls instead of squashing entries. Each button
           is already shrink-0, so entries wouldn't compress without it either
@@ -56,6 +79,10 @@ const WeeklyColorLegend: React.FC<WeeklyColorLegendProps> = ({ colorMinutes, act
           );
         })}
       </div>
+      </div>
+      {/* Outside the scroller on purpose: after twelve entries it would be off
+          screen at any normal width. */}
+      <RenameTagsDialog labels={labels} onRename={updateLabel} />
     </div>
   );
 };
