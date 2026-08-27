@@ -7,6 +7,7 @@ import {
   weekKeyForStoredWeek,
 } from "./planner-data";
 import { writeItem } from "./storage";
+import { isMonthKey, loadAllMonthNotes, saveMonthNote } from "./month-notes";
 
 /**
  * What travels besides the weeks. Colour labels only: they are the one piece of
@@ -23,10 +24,29 @@ export interface ExportData {
   version: 2;
   exportedAt: string;
   weeks: Record<string, WeekData>;
+  /**
+   * Keyed "yyyy-MM". A month with no note is absent, never an empty string.
+   *
+   * A sibling of `weeks` rather than a member of `settings`, because it is
+   * content: `settings` is what travels *besides* the weeks, and the colour
+   * labels are there because they are the mapping the stored numbers are read
+   * through, not because they are prose.
+   */
+  monthNotes: Record<string, string>;
   settings: ExportSettings;
 }
 
-/** Versions this build can read. Writing is always the newest. */
+/**
+ * Versions this build can read. Writing is always the newest.
+ *
+ * Adding `monthNotes` deliberately did not move the number. Bumping to 3 would
+ * make a backup written today refused outright by an older cached build, losing
+ * the weeks as well as the notes; leaving it at 2 lets that build restore the
+ * weeks and the labels and silently drop the notes. Both lose something and the
+ * smaller loss was chosen — but the reasoning should be revisited rather than
+ * inherited if a third stored shape is ever added, because the unversioned
+ * surface grows with each one.
+ */
 const READABLE_VERSIONS = [1, 2];
 
 export function exportAllData(): ExportData {
@@ -39,6 +59,10 @@ export function exportAllData(): ExportData {
     version: 2,
     exportedAt: new Date().toISOString(),
     weeks,
+    // Written unconditionally, like settings: an empty object and an absent one
+    // mean the same thing on read, and writing it always keeps the shape of an
+    // export predictable.
+    monthNotes: loadAllMonthNotes(),
     // Always present, even when nothing is labelled. An empty object and an
     // absent one mean the same thing on read, and writing it unconditionally
     // keeps the shape of an export predictable.
