@@ -315,6 +315,14 @@ const StudyPlanner: React.FC = () => {
               setCurrentDate(parse(monday, "yyyy-MM-dd", new Date()));
               setViewMode("weekly");
             }}
+            // A month result opens the month view, so it cannot ride onJump —
+            // that handler hardcodes the weekly view, and TagHistoryPanel shares
+            // it. The first of the month is an arbitrary but stable day inside
+            // the month, which is all MonthlyView reads from currentDate.
+            onJumpToMonth={(monthKey) => {
+              setCurrentDate(parse(`${monthKey}-01`, "yyyy-MM-dd", new Date()));
+              setViewMode("monthly");
+            }}
           />
           {/* Deliberately after SearchDialog rather than earlier in the
               toolbar: carry-bar.test.tsx finds the week chevrons positionally,

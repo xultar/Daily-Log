@@ -1,7 +1,10 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { render, screen, fireEvent, cleanup } from "@testing-library/react";
 import SearchDialog from "@/components/planner/SearchDialog";
+import StudyPlanner from "@/components/planner/StudyPlanner";
 import { createEmptyWeek } from "@/lib/planner-data";
+
+vi.mock("@/hooks/use-toast", () => ({ toast: vi.fn(), useToast: () => ({ toasts: [] }) }));
 import { saveMonthNote } from "@/lib/month-notes";
 import { searchAll, searchMonthNotes } from "@/lib/search";
 
@@ -134,5 +137,25 @@ describe("a month note in the search dialog", () => {
 
     expect(onJump).toHaveBeenCalledWith("2026-08-24");
     expect(onJumpToMonth).not.toHaveBeenCalled();
+  });
+});
+
+// No ThemeProvider: autosave.test.tsx renders <StudyPlanner /> bare, because
+// theme-context gives createContext a real default rather than throwing.
+describe("clicking a month result in the app", () => {
+  it("switches to the month view and lands on that month", () => {
+    saveMonthNote("2026-08", "Teaching ate the month.");
+    render(<StudyPlanner />);
+
+    fireEvent.click(screen.getByRole("button", { name: /search all weeks/i }));
+    typeQuery("Teaching");
+    fireEvent.click(screen.getByText("Teaching ate the month."));
+
+    // The notes field, not the month heading. It proves both halves at once —
+    // only the month view renders it, and its label names the month — where a
+    // heading assertion would pass on the right view showing the wrong month.
+    expect(
+      screen.getByRole("textbox", { name: "Notes and reflections for August 2026" })
+    ).toBeInTheDocument();
   });
 });
