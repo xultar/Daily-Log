@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, cleanup } from "@testing-library/react";
 import WeeklyColorLegend from "@/components/planner/WeeklyColorLegend";
+import TimeGrid from "@/components/planner/TimeGrid";
+import { createEmptyDay } from "@/lib/planner-data";
 
 /**
  * The strip reads its labels once per mount, because loadColorLabels() hits
@@ -91,5 +93,52 @@ describe("renaming from the weekly strip", () => {
 
     expect(scroller).not.toBeNull();
     expect(scroller.contains(trigger)).toBe(false);
+  });
+});
+
+describe("the number keys while renaming", () => {
+  it("does not repaint the grid when a digit is typed into a rename field", () => {
+    // TimeGrid listens on window, so this needs both components mounted.
+    //
+    // The event is fired on the FIELD, not on window. color-keys.test.tsx
+    // fires on window, which sets target to window — and TimeGrid's guard
+    // bails on target.tagName === "INPUT", so firing on window would skip the
+    // guard entirely and pass for the wrong reason.
+    const onActiveColorChange = vi.fn();
+    render(
+      <>
+        <TimeGrid
+          timeBlocks={createEmptyDay(new Date(2026, 7, 24)).timeBlocks}
+          onChange={() => {}}
+          activeColor={1}
+          onActiveColorChange={onActiveColorChange}
+        />
+        <WeeklyColorLegend colorMinutes={{}} activeColor={1} onSelect={vi.fn()} />
+      </>
+    );
+    openDialog();
+
+    const field = screen.getByRole("textbox", { name: /rename gray/i });
+    fireEvent.keyDown(field, { key: "3" });
+
+    expect(onActiveColorChange).not.toHaveBeenCalled();
+  });
+
+  it("still repaints when the digit is typed outside a field", () => {
+    // The other half: without this, deleting the guard's INPUT check would
+    // leave the test above green and the shortcut silently dead.
+    const onActiveColorChange = vi.fn();
+    render(
+      <TimeGrid
+        timeBlocks={createEmptyDay(new Date(2026, 7, 24)).timeBlocks}
+        onChange={() => {}}
+        activeColor={1}
+        onActiveColorChange={onActiveColorChange}
+      />
+    );
+
+    fireEvent.keyDown(window, { key: "3" });
+
+    expect(onActiveColorChange).toHaveBeenCalledWith(3);
   });
 });
