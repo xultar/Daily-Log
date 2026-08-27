@@ -3,9 +3,13 @@
 The long-form reasoning behind the rules in `CLAUDE.md`: how numbers were
 measured, what failed before, and which alternatives were rejected and why.
 
-Moved here on 2026-08-26 because `CLAUDE.md` had grown to 54 KB and is loaded
-into every session. Nothing was deleted — each section below is verbatim, and
-`CLAUDE.md` keeps the rule that bites plus a pointer here.
+Started on 2026-08-26 because `CLAUDE.md` had grown to 54 KB and is loaded into
+every session. Nothing was deleted in that move: the sections it carried across
+are verbatim, and `CLAUDE.md` kept the rule that bites plus a pointer here.
+
+**Sections added since are written here first, not moved**, so do not go looking
+for a `CLAUDE.md` original that never existed. What is in `CLAUDE.md` for those
+is the rule alone.
 
 **Read the section covering whatever you are about to change.** Several record
 decisions that were reversed after review, and the reversal is usually the

@@ -489,8 +489,17 @@ survived; the other is not recoverable.
 
 ## Nothing calls localStorage directly
 
-`src/lib/storage.ts` is the only module that touches it, and `grep localStorage
-src --include=*.ts --include=*.tsx` outside that file should stay empty.
+`src/lib/storage.ts` is the only module that touches it. To check, match the
+calls rather than the word — tests seed fixtures with `localStorage` freely and
+several comments name it, so grepping the bare word returns about 180 lines and
+reads like a flagrant breach of a rule that is in fact intact:
+
+```
+grep -rnE "localStorage\.(get|set|remove)Item|localStorage\.(clear|key)" src --include=*.ts --include=*.tsx | grep -v "^src/test/"
+```
+
+That should return exactly the four call sites inside `storage.ts` and nothing
+else.
 
 The reason is that storage does not fail by being empty — it throws. A
 sandboxed frame or a browser with cookies blocked raises a `SecurityError` from
