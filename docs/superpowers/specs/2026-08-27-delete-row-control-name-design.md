@@ -77,12 +77,13 @@ does the work, and its test still tests the guard.
 
 ## Tests
 
-Three added to the `DailyView row deletion` block, and the positional helper
+Four added to the `DailyView row deletion` block, and the positional helper
 replaced with `getByRole("button", { name: /^Delete priority row/ })` — matched
 loosely because the name grows an explanation on the last row.
 
 - names the delete control (`toHaveAccessibleName`, `title`, `aria-disabled="false"`)
 - announces the delete control as unavailable on the last row
+- reveals the delete control on keyboard focus
 - keeps the delete control focusable and clickable on the last row
 
 All five mutations killed the test that claims to defend them:
@@ -94,10 +95,59 @@ All five mutations killed the test that claims to defend them:
 | add a real `disabled` | keeps the delete control focusable and clickable |
 | freeze `title` to the available text | announces the delete control as unavailable |
 | delete the `removeSubject` guard | refuses to delete the last remaining row |
+| drop `focus-visible:!opacity-100` | reveals the delete control on keyboard focus |
+| downgrade it to `focus:` | reveals the delete control on keyboard focus |
+| drop the `!` | reveals the delete control on keyboard focus |
 
-## Known, and deliberately out of scope
+## Revealing it on keyboard focus
 
-The button is `opacity-0` until the row is hovered, and nothing reveals it on
-keyboard focus. It is now reachable and named but still invisible to a sighted
-keyboard user who tabs to it — a focus-visibility gap that predates this change
-and is not fixed by it.
+The button is `opacity-0` until its row is hovered. That hides the browser's own
+focus outline along with the icon, so before this change a keyboard user could
+reach the control and hear its name and still see nothing at all — the outline
+was not missing, it was merely being rendered at zero opacity.
+
+`focus-visible:!opacity-100` fixes both at once: revealing the button reveals the
+outline that was already there. No focus ring was added; none was needed.
+
+Two details are deliberate.
+
+**`focus-visible` rather than `focus`.** A plain `:focus` also fires on
+mouse-down, which would reveal the button under the cursor and undo the
+hover-only design the row already has.
+
+**The `!`, mirroring the neighbouring `hover:!opacity-100`.** The base is
+`opacity-0` with `group-hover:opacity-50`. An unforced `focus-visible:opacity-100`
+has the same specificity as `group-hover:opacity-50`, so which one won would be
+decided by Tailwind's variant source order rather than by intent. The important
+modifier settles it.
+
+Three mutations, each killed by `reveals the delete control on keyboard focus`:
+dropping the class, downgrading it to `focus:`, and dropping the `!`.
+
+### The test can only assert the class, and why
+
+jsdom loads no stylesheet, so the test asserts the class is present and cannot
+assert that anything is revealed. This is the same limit the week-row-alignment
+work ran into — measure it in a browser or not at all.
+
+### The browser measurement, and the trap in it
+
+Measured with a real Tab keypress: the delete button takes focus, matches
+`:focus-visible`, and resolves to `opacity: 1` while its unfocused siblings stay
+at `0`.
+
+That reading is not straightforward to take, and the first attempt was wrong.
+With the class present, the rule present, `:focus-visible` matching, no inline
+style and the parent at opacity 1, `getComputedStyle` still reported **0**.
+
+The cause was the harness, not the CSS. The browser pane was not displayed, so
+the page was not compositing frames — `document.visibilityState` was `"hidden"`
+— and **a page producing no frames does not advance CSS transitions**. The
+element carries `transition-opacity`, so the transition sat frozen at its start
+value forever.
+
+Setting `style.transition = "none"` and re-reading gives `1` immediately.
+
+Anything measuring a transitioned property in a headless or hidden pane must
+suppress the transition first, or it will read the start value and conclude the
+rule does not work.

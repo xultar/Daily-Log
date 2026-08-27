@@ -163,6 +163,14 @@ const DailyView: React.FC<DailyViewProps> = ({ day, dayIndex, onChange, activeCo
                   * leaving a keyboard user with no way to hear why. It also
                   * swallows the click before the guard is consulted, which
                   * would let the guard rot with its own test still green.
+                  *
+                  * `opacity-0` hides the browser's focus outline as well as the
+                  * icon, so revealing on `focus-visible` is what makes a
+                  * keyboard user able to see the control they can already reach.
+                  * `focus-visible` rather than `focus` keeps it off mouse
+                  * clicks; the `!` mirrors `hover:!opacity-100` so it beats
+                  * `group-hover:opacity-50` by intent rather than by Tailwind's
+                  * variant ordering.
                   */}
                 <button
                   type="button"
@@ -174,7 +182,7 @@ const DailyView: React.FC<DailyViewProps> = ({ day, dayIndex, onChange, activeCo
                   title={canRemoveSubject
                     ? "Delete priority row"
                     : "A day keeps at least one row"}
-                  className="opacity-0 group-hover:opacity-50 hover:!opacity-100 text-muted-foreground p-0.5 transition-opacity"
+                  className="opacity-0 group-hover:opacity-50 hover:!opacity-100 focus-visible:!opacity-100 text-muted-foreground p-0.5 transition-opacity"
                 >
                   <X className="h-3 w-3" />
                 </button>

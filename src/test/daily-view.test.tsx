@@ -65,6 +65,29 @@ describe("DailyView row deletion", () => {
     expect(button).toHaveAttribute("title", "A day keeps at least one row");
   });
 
+  /**
+   * The control is `opacity-0` until its row is hovered, which hides the
+   * browser's own focus outline along with the icon — so a keyboard user could
+   * reach it, and hear it, and still see nothing at all. Revealing it on focus
+   * restores the outline for free, because the outline was only ever invisible
+   * for want of opacity.
+   *
+   * jsdom loads no stylesheet, so this asserts the class is present and cannot
+   * assert that it reveals anything; that part is measured in a browser, the
+   * same way the week's column alignment is. `focus-visible` rather than
+   * `focus` keeps the reveal off mouse clicks, and the `!` mirrors the
+   * neighbouring `hover:!opacity-100` so it beats `group-hover:opacity-50` by
+   * intent rather than by Tailwind's variant ordering.
+   */
+  it("reveals the delete control on keyboard focus", () => {
+    render(
+      <DailyView day={createEmptyDay(MONDAY)} dayIndex={0} onChange={() => {}}
+                 activeColor={1} onActiveColorChange={() => {}} />
+    );
+
+    expect(deleteControl()).toHaveClass("focus-visible:!opacity-100");
+  });
+
   /** aria-disabled, not disabled: the click must still reach the guard. */
   it("keeps the delete control focusable and clickable on the last row", () => {
     const day = createEmptyDay(MONDAY);
