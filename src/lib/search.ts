@@ -1,4 +1,5 @@
 import { loadAllWeeks, mondayOfKey } from "./planner-data";
+import { loadAllMonthNotes } from "./month-notes";
 
 /** Which field a week match came from, for the label a result row shows. */
 export type WeekField = "goal" | "review" | "action" | "priority" | "memo";
@@ -108,4 +109,55 @@ export function searchWeeks(query: string): WeekMatch[] {
 
   // Newest first: what you are looking for is usually recent.
   return matches.sort((a, b) => b.monday.localeCompare(a.monday));
+}
+
+/**
+ * Every place the query appears in a month's notes.
+ *
+ * Unlike the weeks, these arrive as strings by construction — `loadAllMonthNotes`
+ * reads them through `readItem`, which returns a string or nothing — so there is
+ * no unrepaired-shape problem here and no field access to defend.
+ */
+export function searchMonthNotes(query: string): MonthMatch[] {
+  const needle = query.trim().toLowerCase();
+  if (needle.length < MIN_QUERY) return [];
+
+  const matches: MonthMatch[] = [];
+  for (const [monthKey, text] of Object.entries(loadAllMonthNotes())) {
+    const at = text.toLowerCase().indexOf(needle);
+    if (at === -1) continue;
+    matches.push({
+      kind: "month",
+      monthKey,
+      field: "month",
+      snippet: snippetAround(text, at, needle.length),
+    });
+  }
+  return matches;
+}
+
+/**
+ * The date a match sorts on, so that both kinds interleave by date rather than
+ * a month note being appended to one end of the list.
+ *
+ * A month note takes the first of its month. **That `-01` is legibility, not
+ * behaviour**, and no test can defend it: `"2026-08"` is a prefix of every
+ * August date, and a prefix sorts first, so a bare month key orders identically
+ * against every `yyyy-MM-dd` string there is. It is written this way so every
+ * sort key has the same shape, and so the line stays correct if the comparison
+ * ever stops being a string compare. Do not add a test claiming to pin it.
+ */
+const sortKey = (match: SearchMatch): string =>
+  match.kind === "week" ? match.monday : `${match.monthKey}-01`;
+
+/**
+ * Everything the query matches, newest first. This is what the dialog calls.
+ *
+ * `searchWeeks` keeps its own sort because it stays independently exported and
+ * tested, and re-sorting an already-sorted list costs nothing.
+ */
+export function searchAll(query: string): SearchMatch[] {
+  return [...searchWeeks(query), ...searchMonthNotes(query)].sort((a, b) =>
+    sortKey(b).localeCompare(sortKey(a))
+  );
 }
