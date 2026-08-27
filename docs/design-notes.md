@@ -520,6 +520,55 @@ on the field rather than on `window`, because firing on `window` sets `target`
 to `window` and skips the guard entirely — passing for the wrong reason. It is
 paired with a positive case, so deleting the guard cannot leave both green.
 
+## Trends scale per row, and the total carries the magnitude
+
+Each tag's bars are measured against that tag's own busiest month. A single
+global scale makes every row comparable — and flattens a tag used an hour a
+week into a row of stubs, hiding exactly the trend the feature exists to show.
+The cost of the choice is that two rows can look equally busy while being ten
+times apart, so every row prints its span total, which is where the magnitude
+went.
+
+Only one test can tell the two scales apart, and it needs the right fixture:
+**each tag's peak in a different month, and the tags an order of magnitude
+apart.** With both peaks in the same month, a global scale still shows the
+busiest at 100% and the test passes under either implementation.
+Mutation-checked against a global maximum, where it fails alone and the other
+six pass.
+
+**`trendsByMonth` makes one pass, not twelve.** Twelve `totalsByTag` calls would
+each walk every stored week. It is the third caller of `eachStoredDay`, the
+iterator extracted during the templating work — which is the belated argument
+for having extracted it.
+
+**It is deliberately not a generalisation of `totalsByTag`.** That one takes an
+arbitrary range rather than whole months, which is what lets the month report be
+handed any two dates. The two look similar enough that a tidy-up would try to
+fold them together.
+
+**Every row is as long as `months`, with zeros.** A hole would be
+indistinguishable from a month nobody worked, and the renderer would have to
+align rows against the header itself.
+
+**A month with no time draws its track and no bar.** An element at `height: 0%`
+still carries its border and rounding, and twelve of those read as a row of
+marks that mean nothing.
+
+**No charting library.** The recharts note lists what would earn its weight —
+axes, tooltips, zoom, real time series — and this has none of them. Bars in a
+table cost 0.5 kB against +102 kB gzipped; the measured cost of this whole
+feature was +0.77 kB gzipped.
+
+**A table, not divs.** `scope="col"` and `scope="row"` name the month and the
+tag for every cell. The visible month initial is a position marker — twelve of
+them contain three Js — and the `sr-only` full month name is the fact.
+
+**The trigger is called "Trends by tag", and must not contain "month".**
+`carry-bar.test.tsx` finds the Month view button by accessible name, and a
+trigger named "Time across months" matched both. That query is now anchored to
+`/^month$/i`, matching the day-view test beside it, so either fix alone would
+do — but the label is the one a future rename could undo without noticing.
+
 ## A second tab reloads, or says so — it never overwrites in silence
 
 Nothing used to listen for the `storage` event, so a stale second tab reverted

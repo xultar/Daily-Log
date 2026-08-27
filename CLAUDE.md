@@ -80,20 +80,23 @@ or cancelled run in this repo does not always say so.
 
 ## Pick up here next — the backlog
 
-**This section is the backlog.** If you were asked for "the backlog", "what's
-next", "the todo list" or "outstanding work", it is the single numbered item
-below and there is no other list. One other paragraph in this file mentions a
-backlog being retired; that refers to a duplicate of this one that was deleted
-on 2026-08-26, not to this.
+**This section is the backlog, and it is currently empty.** If you were asked
+for "the backlog", "what's next", "the todo list" or "outstanding work", the
+answer is that there is none: nothing is half-finished, there are no known
+defects outstanding, and every item that was here has shipped. One other
+paragraph in this file mentions a backlog being retired; that refers to a
+duplicate of this one that was deleted on 2026-08-26, not to this.
 
-Nothing is half-finished and there are no known defects outstanding. What is
-left is new functionality, and it carries what it needs to start cold.
+New work starts by adding an item here, in the shape the shipped ones used:
+what it is, what already exists to build on, the open questions, and the traps.
 
 ### Starting a session here
 
-1. **Confirm the tree before changing it.** `npm test` should be 394 across 38
-   files, `npm run lint` 0 errors and 10 pre-existing warnings, `npm run build`
-   clean. If any of those differ, find out why before writing anything.
+1. **Confirm the tree before changing it.** `npm test`, `npm run lint` and
+   `npm run build` should all match **Baselines** below. If any of them differ,
+   find out why before writing anything. The numbers live in one place on
+   purpose: this step used to carry its own copy, which said 394 across 38 files
+   long after the suite had passed 450.
 2. **Read the section that governs what you are about to touch.** "The one rule
    that can corrupt user data" before anything with colours. "A stored week is
    repaired, never replaced" and "Nothing calls localStorage directly" before
@@ -109,28 +112,6 @@ left is new functionality, and it carries what it needs to start cold.
    layout.
 5. **Work on a branch.** Pushing `main` deploys, and the deploy is gated on
    `npm test`. Merging is the user's call.
-
-### 1. Trends across months
-
-Time reporting shipped for one month. What is missing is the shape over a year —
-Thesis rising, Admin falling.
-
-**Already there:** `totalsByTag(from, to)` takes a range, so the data layer is a
-loop over months and no new logic. `TimeByTag.tsx` is the drawing idiom —
-swatch, name, proportional bar, total. `formatMinutes` and `getBlockColor` do
-the formatting and the fill.
-
-**Open questions:** Where does it live? The month view is already long, so this
-may want its own surface. How many months, and chosen how? How is it drawn — a
-stacked bar per month, or a line per tag? What does a month with no data look
-like?
-
-**Traps:** **Do not reach for `recharts` without measuring** — see "Not charting with recharts" in `docs/design-notes.md`. It is in `package.json`, contributes zero bytes today, and costs
-+103 kB gzipped the moment anything imports it. Twelve series is also a lot of
-lines, and several pairs of tags are indistinguishable under colourblindness, so
-any chart needs names rather than colour alone.
-
-**Copy from:** `src/components/planner/TimeByTag.tsx`.
 
 ### The working rhythm in this repo
 
@@ -331,6 +312,10 @@ Read the matching note before changing anything in that area.
   entries at 10px in a scroller have no room for the day view's answer. The
   dialog renames and never arms, so its rows contain no button and nothing can
   nest. Its trigger sits *outside* the scroller or it is off screen.
+- **Trends scale per row, not globally.** Each tag's bars are measured against
+  its own busiest month, so a small tag's shape stays readable; the span total
+  printed beside the row is what carries the magnitude that hides. One pass over
+  `eachStoredDay` buckets all twelve months at once.
 - **A second tab reloads, or says so.** It never overwrites in silence.
 - **The hour column's last row reads 00**, deliberately.
 
@@ -448,7 +433,7 @@ rather than dropping it.
 
 ## Baselines
 
-- `npm test` — 450 tests across 45 files. `vitest.config.ts` sets
+- `npm test` — 465 tests across 47 files. `vitest.config.ts` sets
   `testTimeout: 15000` against a 5s default, and that is load-bearing: several
   tests render the whole app and click through it, sitting at 3-4s alone. Under
   full-suite contention they cross 5s — `today.test.tsx` timed out at 5597ms on
