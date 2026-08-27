@@ -48,7 +48,18 @@ const MonthNotes: React.FC<MonthNotesProps> = ({ monthKey }) => {
     const el = areaRef.current;
     if (!el) return;
     el.style.height = "auto";
-    el.style.height = `${el.scrollHeight}px`;
+    // `scrollHeight` alone is one border too short. The box is border-box —
+    // Tailwind's default — so `height` covers the borders as well as the
+    // content, and setting it to the content height leaves the field
+    // permanently unable to show its own last line. On screen that is an
+    // invisible one pixel; on paper it shaves the descenders off the final row,
+    // which is precisely what this effect exists to prevent.
+    //
+    // `offsetHeight - clientHeight` is the vertical border, measured rather
+    // than assumed, so a change to the border width in the class list below
+    // cannot quietly reintroduce the clipping.
+    const border = el.offsetHeight - el.clientHeight;
+    el.style.height = `${el.scrollHeight + border}px`;
   }, [text]);
 
   const change = (value: string) => {

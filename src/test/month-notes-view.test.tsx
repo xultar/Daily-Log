@@ -105,6 +105,54 @@ const SEP = new Date(2026, 8, 16); // Wed 16 Sep 2026
 const renderMonth = (date: Date) =>
   render(<MonthlyView currentDate={date} onSelectDay={vi.fn()} />);
 
+/**
+ * jsdom does no layout, so scrollHeight and friends are all 0 and the grow
+ * cannot be observed the way a browser shows it. What can be pinned is the
+ * arithmetic, which is where the bug was: the box is border-box, so a height of
+ * exactly scrollHeight leaves the border eating into the content and the field
+ * sits one border-width short of its own text — invisible on screen, and a
+ * shaved last line in print, which is the one thing the grow exists to stop.
+ */
+const mockMetrics = ({ scrollHeight, borderTotal }: { scrollHeight: number; borderTotal: number }) => {
+  const clientHeight = 40;
+  for (const [name, value] of [
+    ["scrollHeight", scrollHeight],
+    ["clientHeight", clientHeight],
+    ["offsetHeight", clientHeight + borderTotal],
+  ] as const) {
+    Object.defineProperty(HTMLTextAreaElement.prototype, name, {
+      configurable: true,
+      get: () => value,
+    });
+  }
+};
+
+const unmockMetrics = () => {
+  for (const name of ["scrollHeight", "clientHeight", "offsetHeight"]) {
+    delete (HTMLTextAreaElement.prototype as Record<string, unknown>)[name];
+  }
+};
+
+describe("the field grows to fit its own text", () => {
+  afterEach(unmockMetrics);
+
+  it("adds the border to the height, because the box is border-box", () => {
+    mockMetrics({ scrollHeight: 140, borderTotal: 2 });
+
+    render(<MonthNotes monthKey="2026-08" />);
+
+    expect(field().style.height).toBe("142px");
+  });
+
+  it("is exactly the content height when there is no border", () => {
+    mockMetrics({ scrollHeight: 140, borderTotal: 0 });
+
+    render(<MonthNotes monthKey="2026-08" />);
+
+    expect(field().style.height).toBe("140px");
+  });
+});
+
 describe("the month notes field in the month view", () => {
   it("sits below the time-blocked-by-tag bars", () => {
     const week = createEmptyWeek(AUG);
