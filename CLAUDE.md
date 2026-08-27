@@ -56,7 +56,7 @@ or cancelled run in this repo does not always say so.
 ## Pick up here next — the backlog
 
 **This section is the backlog.** If you were asked for "the backlog", "what's
-next", "the todo list" or "outstanding work", it is the two numbered items
+next", "the todo list" or "outstanding work", it is the three numbered items
 below and there is no other list. One other paragraph in this file mentions a
 backlog being retired; that refers to a duplicate of this one that was deleted
 on 2026-08-26, not to this.
@@ -115,30 +115,58 @@ Does it travel in export, import and a backup?
 - Writing on mount is the recurring bug in this repo — see the `dirtyRef` note
   and `DailyView.updateLabel`. Save where the change happens.
 
-### 2. A full shakedown
+### 2. Back up the "show weekends" preference, or decide not to
 
-Nothing here has ever been exercised end to end in one sitting on realistic
-data. Seven features merged on 2026-08-26 alone, each verified on its own.
+A backup does not carry it. `exportAllData` writes `settings: { colorLabels }`
+and nothing else, so exporting, clearing and re-importing silently resets
+weekend visibility to the default.
 
-**What it is:** one deliberate pass over the whole app, with a year of
-real-shaped data, in both appearances and across the six accent themes,
-checking what unit tests structurally cannot — layout, colour, print output, and
-how features behave *together* rather than each alone.
+**Found by** the 2026-08-27 shakedown. Eighteen weeks and the colour labels
+round-tripped byte-identical; `planner-show-weekends` was the only key that did
+not come back.
 
-**Worth covering:** printing from the week and month views; an export → clear →
-import round-trip, colour labels included; the cross-tab notice with two real
-tabs open; a week the app has had to repair; all four dialogs at a narrow window;
-the 1–9 paint shortcuts while each dialog is open; and a month boundary, since a
-week straddles one and a day does not.
+**Where:** `exportAllData` in `src/lib/export-import.ts` builds `settings`; the
+importer reads `parsed.settings.colorLabels` and would need the matching field.
 
-**Why this is not just clicking around:** jsdom draws nothing, so every measured
-claim in `docs/design-notes.md` — the wash alphas, the contrast ceilings, the
-24px minimum hit target, bar legibility at 24px — was verified once, in
-isolation, at one window size. This is the pass that would catch two of them
-disagreeing with each other.
+**The open question is whether it should be in a backup at all.** Colour labels
+earned their place because they carry meaning — losing them loses what the
+colours stand for. Weekend visibility is a view preference, and a backup
+restored onto a different device might reasonably keep that device's setting.
+Decide that before writing code; either answer is defensible and only one of
+them is work.
 
-**Output:** anything found becomes its own backlog item. The shakedown is done
-when the pass is complete, not when everything it found is fixed.
+**Trap:** `planner-show-weekends` is deliberately excluded from being collected
+*as a week* — see the comment near the top of `exportAllData`. Adding it to
+`settings` must not undo that.
+
+### 3. Repair a short subjects array back to six rows
+
+A day whose `subjects` array is short but not empty stays short, so the week
+view renders that column with fewer priority rows. Its time grid then starts
+higher than its neighbours and the week's rows stop lining up across days.
+
+**Found by** the 2026-08-27 shakedown, opening a week damaged in every way at
+once: Monday carried three subject rows and rendered three, while the other six
+days rendered six.
+
+**Root cause:** `repairList` in `src/lib/planner-data.ts` pads to full length
+**only when the incoming value is missing or empty**. Otherwise it does
+`value.map(repairItem)`, which preserves whatever length arrived.
+
+**Why it was missed:** `repairList` serves two callers with opposite contracts —
+`subjects` is a fixed six, and `weeklyTodos` is genuinely variable because the
+sidebar has an Add button. Length-preserving is right for one and wrong for the
+other. `repairWeek` already pads a short week's *days* and says so in its
+comment, so the gap is only at the row level.
+
+**Trap:** do not add padding inside `repairList` itself — that would also pad
+`weeklyTodos`, which is meant to grow and shrink. Pad at the `subjects` call
+site, or give the helper an explicit fixed-length mode.
+
+**Not a crash, and the guards held.** The app rendered the damaged week with no
+error boundary, and storage still held the damaged copy afterwards — `dirtyRef`
+correctly refused to write on open. `week-repair.test.ts` has no case with a
+short subjects array, which is the test to add first.
 
 ### The working rhythm in this repo
 
@@ -487,8 +515,13 @@ rather than dropping it.
 
 ## Known open issues
 
-None. The last two — the `<input>` nested inside a `<button>` in the daily
-legend, and the label write that happened on mount — were both fixed on
+Two, both found by the 2026-08-27 shakedown, and both carried as backlog items
+2 and 3 rather than described twice here: a backup does not include the
+show-weekends preference, and a short `subjects` array is not repaired back to
+six rows. Neither crashes anything and neither risks stored data.
+
+Before those, the last two — the `<input>` nested inside a `<button>` in the
+daily legend, and the label write that happened on mount — were both fixed on
 2026-08-26 and both have tests that fail if they come back.
 
 The second is worth remembering as a pattern rather than as a bug. `DailyView`
