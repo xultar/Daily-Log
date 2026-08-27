@@ -191,6 +191,18 @@ export function importFromJSON(jsonString: string): ImportResult {
       error: `Storage is full or unavailable \u2014 only ${written} of ${staged.length} weeks could be saved.`,
     };
   }
+  // After the weeks, and merged rather than replaced — the same rule the labels
+  // follow. Because each month is its own key, the merge needs no read: writing
+  // the months the file names leaves every month it does not name alone.
+  //
+  // A refused note write does not fail the restore, for the reason a refused
+  // label write does not: the weeks are what the user came for, and a restore
+  // that saved every one of them must not be reported as a failure because a
+  // note would not fit.
+  for (const [monthKey, text] of Object.entries(usableMonthNotes(parsed.monthNotes))) {
+    saveMonthNote(monthKey, text);
+  }
+
   // After the weeks, deliberately. The weeks are what the user came for, so a
   // label write that fails on full storage must not turn a restore that
   // restored everything important into a failure.
@@ -221,6 +233,24 @@ function usableLabels(value: unknown): Record<number, string> {
     const id = Number(key);
     if (id < 1 || id > BLOCK_COLORS.length) continue;
     out[id] = label;
+  }
+  return out;
+}
+
+/**
+ * The month notes from an untrusted file, minus anything unusable.
+ *
+ * Modelled on `usableLabels` and for the same reason: whatever passes through
+ * here is written straight into storage under a key built from the object's own
+ * property name. A key that is not a month must never become a storage key.
+ */
+function usableMonthNotes(value: unknown): Record<string, string> {
+  if (!isPlainObject(value)) return {};
+  const out: Record<string, string> = {};
+  for (const [monthKey, text] of Object.entries(value)) {
+    if (typeof text !== "string" || text.trim() === "") continue;
+    if (!isMonthKey(monthKey)) continue;
+    out[monthKey] = text;
   }
   return out;
 }
