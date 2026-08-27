@@ -10,6 +10,8 @@ import {
   getISOWeek,
 } from "date-fns";
 import TimeByTag from "./TimeByTag";
+import MonthNotes from "./MonthNotes";
+import { monthKeyOf } from "@/lib/month-notes";
 import { useTheme } from "@/lib/theme-context";
 import { resolveScheme, prefersDark } from "@/lib/color-scheme";
 import { loadWeek, calcDayTotal, getWeekKey, getWeekDates, dominantTag, getBlockTint, tintAlpha, WASH_CEILING_DARK, WASH_CEILING_LIGHT, loadColorLabels, BLOCK_COLORS } from "@/lib/planner-data";
@@ -25,6 +27,7 @@ const MonthlyView: React.FC<MonthlyViewProps> = ({ currentDate, onSelectDay }) =
   const calStart = startOfWeek(monthStart, { weekStartsOn: 1 });
   const calEnd = endOfWeek(monthEnd, { weekStartsOn: 1 });
   const allDays = eachDayOfInterval({ start: calStart, end: calEnd });
+  const monthKey = monthKeyOf(currentDate);
 
   // Preload relevant weeks
   const weekCache = React.useMemo(() => {
@@ -147,6 +150,15 @@ const MonthlyView: React.FC<MonthlyViewProps> = ({ currentDate, onSelectDay }) =
           which tag, and this says how much. Reads a future month as a plan,
           because a painted block is a painted block. */}
       <TimeByTag from={monthStart} to={monthEnd} />
+
+      {/* A sibling of TimeByTag, not a child: TimeByTag renders null when
+          nothing is blocked in the range, and a month with no painted blocks is
+          precisely a month worth writing about.
+
+          The key is what reseeds the field when the user pages to another
+          month — remounting rather than an effect, so nothing reads storage
+          during an update and nothing can write on mount. */}
+      <MonthNotes key={monthKey} monthKey={monthKey} />
 
       <p className="no-print text-[10px] text-muted-foreground text-center mt-2">
         Click on a day to switch to daily view
