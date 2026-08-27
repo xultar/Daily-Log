@@ -17,14 +17,65 @@ const tagged = () => {
  * It had no test of its own until that fix needed it to stay true.
  */
 describe("DailyView row deletion", () => {
-  /** The delete control: the last button in a row, and unlabelled. */
-  const removeFirstRow = () => {
+  /**
+   * The delete control names itself, so this queries by role rather than by
+   * position. The name is matched loosely because it grows an explanation when
+   * the row is the last one left.
+   */
+  const deleteControl = () => {
     const row = screen
       .getAllByPlaceholderText("Add priority / action...")[0]
       .closest("div.group") as HTMLElement;
-    const buttons = within(row).getAllByRole("button");
-    fireEvent.click(buttons[buttons.length - 1]);
+    return within(row).getByRole("button", { name: /^Delete priority row/ });
   };
+
+  const removeFirstRow = () => fireEvent.click(deleteControl());
+
+  it("names the delete control", () => {
+    render(
+      <DailyView day={createEmptyDay(MONDAY)} dayIndex={0} onChange={() => {}}
+                 activeColor={1} onActiveColorChange={() => {}} />
+    );
+
+    const button = deleteControl();
+    expect(button).toHaveAccessibleName("Delete priority row");
+    expect(button).toHaveAttribute("title", "Delete priority row");
+    expect(button).toHaveAttribute("aria-disabled", "false");
+  });
+
+  /**
+   * `removeSubject` refuses when one row is left, so the control is announced
+   * as unavailable rather than looking identical and silently doing nothing.
+   * `aria-disabled` rather than `disabled`: it keeps the button in the tab
+   * order, which is the only way a keyboard user hears the reason, and it
+   * leaves the refusal where it already lives instead of letting the attribute
+   * swallow the click before the guard is consulted.
+   */
+  it("announces the delete control as unavailable on the last row", () => {
+    const day = createEmptyDay(MONDAY);
+    day.subjects = day.subjects.slice(0, 1);
+    render(
+      <DailyView day={day} dayIndex={0} onChange={() => {}}
+                 activeColor={1} onActiveColorChange={() => {}} />
+    );
+
+    const button = deleteControl();
+    expect(button).toHaveAttribute("aria-disabled", "true");
+    expect(button).toHaveAccessibleName("Delete priority row (a day keeps at least one)");
+    expect(button).toHaveAttribute("title", "A day keeps at least one row");
+  });
+
+  /** aria-disabled, not disabled: the click must still reach the guard. */
+  it("keeps the delete control focusable and clickable on the last row", () => {
+    const day = createEmptyDay(MONDAY);
+    day.subjects = day.subjects.slice(0, 1);
+    render(
+      <DailyView day={day} dayIndex={0} onChange={() => {}}
+                 activeColor={1} onActiveColorChange={() => {}} />
+    );
+
+    expect(deleteControl()).not.toBeDisabled();
+  });
 
   it("shortens the day rather than blanking the row", () => {
     const onChange = vi.fn();

@@ -77,8 +77,12 @@ const DailyView: React.FC<DailyViewProps> = ({ day, dayIndex, onChange, activeCo
     onChange({ ...day, subjects: [...day.subjects, { subject: "", checked: false }] });
   };
 
+  // The same quantity the delete control announces, so the label cannot drift
+  // from what the guard below actually does.
+  const canRemoveSubject = day.subjects.length > 1;
+
   const removeSubject = (idx: number) => {
-    if (day.subjects.length <= 1) return;
+    if (!canRemoveSubject) return;
     onChange({ ...day, subjects: day.subjects.filter((_, i) => i !== idx) });
   };
 
@@ -152,8 +156,24 @@ const DailyView: React.FC<DailyViewProps> = ({ day, dayIndex, onChange, activeCo
                 >
                   <Flag className="h-3.5 w-3.5" fill={s.flagged ? "currentColor" : "none"} />
                 </button>
+                {/*
+                  * `aria-disabled` rather than `disabled`, because
+                  * `removeSubject` already refuses the last row and a real
+                  * `disabled` would take the button out of the tab order —
+                  * leaving a keyboard user with no way to hear why. It also
+                  * swallows the click before the guard is consulted, which
+                  * would let the guard rot with its own test still green.
+                  */}
                 <button
+                  type="button"
                   onClick={() => removeSubject(idx)}
+                  aria-disabled={!canRemoveSubject}
+                  aria-label={canRemoveSubject
+                    ? "Delete priority row"
+                    : "Delete priority row (a day keeps at least one)"}
+                  title={canRemoveSubject
+                    ? "Delete priority row"
+                    : "A day keeps at least one row"}
                   className="opacity-0 group-hover:opacity-50 hover:!opacity-100 text-muted-foreground p-0.5 transition-opacity"
                 >
                   <X className="h-3 w-3" />
