@@ -80,15 +80,14 @@ or cancelled run in this repo does not always say so.
 
 ## Pick up here next — the backlog
 
-**This section is the backlog, and it is currently empty.** If you were asked
-for "the backlog", "what's next", "the todo list" or "outstanding work", the
-answer is that there is none: nothing is half-finished, there are no known
-defects outstanding, and every item that was here has shipped. One other
-paragraph in this file mentions a backlog being retired; that refers to a
-duplicate of this one that was deleted on 2026-08-26, not to this.
+**This section is the backlog.** If you were asked for "the backlog", "what's
+next", "the todo list" or "outstanding work", it is the three numbered items
+below and there is no other list. One other paragraph in this file mentions a
+backlog being retired; that refers to a duplicate of this one that was deleted
+on 2026-08-26, not to this.
 
-New work starts by adding an item here, in the shape the shipped ones used:
-what it is, what already exists to build on, the open questions, and the traps.
+Nothing is half-finished and there are no known defects outstanding. What is
+left is new functionality. Each item below carries what it needs to start cold.
 
 ### Starting a session here
 
@@ -112,6 +111,64 @@ what it is, what already exists to build on, the open questions, and the traps.
    layout.
 5. **Work on a branch.** Pushing `main` deploys, and the deploy is gated on
    `npm test`. Merging is the user's call.
+
+### 1. Rename the day view's memo label
+
+The heading above the day view's free-text box reads "Memo". It should read
+"Daily Log / Notes", which is what the box is actually for.
+
+**Where:** `DailyView.tsx`, the `uppercase tracking-wider` heading above the
+textarea. The textarea's own placeholder already says "Notes for the day…".
+
+**Trap:** there are two other "Memo"s in the codebase and neither is this one.
+See the shared note under item 2.
+
+### 2. Rename the week view's memo placeholder
+
+Each day column in the week view has a textarea whose placeholder reads
+"Memo…". It should read "Daily Log / Notes…".
+
+**Where:** `DayColumn.tsx`, the textarea that fills the remaining column height.
+
+**Traps, shared with item 1:**
+
+- **Do not rename the CSV export column.** `exportAsCSV` in
+  `src/lib/export-import.ts` writes a `Memo` header, and `export-import.test.ts`
+  pins the whole header row. That is a data format, not a label: renaming it
+  changes what lands in a spreadsheet someone already has.
+- **`SearchDialog`'s `FIELD_LABEL.memo` also says "Memo".** It names the field a
+  result matched. Whether it should follow these two is a real question and was
+  deliberately left out of scope — decide it rather than discovering it.
+- The week column is narrow and its text is 8px, so the longer placeholder will
+  clip. That is expected; check it looks deliberate rather than broken.
+
+### 3. Notes and reflections for the month
+
+Below "Time blocked by tag" in the month view, a free-text area for notes on the
+month — what went well, what to change.
+
+**Already there:** `TimeByTag` sits at the bottom of `MonthlyView`, which is
+where this goes under it. The week's `weekReview` is the closest precedent for
+the field itself: free text, saved through the ordinary autosave path.
+
+**Open questions:** where does the text live? There is no month entity in
+storage — everything stored today is a week — so this needs a new key, probably
+keyed by `yyyy-MM`. Does it print with the month view? Should it be searchable?
+Does it travel in export, import and a backup?
+
+**Traps:**
+
+- **This is the first stored thing that is not a week.** `loadAllWeeks` matches
+  entries by shape and will correctly ignore it — but `exportAllData` was
+  rewritten onto `loadAllWeeks`, so month notes would silently not be backed up
+  unless export is taught about them. A backup that quietly omits something the
+  user typed is worse than no backup.
+- **Nothing calls localStorage directly.** Go through `src/lib/storage.ts`.
+- **A new stored shape needs a repair path.** Read "A stored week is repaired,
+  never replaced" in `docs/design-notes.md` before deciding the shape; every
+  other reader of storage assumes damage is possible, and this one must too.
+- Writing on mount is the recurring bug in this repo — see the `dirtyRef` note
+  and `DailyView.updateLabel`. Save where the change happens.
 
 ### The working rhythm in this repo
 
