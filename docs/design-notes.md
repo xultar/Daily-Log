@@ -467,6 +467,59 @@ mutation-checked, where closing over `weekData` failed exactly one of the six.
 and `[1]`, so a button inserted earlier renumbers every one of them and breaks
 a file that has nothing to do with templating.
 
+## Renaming tags from the strip is a dialog, and deliberately not the day view's answer
+
+The day view's legend is a two-column grid of ~100px cells with room for a
+permanent field beside every swatch. The weekly strip is a horizontal scroller
+of twelve entries at 10px text, each sized to its content. Transferring the day
+view's answer would need twelve fixed-width fields and would push most of the
+palette off screen, so the strip gets one button and a dialog instead.
+
+**The dialog renames and never arms.** Arming stays in the strip, which means a
+dialog row contains no `<button>` at all. The rule `legend-cell.test.tsx`
+enforces for the day view — no cell nesting one interactive element inside
+another — therefore holds here by construction. Its test is written as *the
+list contains zero buttons*, not as a loop over buttons checking their
+contents: that loop would never execute, and a test that cannot fail reads as
+coverage without being any.
+
+**The trigger sits outside the scrolling container.** Inside it, the button
+follows twelve entries and is off screen at any normal width. That is invisible
+at three tags and obvious at twelve, so a structural test asserts the trigger is
+not a descendant of the `overflow-x-auto` element. Mutation-checked: moving it
+inside kills that test and nothing else.
+
+**`WeeklyColorLegend` holds its labels in `useState`, not `useMemo`.** Both read
+once per mount — a `useState` initialiser runs exactly once — so the reason the
+memo existed, that `loadColorLabels()` hits `localStorage` and this re-renders
+at drag-paint rate, still holds. State is what lets the strip update itself when
+the dialog edits. Everything the old comment said about conditional rendering
+remains true and remains recorded. Mutation-checked: dropping the `setLabels`
+call kills exactly the test that watches the strip update behind the dialog.
+
+**Lifting the labels to `StudyPlanner` is the tidy-looking wrong answer.** It
+would give one source of truth instead of two mounts each reading once — and it
+would break day-view renames reaching the strip, because `StudyPlanner` never
+remounts on a view switch. It only works if the day view is lifted too.
+
+**Saving happens in the handler, never in an effect**, matching
+`DailyView.updateLabel`. The effect version ran on mount as well as on change,
+writing `planner-color-labels: {}` for users who had never named a tag. A test
+asserts that opening the dialog writes nothing.
+
+**Clearing a name stores an empty string rather than deleting the key.** Every
+reader falls back with `labels[id] || c.label`, so an empty entry and a missing
+one look identical in the UI — but not in a backup, where a cleared tag travels
+as `{"6": ""}`. Harmless, and it matches what the day view already writes to the
+same key.
+
+**Typing a digit into a rename field does not repaint the grid.** `TimeGrid`'s
+window-level handler bails when the target is an `INPUT`, before it ever checks
+for `role="menu"`, `role="dialog"` or `role="listbox"`. The test fires the event
+on the field rather than on `window`, because firing on `window` sets `target`
+to `window` and skips the guard entirely — passing for the wrong reason. It is
+paired with a positive case, so deleting the guard cannot leave both green.
+
 ## A second tab reloads, or says so — it never overwrites in silence
 
 Nothing used to listen for the `storage` event, so a stale second tab reverted

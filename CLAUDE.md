@@ -81,13 +81,13 @@ or cancelled run in this repo does not always say so.
 ## Pick up here next — the backlog
 
 **This section is the backlog.** If you were asked for "the backlog", "what's
-next", "the todo list" or "outstanding work", it is the two numbered items
+next", "the todo list" or "outstanding work", it is the single numbered item
 below and there is no other list. One other paragraph in this file mentions a
 backlog being retired; that refers to a duplicate of this one that was deleted
 on 2026-08-26, not to this.
 
 Nothing is half-finished and there are no known defects outstanding. What is
-left is new functionality. Each item below carries what it needs to start cold.
+left is new functionality, and it carries what it needs to start cold.
 
 ### Starting a session here
 
@@ -131,34 +131,6 @@ lines, and several pairs of tags are indistinguishable under colourblindness, so
 any chart needs names rather than colour alone.
 
 **Copy from:** `src/components/planner/TimeByTag.tsx`.
-
-### 2. Edit colour labels from the weekly strip
-
-Rename a tag without going to the day view. No longer blocked: the daily legend
-now has the correct structure to copy rather than a mistake to replicate.
-
-**Already there:** The daily legend cell is the pattern — a plain container
-holding a button that arms the colour and a sibling input that renames it, with
-`aria-pressed` and the key hint in the button's accessible name.
-`src/test/legend-cell.test.tsx` includes the structural assertion that no cell
-nests one interactive element inside another.
-
-**Open questions:** The weekly strip is a horizontal scroller with far less room
-per entry than the daily grid's 100px cells. An always-visible text field may
-simply not fit, so this may want a different affordance *despite* the daily
-view's answer — do not assume the daily solution transfers.
-
-**Traps:** Never nest an `<input>` inside a `<button>`; that defect was removed
-on 2026-08-26 and the test above exists to stop it returning.
-`WeeklyColorLegend` reads labels once per mount with a `useMemo`, which is
-deliberate and carries a comment explaining when it would go stale — making the
-strip editable changes that calculus, so read it first. Do not add
-`role="menu"`, `role="dialog"` or `role="listbox"` to anything in the strip:
-`TimeGrid`'s keydown guard tests for exactly those and would silently disable
-the 1-9 paint shortcuts while focus sits inside.
-
-**Copy from:** the legend cell in `src/components/planner/DailyView.tsx` and
-`docs/superpowers/specs/2026-08-26-legend-cell-a11y-design.md`.
 
 ### The working rhythm in this repo
 
@@ -355,6 +327,10 @@ Read the matching note before changing anything in that area.
   dialog be a preview rather than a warning, and why there is no undo. Days map
   by index, not date. `previewTemplate` and `applyTemplate` are wrappers over
   one `fillDay` pass, so the counts cannot drift from the result.
+- **The weekly strip renames through a dialog, not inline fields.** Twelve
+  entries at 10px in a scroller have no room for the day view's answer. The
+  dialog renames and never arms, so its rows contain no button and nothing can
+  nest. Its trigger sits *outside* the scroller or it is off screen.
 - **A second tab reloads, or says so.** It never overwrites in silence.
 - **The hour column's last row reads 00**, deliberately.
 
@@ -472,7 +448,7 @@ rather than dropping it.
 
 ## Baselines
 
-- `npm test` — 437 tests across 43 files. `vitest.config.ts` sets
+- `npm test` — 450 tests across 45 files. `vitest.config.ts` sets
   `testTimeout: 15000` against a 5s default, and that is load-bearing: several
   tests render the whole app and click through it, sitting at 3-4s alone. Under
   full-suite contention they cross 5s — `today.test.tsx` timed out at 5597ms on
