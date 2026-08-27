@@ -21,7 +21,7 @@ mistake available here. Every bullet under "Area notes" names the note that
 explains it. Open that one section and stop.
 
 **Specs and plans are history, not orientation.** `docs/superpowers/specs/` holds
-seventeen approved designs and `plans/` twelve task lists. Read one when you are
+eighteen approved designs and `plans/` twelve task lists. Read one when you are
 about to change behaviour it describes. Never read them to find out what the app
 does — this file already says.
 
@@ -75,10 +75,8 @@ the page renders blank.
 
 ## Where things stand
 
-`main` is deployed and `origin/main` is level with it. **There is one unmerged
-branch: `weekends-decision`** — no feature, just the decision not to back up the
-show-weekends preference, made enforceable by a test and written down. Merging
-is the user's call. The backlog below is empty.
+`main` is deployed, `origin/main` is level with it, and there is no unmerged
+work. The backlog below is empty.
 
 **What shipped, and when, is `git log` — not this section.** It used to carry a
 hand-written list of every feature and its date. That list drifted within a day
@@ -477,7 +475,7 @@ rather than dropping it.
 
 ## Baselines
 
-- `npm test` — 531 tests across 52 files. `vitest.config.ts` sets
+- `npm test` — 534 tests across 52 files. `vitest.config.ts` sets
   `testTimeout: 15000` against a 5s default, and that is load-bearing: several
   tests render the whole app and click through it, sitting at 3-4s alone. Under
   full-suite contention they cross 5s — `today.test.tsx` timed out at 5597ms on
