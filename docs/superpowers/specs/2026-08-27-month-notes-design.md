@@ -8,7 +8,7 @@ Status: approved
 Below "Time blocked by tag" in the month view, a free-text area for notes on the
 month — what went well, what to change. The text is stored under its own key per
 month, saved as it is typed, printed with the month when it has anything in it,
-and carried in a backup.
+carried in a backup, and findable from the search dialog.
 
 It is the first thing this app stores that is not a week.
 
@@ -32,10 +32,12 @@ beside the evidence, once per month, not scattered across four weekly reviews.
 | Save timing | On every keystroke | One short string under its own key. Deletes the whole `pendingRef` class of bug rather than reimplementing it |
 | Save failure | Warn once per failure episode | `StudyPlanner`'s `saveFailedRef` rule. At one write per keystroke, warning per failure buries itself |
 | State seeding | Lazy `useState` initialiser plus `key={monthKey}` | No effect reads storage, so nothing writes on mount |
-| Backup | New top-level `monthNotes`, `version: 3` | It is content, not a device preference, so it is a sibling of `weeks` rather than a member of `settings` |
+| Backup | New top-level `monthNotes`, `version` stays 2 | It is content, not a device preference, so it is a sibling of `weeks` rather than a member of `settings`. The version does not move: see Risks |
 | Import | Merge by month key, validate like `usableLabels` | A file that does not mention September is not an instruction to delete September |
 | Print | Prints when non-empty, `no-print` when empty | The month view prints and the week's Goal prints with it. An empty box on a printout is noise |
-| Search | Not searchable | Deferred to its own item. See Out of scope |
+| Search | Searchable, as its own match kind | A reflection nobody can find again is a diary, not a planner |
+| Match shape | Discriminated union on `kind` | With `strictNullChecks` off, optional `monday`/`weekKey` fields buy no protection at all; a literal discriminant narrows regardless |
+| Search navigation | A second `onJumpToMonth`, not a widened `onJump` | `onJump` is shared with `TagHistoryPanel`, which has no use for a view discriminator |
 | CSV | Untouched | `exportAsCSV` is a per-day row format and a month note has no day |
 
 Rejected alternatives:
@@ -172,7 +174,7 @@ prints nothing at all rather than an empty frame under the tag bars.
 
 ```ts
 export interface ExportData {
-  version: 3;
+  version: 2;
   exportedAt: string;
   weeks: Record<string, WeekData>;
   /** Keyed "yyyy-MM". Absent months are absent, never empty strings. */
@@ -180,8 +182,16 @@ export interface ExportData {
   settings: ExportSettings;
 }
 
-const READABLE_VERSIONS = [1, 2, 3];
+const READABLE_VERSIONS = [1, 2];
 ```
+
+**The version deliberately does not move.** Adding a field is backward
+compatible in the direction that matters least — a new build reading an old file
+finds no `monthNotes` and imports nothing — and incompatible in the direction
+that would have hurt: bumping to 3 makes a backup written today *refused
+outright* by any older cached build, rather than restored with the weeks intact.
+Staying at 2 means an old build restores the weeks and the labels and silently
+drops the notes. Both are losses; the smaller one is chosen. See Risks.
 
 `exportAllData` gains `monthNotes: loadAllMonthNotes()`, written unconditionally
 like `settings` so the shape of an export is predictable.
@@ -196,6 +206,73 @@ A failed month-note write does not fail the restore, for the reason the labels d
 not: the weeks are what the user came for, and a restore that saved every week
 must not be reported as a failure because a note would not fit.
 
+## Search
+
+A month note is findable, and a result opens the month view at that month.
+
+**The match becomes a discriminated union.** A week match carries a `weekKey` and
+a `monday` because clicking it navigates to a week; a month match has neither and
+never will.
+
+```ts
+export type WeekField = "goal" | "review" | "action" | "priority" | "memo";
+export type SearchField = WeekField | "month";
+
+export interface WeekMatch {
+  kind: "week";
+  weekKey: string;
+  monday: string;
+  field: WeekField;
+  dayIndex?: number;
+  snippet: string;
+}
+
+export interface MonthMatch {
+  kind: "month";
+  monthKey: string;
+  field: "month";
+  snippet: string;
+}
+
+export type SearchMatch = WeekMatch | MonthMatch;
+```
+
+The union is not ceremony. `tsconfig.app.json` sets `"strict": false`, so
+`strictNullChecks` is off and an optional `monday?: string` would be no
+protection whatever — the compiler would hand a `null` straight to
+`parse(monday, ...)` in the dialog, which is the same silent-null class of bug
+the `colorIdForDisplayPosition` note in CLAUDE.md describes. Narrowing on a
+literal `kind` works with `strict` off, so it is the one mechanism here that
+actually holds.
+
+Three functions in `search.ts`:
+
+- `searchWeeks(query)` — unchanged in behaviour, now stamping `kind: "week"`.
+- `searchMonthNotes(query)` — the same `snippetAround` over `loadAllMonthNotes()`.
+- `searchAll(query)` — concatenates both and sorts newest first.
+
+`searchAll` is what the dialog calls. Sorting needs a key both kinds have, so it
+sorts on the month match's `${monthKey}-01` and the week match's `monday`: a
+month note lands among the weeks of its own month, which is where someone
+scanning by date would look for it. `searchWeeks` keeps its own sort because it
+stays independently exported and tested, and re-sorting a sorted list costs
+nothing.
+
+**Navigation gains a second callback rather than a wider one.** `SearchDialog`
+takes `onJumpToMonth: (monthKey: string) => void` alongside the existing
+`onJump`, and `StudyPlanner` wires it to `setCurrentDate(parse(monthKey + "-01"))`
+plus `setViewMode("monthly")`.
+
+Widening `onJump` to take `{ date, view }` was the alternative. Rejected because
+`onJump` is shared with `TagHistoryPanel`, which navigates to weeks and only to
+weeks — widening it would push a discriminator into a caller that has no opinion
+about it, to spare one prop on a caller that does.
+
+In the dialog, `FIELD_LABEL` gains `month: "Month notes"`, and a month row reads
+`August 2026 · Month notes` where a week row reads `24 – 30 Aug 2026 · Review`.
+The row's `key` includes the kind, since a month key and a week key can no longer
+be assumed distinct strings from the same space.
+
 ## Changes
 
 | File | Change |
@@ -203,7 +280,10 @@ must not be reported as a failure because a note would not fit.
 | `src/lib/month-notes.ts` | New. The five functions above |
 | `src/components/planner/MonthNotes.tsx` | New. The field |
 | `src/components/planner/MonthlyView.tsx` | Mount `MonthNotes` below `TimeByTag` |
-| `src/lib/export-import.ts` | `version: 3`, `monthNotes` in export, `usableMonthNotes` on import |
+| `src/lib/export-import.ts` | `monthNotes` in export, `usableMonthNotes` on import. Version unchanged |
+| `src/lib/search.ts` | `SearchMatch` union, `searchMonthNotes`, `searchAll` |
+| `src/components/planner/SearchDialog.tsx` | Call `searchAll`, render month rows, take `onJumpToMonth` |
+| `src/components/planner/StudyPlanner.tsx` | Wire `onJumpToMonth` to the monthly view |
 
 Nothing in `planner-data.ts` changes. `loadAllWeeks` already ignores the new key
 by construction — its regex is anchored on `^planner-(\d{4}-W\d{2})$` — and that
@@ -231,8 +311,9 @@ bars are not verifiable from the suite.
 `src/test/month-notes-backup.test.ts`
 
 - Export → clear → import round-trips notes byte-identical alongside weeks.
-- A `version: 2` file with no `monthNotes` imports without error and touches no
-  stored note.
+- An older `version: 2` file with no `monthNotes` imports without error and
+  touches no stored note. This is the compatibility the unchanged version number
+  buys, so it is asserted rather than assumed.
 - A file whose `monthNotes` holds a non-string value, or a key like `2026-13`,
   skips that entry and imports the rest.
 - A month stored locally but not named in the file survives the import.
@@ -248,6 +329,19 @@ bars are not verifiable from the suite.
 - A storage failure warns once across several keystrokes, and warns again after a
   recovery and a second failure.
 
+`src/test/month-notes-search.test.ts`
+
+- `searchMonthNotes` finds a query in a stored note and reports its `monthKey`.
+- It respects the two-character minimum, as `searchWeeks` does.
+- `searchAll` interleaves month and week matches newest first, with a month note
+  sorting among the weeks of its own month.
+- A month match carries `kind: "month"` and no `monday`; a week match carries
+  `kind: "week"` and no `monthKey`. This is what the dialog narrows on.
+- In the dialog, a month row reads `August 2026 · Month notes` and clicking it
+  calls `onJumpToMonth` with the month key, not `onJump`.
+- Clicking a week row still calls `onJump` with the Monday — the existing
+  contract, asserted here because this change is the one that could break it.
+
 `src/test/all-weeks.test.ts`
 
 - One added case: `loadAllWeeks()` ignores a `daily-log-month-*` entry. The prefix
@@ -256,14 +350,6 @@ bars are not verifiable from the suite.
   prefix, and the test is what keeps it clear.
 
 ## Out of scope
-
-**Search.** `searchWeeks` iterates `loadAllWeeks()`, and every `SearchMatch`
-carries a `weekKey` and a `monday` because clicking one navigates to a week. A
-month note has neither. Making it searchable means widening the match shape and
-the dialog's navigation contract to open the month view at a month — and this
-codebase already holds two deliberately opposite date rules, `mondayOfKey` for
-navigation and `weekKeyForStoredWeek` for filing. A month result needs a third.
-That is its own design, not a rider on this one.
 
 **A month entity.** This adds a stored string keyed by month, not a month object.
 Nothing else about a month is stored, and `totalsByTag` aggregates per day
@@ -274,11 +360,25 @@ names.
 
 ## Risks
 
-**The version bump refuses old readers.** A backup written by this build is
-rejected outright by a build from before it, rather than restored minus the
-notes. That is the intended trade — silently dropping user-typed prose is the
-failure this item exists to prevent — but it is a real regression for anyone
-holding a stale cached tab, and worth stating rather than discovering.
+**An old build restores a new backup minus the notes, and says nothing.** The
+version stays at 2 while the file gains a field, so a stale cached build reads
+the file happily, restores every week and every colour label, reports success,
+and drops the month notes on the floor.
+
+This is the accepted cost of not bumping. The alternative — `version: 3` — trades
+it for a stale build refusing the file outright, which loses the weeks too. A
+silent partial restore is the milder failure, and only reaches a user who has an
+old tab still cached at the moment they restore. Worth stating rather than
+discovering: if a third stored shape is ever added, this reasoning should be
+revisited rather than inherited, because the balance shifts as the unversioned
+surface grows.
+
+**Two things now decide where a search result goes.** `onJump` navigates to a
+week and `onJumpToMonth` to a month, and `StudyPlanner` sets a different
+`viewMode` in each. A result routed through the wrong one lands the user in the
+right date and the wrong view, which is the sort of thing that looks like a
+rendering bug rather than a wiring one. Both paths are asserted in
+`month-notes-search.test.ts`.
 
 **One `setItem` per keystroke.** Cheap for a few hundred bytes under its own key,
 and it is what buys the absence of the whole flush-on-unmount problem. If a month
