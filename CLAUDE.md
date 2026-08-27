@@ -84,21 +84,18 @@ to their current majors on 2026-08-27 (`checkout` and `setup-node` at v7,
 `upload-pages-artifact` and `deploy-pages` at v5); the breaking change above is
 the only one that reaches this repo.
 
-**The runner is not the slow environment.** This said the opposite until the
-gate actually ran. Re-measured on 2026-08-27 at 541 tests: `npm test` takes
-**28-43s on the runner, median ~33s** across eight runs, against **50-57s** on
-an idle 8-core dev machine. The runner still wins every step, because `npm ci`
-leaves a warm cache and nothing there competes for cores. A wall-clock-sensitive
-test will show itself on a loaded dev machine first, which is exactly where
-`today.test.tsx` timed out. Do not reason about CI being slower.
+**The runner is not the slow environment.** Re-measured 2026-08-27 at 541
+tests: `npm test` takes **28-43s on the runner, median ~33s**, against **50-57s**
+on an idle 8-core dev machine, because `npm ci` leaves a warm cache and nothing
+there competes for cores. A wall-clock-sensitive test will show itself on a
+loaded dev machine first, which is exactly where `today.test.tsx` timed out. Do
+not reason about CI being slower.
 
-The margin has narrowed a long way, though, and the reason is worth knowing.
-Per test the runner went 55ms to 61ms while the dev machine went 205ms to 96ms
-— the runner did not slow down relative to the work, the dev figure halved. The
-old 70s was almost certainly measured on a *loaded* machine, which is the very
-effect the paragraph above warns about. Take a dev-machine timing back to back
-and check the runs agree before trusting it; the three behind the number above
-did.
+**Time a dev machine back to back and check the runs agree before believing it**,
+and time the command rather than vitest's own `Duration`. The figure this
+replaced ran at 205ms per test against 96ms now — more than twice as slow, which
+no growth in the suite explains and load does. The hazard the paragraph above
+describes, landing in its own headline number. See `docs/design-notes.md`.
 
 **The base path is `/Daily-Log/`.** `vite.config.ts` sets it, and it applies in
 development too, so the dev server serves at `http://localhost:8080/Daily-Log/`,
@@ -534,11 +531,8 @@ rather than dropping it.
   For comparison, the same suite on a GitHub runner, measured across eight runs
   on 2026-08-27: `npm ci` 7-9s, `npm test` 28-43s, `npm run build` 4-5s, whole
   workflow 74-91s including the Pages deploy. The runner is the comfortable
-  environment, not the constrained one.
-
-  The Node 24 move did not shift any of it. The six Node 20 runs tested in 41,
-  40, 28, 32, 32 and 43s and the two Node 24 runs in 34 and 33s — inside the
-  Node 20 spread, so there is no speedup to claim in either direction.
+  environment, not the constrained one. The Node 24 move did not shift any of
+  it — see `docs/design-notes.md` for the runs and why no speedup is claimed.
 - **`eslint` ignores `.claude`.** Background tasks create git worktrees at
   `.claude/worktrees/<name>`, which are full copies of the codebase. Without
   the ignore, lint reports all ten warnings twice, which reads exactly like a

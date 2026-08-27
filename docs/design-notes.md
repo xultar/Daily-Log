@@ -983,3 +983,74 @@ have failed silently:
 
 The cell still carries `aria-current="date"`, the same attribute the week view
 uses, so one query finds today in either view and neither announces it twice.
+
+## The deploy's timings, and why the dev-machine number moved
+
+`CLAUDE.md` keeps the rule — the runner is not the slow environment — plus the
+current figures. This is where they came from.
+
+### The measurements
+
+Re-taken on 2026-08-27, at 541 tests across 53 files. The runner side is eight
+consecutive `Deploy to GitHub Pages` runs on `main`, read from the Actions API
+rather than from the summary line, so each step is timed separately:
+
+| step | range |
+| --- | --- |
+| `npm ci` | 7-9s |
+| `npm test` | 28-43s, median ~33s |
+| `npm run build` | 4-5s |
+| whole workflow | 74-91s including the Pages deploy |
+
+The dev machine is an idle 8-core box, timed three times back to back: **50s,
+57s, 52s**.
+
+**Both sides are wall clock.** That matters more than it sounds. Vitest prints
+its own `Duration`, and on the same runs that read 30-40s while `npm test` took
+50-57s, because the reported duration excludes npm's own startup and counts
+phases that overlap. The runner figure is the wall time of the whole step, so
+comparing it against vitest's number would flatter the dev machine by twenty
+seconds. Time the command, not the reporter.
+
+### What actually changed
+
+The previous figures were 342 tests, 19s on the runner against 70s on the dev
+machine. The conclusion has not changed — the runner still wins every step — but
+the gap fell from 3.7x to about 1.6x, and the arithmetic says the runner is not
+the part that moved:
+
+| | per test, then | per test, now |
+| --- | --- | --- |
+| runner | 56ms | 61ms |
+| dev machine | 205ms | 96ms |
+
+The runner got slightly worse per test, which is what more tests and more setup
+cost. The dev machine got **twice as good per test**, which no amount of extra
+tests explains.
+
+The likeliest reading is that the original 70s was taken on a loaded machine.
+That is precisely the effect the surrounding rule warns about — a
+wall-clock-sensitive test shows itself on a loaded dev machine first, which is
+where `today.test.tsx` timed out at 5597ms on code that had passed minutes
+earlier. The section was demonstrating its own hazard in its own headline
+number, and did so from the day it was written — the gate first ran on
+2026-08-26 and this was re-measured on the 27th.
+
+Hence the instruction that now sits with the rule: **time a dev machine back to
+back and check the runs agree** before trusting the figure. Three runs within 7s
+of each other stand behind the 50-57s above. What stands behind the 70s is not
+recorded, which is itself the point — a figure with no spread beside it cannot
+be told apart from a figure taken under load, and this one could not be.
+
+### The Node 24 move did not shift any of it
+
+Worth recording because the temptation to claim a win is real. `npm test` on the
+runner, by commit:
+
+- Node 20: 41, 40, 28, 32, 32, 43s
+- Node 24: 34, 33s
+
+The two Node 24 runs sit inside the Node 20 spread, which is 15s wide. Two
+samples against a spread that size supports no conclusion in either direction,
+so none is drawn. If the question ever matters, it needs enough runs to separate
+the medians, not two runs that happen to look tidy.
