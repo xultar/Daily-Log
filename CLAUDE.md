@@ -460,7 +460,7 @@ rather than dropping it.
 
 ## Baselines
 
-- `npm test` — 469 tests across 48 files. `vitest.config.ts` sets
+- `npm test` — 471 tests across 48 files. `vitest.config.ts` sets
   `testTimeout: 15000` against a 5s default, and that is load-bearing: several
   tests render the whole app and click through it, sitting at 3-4s alone. Under
   full-suite contention they cross 5s — `today.test.tsx` timed out at 5597ms on

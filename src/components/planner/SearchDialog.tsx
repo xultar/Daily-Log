@@ -19,7 +19,7 @@ const FIELD_LABEL: Record<SearchField, string> = {
   review: "Review",
   action: "Weekly action",
   priority: "Priority",
-  memo: "Memo",
+  memo: "Daily Log / Notes",
 };
 
 /** "24 – 30 Aug 2026", from the Monday a match reported. */
@@ -75,7 +75,7 @@ const SearchDialog: React.FC<{ onJump: (monday: string) => void }> = ({ onJump }
           <DialogTitle className="text-sm">Find</DialogTitle>
           <DialogDescription className="text-xs">
             {mode === "text"
-              ? "Goals, reviews, weekly actions, priorities and memos."
+              ? "Goals, reviews, weekly actions, priorities and notes."
               : "When you last used a tag, and every time before that."}
           </DialogDescription>
         </DialogHeader>

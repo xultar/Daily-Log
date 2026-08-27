@@ -580,10 +580,14 @@ That string is a data format, not a label: renaming it changes what lands in a
 spreadsheet someone has already saved and may already have formulas against.
 Finishing the rename "for consistency" is the mistake this note exists to stop.
 
-**`SearchDialog`'s `FIELD_LABEL.memo` is also still "Memo".** It names the field
-a search result matched, and it was left out of scope rather than overlooked —
-the label there is longer and sits in a dense one-line row. It is a live
-question, not a settled one.
+**`SearchDialog` follows too**, in two places. `FIELD_LABEL.memo` names the
+field a result matched, so a row now reads "24 – 30 Aug 2026 · Daily Log /
+Notes · Friday". The longer label was expected to crowd that dense one-line row
+and does not: the slash sits tight while the separators are spaced, so the two
+do not compete. The dialog's own description also listed "memos" and now says
+"notes" — it was the fourth copy of the word and the one easiest to miss, which
+is why the test for it is written as an absence across the whole dialog rather
+than an assertion about one string.
 
 The longer placeholder was expected to clip in the week column and does not:
 measured in a browser, "Daily Log / Notes..." is 68.9px at 8px against 97px of
