@@ -920,3 +920,66 @@ importing.
 `{ colorLabels }`, with `planner-show-weekends` and `planner-theme` both present
 in storage. A preference cannot drift into a backup without someone deciding to,
 and the comment on `ExportSettings` is no longer the only thing holding the line.
+
+## Today, in the month view
+
+Two bugs and a trap, found on 2026-08-27 when the Today button was reported as
+not working on the month view. It was worse than not working: it navigated the
+user away from the month they were in.
+
+### `currentDate` held the Monday, and the month view reads a month
+
+Both the initialiser and `goToToday` set `currentDate` to
+`startOfWeek(now, { weekStartsOn: 1 })`. That is right for the week and day
+views, which derive a week from it. `MonthlyView` derives a *month* — so on any
+day whose week began in the previous month, both the Today button and the app's
+initial open showed the previous month.
+
+Measured across 2026: **38 of 365 days, 10.4%**. On 1 January it shows the
+previous December, which is the wrong year.
+
+The fix is that `currentDate` now means the date being looked at. Nothing needed
+a Monday: `getWeekDates` and `getWeekKey` both take any day and work back to the
+start of its week, and `onJumpToMonth` had already been setting the first of a
+month without trouble. Removing the special case fixed both entry points at
+once.
+
+### The test that could not fail
+
+`today.test.tsx` already had *"returns to the current month in the month view"*.
+It passed throughout, because its fake clock is Wed 26 Aug 2026 — whose Monday,
+24 Aug, is in the same month. The assertion could not fail whatever that line
+did.
+
+This is the third instance of the same lesson in one day, and the cheapest to
+act on: **a test whose fixture cannot distinguish the two behaviours is not
+defending anything.** Mutation-testing finds it in seconds. The new case picks
+Tue 1 Sep 2026, where today and its Monday disagree, and both the button and the
+initial open are asserted separately — because they are separate lines and each
+mutation kills only its own test.
+
+The doc comment was wrong in the same direction, and worth quoting because it
+reads as correct: *"the month view on this month, since it derives from
+currentDate."* The derivation was real. What it derived **from** was the Monday.
+
+### The marker cannot be a background
+
+Marking today in the month view runs straight into the rule the month wash
+already records: a day with painted time carries an inline `backgroundColor`,
+and an inline style beats a class. A cell-level highlight would therefore be
+invisible on exactly the days that have data — which is the same reason hover
+there is a ring rather than a background.
+
+The ring is taken by hover, so the marker goes on the **date number** instead: a
+filled pill that paints its own background over whatever the cell is doing.
+Measured in the browser on a day carrying a wash, which is the case that would
+have failed silently:
+
+| | |
+| --- | --- |
+| cell background | `rgba(59, 125, 206, 0.224)` — the tag wash |
+| pill background | `rgb(224, 230, 235)` |
+| pill text | `rgb(14, 18, 27)` |
+
+The cell still carries `aria-current="date"`, the same attribute the week view
+uses, so one query finds today in either view and neither announces it twice.

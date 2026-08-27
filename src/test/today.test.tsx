@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { render, screen, cleanup, act, fireEvent, within } from "@testing-library/react";
 import StudyPlanner from "@/components/planner/StudyPlanner";
 import DayColumn from "@/components/planner/DayColumn";
-import { createEmptyDay } from "@/lib/planner-data";
+import { createEmptyDay, createEmptyWeek, getWeekKey } from "@/lib/planner-data";
 
 /**
  * Navigation was prev and next only, so getting back to the current week from a
@@ -63,6 +63,37 @@ describe("getting back to today", () => {
     expect(navLabel()).toBe("August 2026");
   });
 
+  /**
+   * The month view derives its month from `currentDate`, which used to be set
+   * to the *Monday of this week*. On any day whose week began in the previous
+   * month that is the wrong month — 38 days of 2026, and on 1 January it is the
+   * wrong year.
+   *
+   * The test above cannot catch it: its clock is Wed 26 Aug, whose Monday is 24
+   * Aug, the same month. It passes whatever that line does. This one picks a
+   * date where the two disagree.
+   */
+  it("returns to the current month when this week began in the previous one", async () => {
+    vi.setSystemTime(new Date(2026, 8, 1, 9, 30)); // Tue 1 Sep 2026; Monday is 31 Aug
+    const { container } = render(<StudyPlanner />);
+    await click(viewButton("Month"));
+    const prev = container.querySelectorAll("button")[0];
+    for (let i = 0; i < 2; i++) await click(prev);
+
+    await click(today());
+
+    expect(navLabel()).toBe("September 2026");
+  });
+
+  it("opens on the current month when this week began in the previous one", async () => {
+    vi.setSystemTime(new Date(2026, 8, 1, 9, 30)); // Tue 1 Sep 2026
+
+    render(<StudyPlanner />);
+    await click(viewButton("Month"));
+
+    expect(navLabel()).toBe("September 2026");
+  });
+
   it("does nothing surprising when today is already on screen", async () => {
     render(<StudyPlanner />);
 
@@ -80,6 +111,57 @@ describe("getting back to today", () => {
     await act(async () => { vi.advanceTimersByTime(400); });
 
     expect(Object.keys(localStorage).filter((k) => /^planner-\d{4}-W/.test(k))).toEqual([]);
+  });
+});
+
+describe("marking today in the month view", () => {
+  const monthView = async () => {
+    const rendered = render(<StudyPlanner />);
+    await click(viewButton("Month"));
+    return rendered;
+  };
+
+  it("marks the cell that is today", async () => {
+    const { container } = await monthView();
+
+    const marked = container.querySelector('[aria-current="date"]');
+    expect(marked).toBeTruthy();
+    expect(marked!.textContent).toContain("26");
+  });
+
+  it("marks exactly one cell in the month", async () => {
+    const { container } = await monthView();
+
+    expect(container.querySelectorAll('[aria-current="date"]')).toHaveLength(1);
+  });
+
+  it("marks nothing once the user pages to another month", async () => {
+    const { container } = await monthView();
+    const next = container.querySelectorAll("button")[1];
+
+    await click(next);
+
+    expect(container.querySelector('[aria-current="date"]')).toBeNull();
+  });
+
+  /**
+   * The marker cannot be a background. A day with painted time carries an inline
+   * `backgroundColor` for its tag wash, and an inline style beats a class — so
+   * on exactly the days that have data the marker would silently do nothing.
+   * That is why hover here is a ring rather than a background, and the same trap
+   * applies to this. Marking the date number instead sidesteps both.
+   */
+  it("survives a day that already carries a tag wash", async () => {
+    const week = createEmptyWeek(NOW);
+    const day = week.days.find((d) => d.date === "2026-08-26")!;
+    for (let i = 0; i < 6; i++) day.timeBlocks[0][i] = 1;
+    localStorage.setItem(`planner-${getWeekKey(NOW)}`, JSON.stringify(week));
+
+    const { container } = await monthView();
+
+    const marked = container.querySelector('[aria-current="date"]');
+    expect(marked).toBeTruthy();
+    expect(marked!.textContent).toContain("26");
   });
 });
 

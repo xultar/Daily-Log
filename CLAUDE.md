@@ -347,6 +347,18 @@ area.
   `subjects` instead would resurrect deleted rows; `repairList` says so. No test
   can confirm the columns line up, because jsdom has no layout — measure
   `TimeGrid`'s `offsetTop` across columns in a browser.
+- **`currentDate` is the date being viewed, not the Monday of its week.** It was
+  the Monday until 2026-08-27, which made the month view show the wrong month
+  whenever the current week began in the previous one — 38 days of 2026, and the
+  wrong *year* on 1 January, in both the Today button and the initial open. Every
+  consumer derives what it needs (`getWeekDates` and `getWeekKey` both work back
+  to the Monday), so nothing requires one.
+- **Today is marked on the month cell's *number*, not the cell.** A day with
+  painted time carries an inline `backgroundColor` for its tag wash, and an
+  inline style beats a class, so a cell-level highlight would do nothing on
+  exactly the days that have data — the same reason hover there is a ring. The
+  cell carries `aria-current="date"`, matching the week view, so one query finds
+  today in either.
 - **A month note is the only stored thing that is not a week.** It lives at
   `daily-log-month-YYYY-MM`, deliberately off the `planner-` prefix, and is
   stored as raw text so its whole repair path is `?? ""`. One key per month is
@@ -475,7 +487,7 @@ rather than dropping it.
 
 ## Baselines
 
-- `npm test` — 535 tests across 53 files. `vitest.config.ts` sets
+- `npm test` — 541 tests across 53 files. `vitest.config.ts` sets
   `testTimeout: 15000` against a 5s default, and that is load-bearing: several
   tests render the whole app and click through it, sitting at 3-4s alone. Under
   full-suite contention they cross 5s — `today.test.tsx` timed out at 5597ms on

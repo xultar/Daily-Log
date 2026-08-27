@@ -23,9 +23,18 @@ import { toast } from "@/hooks/use-toast";
 type ViewMode = "daily" | "weekly" | "monthly";
 
 const StudyPlanner: React.FC = () => {
-  const [currentDate, setCurrentDate] = useState(() =>
-    startOfWeek(new Date(), { weekStartsOn: 1 })
-  );
+  /**
+   * The date being looked at — not the Monday of its week.
+   *
+   * Both were the Monday until 2026-08-27, which made the month view show the
+   * wrong month whenever this week began in the previous one: 38 days of 2026,
+   * and the wrong *year* on 1 January. Every consumer derives what it needs, so
+   * nothing here needs a Monday — `getWeekDates` and `getWeekKey` both take any
+   * day of the week and work back to it, and `MonthlyView` reads the month.
+   * `onJumpToMonth` had already been setting the first of a month for the same
+   * reason.
+   */
+  const [currentDate, setCurrentDate] = useState(() => new Date());
   const [weekData, setWeekData] = useState<WeekData>(() => loadWeek(currentDate));
   const [viewMode, setViewMode] = useState<ViewMode>("weekly");
   const [selectedDayIndex, setSelectedDayIndex] = useState(0);
@@ -193,12 +202,17 @@ const StudyPlanner: React.FC = () => {
   /**
    * Back to now, from wherever the user has navigated to. Setting both pieces of
    * state covers all three views at once: the day view lands on today itself,
-   * the week view on this week, and the month view on this month, since it
-   * derives from currentDate.
+   * the week view on this week, and the month view on this month.
+   *
+   * `now` rather than its Monday. This comment used to claim the month view was
+   * covered "since it derives from currentDate" — the derivation was real and
+   * the conclusion was wrong, because what it derived from was the Monday. On a
+   * day whose week began in the previous month, Today navigated *away* from the
+   * month the user was in.
    */
   const goToToday = () => {
     const now = new Date();
-    setCurrentDate(startOfWeek(now, { weekStartsOn: 1 }));
+    setCurrentDate(now);
     // getDay() counts Sunday as 0; the planner's week starts on Monday.
     setSelectedDayIndex(now.getDay() === 0 ? 6 : now.getDay() - 1);
   };

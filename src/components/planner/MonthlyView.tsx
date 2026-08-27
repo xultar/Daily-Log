@@ -7,6 +7,7 @@ import {
   endOfWeek,
   format,
   isSameMonth,
+  isToday,
   getISOWeek,
 } from "date-fns";
 import TimeByTag from "./TimeByTag";
@@ -108,11 +109,15 @@ const MonthlyView: React.FC<MonthlyViewProps> = ({ currentDate, onSelectDay }) =
             const tag = getDayDominantTag(date);
             const tint = tag === null ? null : getBlockTint(tag, tintAlpha(mins, washCeiling));
             const tagName = tag === null ? null : labels[tag] || BLOCK_COLORS[tag - 1]?.label;
+            const isCurrentDay = isToday(date);
 
             return (
               <div
                 key={`${wi}-${di}`}
                 onClick={() => onSelectDay(date)}
+                // The same attribute the week view marks today with, so both
+                // views announce it the same way and one query finds either.
+                aria-current={isCurrentDay ? "date" : undefined}
                 // Hover is a ring rather than a background: an inline
                 // backgroundColor beats a hover background class, so on exactly
                 // the days that have data the hover would silently do nothing.
@@ -122,7 +127,22 @@ const MonthlyView: React.FC<MonthlyViewProps> = ({ currentDate, onSelectDay }) =
                 data-dominant-tag={tag ?? undefined}
                 style={tint ? { backgroundColor: tint } : undefined}
               >
-                <div className="text-xs font-medium text-foreground">{format(date, "d")}</div>
+                {/* The marker goes on the number, not on the cell.
+                    A day with painted time carries an inline `backgroundColor`
+                    for its tag wash, and an inline style beats a class — so a
+                    cell-level highlight would silently do nothing on exactly
+                    the days that have data. That is the same reason hover here
+                    is a ring rather than a background. A ring is taken, so this
+                    marks the number instead, which nothing else touches. */}
+                <div className="text-xs font-medium text-foreground">
+                  {isCurrentDay ? (
+                    <span className="inline-flex items-center justify-center min-w-[1.1rem] h-[1.1rem] px-1 rounded-full bg-foreground text-background font-bold">
+                      {format(date, "d")}
+                    </span>
+                  ) : (
+                    format(date, "d")
+                  )}
+                </div>
                 {tagName && (
                   // The non-colour channel. Several pairs in this palette are
                   // the same colour to a deuteranope, and a mono print turns
