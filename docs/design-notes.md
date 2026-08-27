@@ -585,8 +585,9 @@ a search result matched, and it was left out of scope rather than overlooked —
 the label there is longer and sits in a dense one-line row. It is a live
 question, not a settled one.
 
-The week column's placeholder is longer than the column is wide at 8px, so it
-clips. That is expected rather than broken.
+The longer placeholder was expected to clip in the week column and does not:
+measured in a browser, "Daily Log / Notes..." is 68.9px at 8px against 97px of
+available width. There is room for a longer label there if one is ever wanted.
 
 ## A second tab reloads, or says so — it never overwrites in silence
 
