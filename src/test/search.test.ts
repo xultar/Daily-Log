@@ -38,6 +38,12 @@ describe("searchWeeks", () => {
     expect(searchWeeks("Library").map((m) => m.field)).toEqual(["memo"]);
   });
 
+  it("stamps every match as a week match, so a month match can be told apart", () => {
+    store("2026-W35", fullWeek(AUG));
+
+    expect(searchWeeks("viva").map((m) => m.kind)).toEqual(["week"]);
+  });
+
   it("ignores case in both directions", () => {
     store("2026-W35", fullWeek(AUG));
 

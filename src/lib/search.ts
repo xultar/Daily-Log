@@ -1,17 +1,39 @@
 import { loadAllWeeks, mondayOfKey } from "./planner-data";
 
-/** Which field a match came from, for the label a result row shows. */
-export type SearchField = "goal" | "review" | "action" | "priority" | "memo";
+/** Which field a week match came from, for the label a result row shows. */
+export type WeekField = "goal" | "review" | "action" | "priority" | "memo";
 
-export interface SearchMatch {
+export type SearchField = WeekField | "month";
+
+export interface WeekMatch {
+  kind: "week";
   weekKey: string;
   /** ISO Monday of the week, which is what a click sets currentDate to. */
   monday: string;
-  field: SearchField;
+  field: WeekField;
   /** Present only for day-level matches — a memo or a priority. */
   dayIndex?: number;
   snippet: string;
 }
+
+export interface MonthMatch {
+  kind: "month";
+  /** "yyyy-MM". A month note has no week and no Monday, and never will. */
+  monthKey: string;
+  field: "month";
+  snippet: string;
+}
+
+/**
+ * A discriminated union rather than one shape with optional fields.
+ *
+ * `tsconfig.app.json` sets `"strict": false`, so `strictNullChecks` is off and
+ * an optional `monday?: string` would be no protection whatever — the compiler
+ * would hand a `null` straight to `parse(monday, ...)` in the dialog. Narrowing
+ * on a literal `kind` still works with `strict` off, which makes it the one
+ * mechanism here that actually holds.
+ */
+export type SearchMatch = WeekMatch | MonthMatch;
 
 /**
  * Below this a query matches most weeks and answers nothing.
@@ -41,21 +63,22 @@ function snippetAround(text: string, at: number, length: number): string {
  * stored weeks raw was `exportAsCSV`, and a single bad entry took the whole
  * export down for every user.
  */
-export function searchWeeks(query: string): SearchMatch[] {
+export function searchWeeks(query: string): WeekMatch[] {
   const needle = query.trim().toLowerCase();
   if (needle.length < MIN_QUERY) return [];
 
-  const matches: SearchMatch[] = [];
+  const matches: WeekMatch[] = [];
 
   for (const [weekKey, week] of Object.entries(loadAllWeeks())) {
     const monday = mondayOfKey(weekKey);
     if (!monday) continue;
 
-    const take = (value: unknown, field: SearchField, dayIndex?: number) => {
+    const take = (value: unknown, field: WeekField, dayIndex?: number) => {
       const text = asText(value);
       const at = text.toLowerCase().indexOf(needle);
       if (at === -1) return;
       matches.push({
+        kind: "week",
         weekKey,
         monday,
         field,
