@@ -81,7 +81,7 @@ or cancelled run in this repo does not always say so.
 ## Pick up here next — the backlog
 
 **This section is the backlog.** If you were asked for "the backlog", "what's
-next", "the todo list" or "outstanding work", it is the three numbered items
+next", "the todo list" or "outstanding work", it is the single numbered item
 below and there is no other list. One other paragraph in this file mentions a
 backlog being retired; that refers to a duplicate of this one that was deleted
 on 2026-08-26, not to this.
@@ -112,37 +112,7 @@ left is new functionality. Each item below carries what it needs to start cold.
 5. **Work on a branch.** Pushing `main` deploys, and the deploy is gated on
    `npm test`. Merging is the user's call.
 
-### 1. Rename the day view's memo label
-
-The heading above the day view's free-text box reads "Memo". It should read
-"Daily Log / Notes", which is what the box is actually for.
-
-**Where:** `DailyView.tsx`, the `uppercase tracking-wider` heading above the
-textarea. The textarea's own placeholder already says "Notes for the day…".
-
-**Trap:** there are two other "Memo"s in the codebase and neither is this one.
-See the shared note under item 2.
-
-### 2. Rename the week view's memo placeholder
-
-Each day column in the week view has a textarea whose placeholder reads
-"Memo…". It should read "Daily Log / Notes…".
-
-**Where:** `DayColumn.tsx`, the textarea that fills the remaining column height.
-
-**Traps, shared with item 1:**
-
-- **Do not rename the CSV export column.** `exportAsCSV` in
-  `src/lib/export-import.ts` writes a `Memo` header, and `export-import.test.ts`
-  pins the whole header row. That is a data format, not a label: renaming it
-  changes what lands in a spreadsheet someone already has.
-- **`SearchDialog`'s `FIELD_LABEL.memo` also says "Memo".** It names the field a
-  result matched. Whether it should follow these two is a real question and was
-  deliberately left out of scope — decide it rather than discovering it.
-- The week column is narrow and its text is 8px, so the longer placeholder will
-  clip. That is expected; check it looks deliberate rather than broken.
-
-### 3. Notes and reflections for the month
+### 1. Notes and reflections for the month
 
 Below "Time blocked by tag" in the month view, a free-text area for notes on the
 month — what went well, what to change.
@@ -490,7 +460,7 @@ rather than dropping it.
 
 ## Baselines
 
-- `npm test` — 465 tests across 47 files. `vitest.config.ts` sets
+- `npm test` — 467 tests across 48 files. `vitest.config.ts` sets
   `testTimeout: 15000` against a 5s default, and that is load-bearing: several
   tests render the whole app and click through it, sitting at 3-4s alone. Under
   full-suite contention they cross 5s — `today.test.tsx` timed out at 5597ms on

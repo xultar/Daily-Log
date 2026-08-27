@@ -569,6 +569,25 @@ trigger named "Time across months" matched both. That query is now anchored to
 `/^month$/i`, matching the day-view test beside it, so either fix alone would
 do — but the label is the one a future rename could undo without noticing.
 
+## The day's free-text box is "Daily Log / Notes", and two other "Memo"s are not
+
+The box was labelled "Memo" in both the day view and the week view, which
+described its size rather than its purpose. Both now read "Daily Log / Notes".
+
+**The CSV export column is still called `Memo`, deliberately.** `exportAsCSV`
+writes it as a header and `export-import.test.ts` pins the whole header row.
+That string is a data format, not a label: renaming it changes what lands in a
+spreadsheet someone has already saved and may already have formulas against.
+Finishing the rename "for consistency" is the mistake this note exists to stop.
+
+**`SearchDialog`'s `FIELD_LABEL.memo` is also still "Memo".** It names the field
+a search result matched, and it was left out of scope rather than overlooked —
+the label there is longer and sits in a dense one-line row. It is a live
+question, not a settled one.
+
+The week column's placeholder is longer than the column is wide at 8px, so it
+clips. That is expected rather than broken.
+
 ## A second tab reloads, or says so — it never overwrites in silence
 
 Nothing used to listen for the `storage` event, so a stale second tab reverted

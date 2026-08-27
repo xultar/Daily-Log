@@ -148,13 +148,13 @@ const DayColumn: React.FC<DayColumnProps> = ({ day, dayIndex, onChange, activeCo
         </span>
       </div>
 
-      {/* Memo — fills remaining height */}
+      {/* Daily Log / Notes — fills remaining height */}
       <div className="flex-1 p-0.5 min-h-0">
         <textarea
           value={day.memo}
           onChange={(e) => onChange({ ...day, memo: e.target.value })}
           className="w-full h-full text-[8px] bg-transparent border-none outline-none resize-none text-foreground placeholder:text-muted-foreground/50"
-          placeholder="Memo..."
+          placeholder="Daily Log / Notes..."
         />
       </div>
       {rowPicker && (

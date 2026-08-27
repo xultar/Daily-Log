@@ -97,7 +97,7 @@ const DailyView: React.FC<DailyViewProps> = ({ day, dayIndex, onChange, activeCo
       </div>
 
       <div className="grid grid-cols-[1fr_1fr] gap-6">
-        {/* Left: Subjects + Memo */}
+        {/* Left: Subjects + Daily Log / Notes */}
         <div className="flex flex-col">
           <div className="text-[10px] font-semibold text-muted-foreground mb-1 uppercase tracking-wider">Priorities / Actions</div>
           <div className="border border-border rounded-md overflow-hidden mb-1">
@@ -171,7 +171,7 @@ const DailyView: React.FC<DailyViewProps> = ({ day, dayIndex, onChange, activeCo
             Add priority / action
           </button>
 
-          <div className="text-[10px] font-semibold text-muted-foreground mb-1 uppercase tracking-wider">Memo</div>
+          <div className="text-[10px] font-semibold text-muted-foreground mb-1 uppercase tracking-wider">Daily Log / Notes</div>
           <textarea
             value={day.memo}
             onChange={(e) => onChange({ ...day, memo: e.target.value })}
