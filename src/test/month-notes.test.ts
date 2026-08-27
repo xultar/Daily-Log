@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import {
   isMonthKey,
+  loadAllMonthNotes,
   loadMonthNote,
   monthKeyFromEntryKey,
   monthKeyOf,
@@ -93,5 +94,31 @@ describe("one month's note", () => {
     });
 
     expect(saveMonthNote("2026-08", "Something")).toBe(false);
+  });
+});
+
+describe("every month at once", () => {
+  it("keys each note by its month, without the entry prefix", () => {
+    saveMonthNote("2026-08", "August");
+    saveMonthNote("2026-09", "September");
+
+    expect(loadAllMonthNotes()).toEqual({ "2026-08": "August", "2026-09": "September" });
+  });
+
+  it("leaves out weeks and settings, which is the whole point of the prefix", () => {
+    saveMonthNote("2026-08", "August");
+    localStorage.setItem("planner-2026-W35", JSON.stringify({ days: [] }));
+    localStorage.setItem("planner-color-labels", JSON.stringify({ 1: "Thesis" }));
+    localStorage.setItem("planner-show-weekends", "false");
+
+    expect(Object.keys(loadAllMonthNotes())).toEqual(["2026-08"]);
+  });
+
+  it("is empty rather than throwing when storage cannot be enumerated", () => {
+    vi.spyOn(Storage.prototype, "key").mockImplementation(() => {
+      throw new DOMException("The operation is insecure.", "SecurityError");
+    });
+
+    expect(loadAllMonthNotes()).toEqual({});
   });
 });

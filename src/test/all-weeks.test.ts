@@ -31,6 +31,13 @@ describe("loadAllWeeks", () => {
     expect(Object.keys(loadAllWeeks())).toEqual(["2026-W35"]);
   });
 
+  it("leaves out a month note, which is not a week and never was", () => {
+    localStorage.setItem("planner-2026-W35", JSON.stringify(createEmptyWeek(WEEK)));
+    localStorage.setItem("daily-log-month-2026-08", "Teaching ate the month.");
+
+    expect(Object.keys(loadAllWeeks())).toEqual(["2026-W35"]);
+  });
+
   it("leaves out a quarantined unreadable entry", () => {
     localStorage.setItem("daily-log-unreadable-2020-W05", "{ broken");
 

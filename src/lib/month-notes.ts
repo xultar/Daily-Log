@@ -1,5 +1,5 @@
 import { format, isValid, parse } from "date-fns";
-import { readItem, removeItem, writeItem } from "./storage";
+import { listKeys, readItem, removeItem, writeItem } from "./storage";
 
 /**
  * Notes on a month.
@@ -72,4 +72,26 @@ export function loadMonthNote(monthKey: string): string {
 export function saveMonthNote(monthKey: string, text: string): boolean {
   const entryKey = PREFIX + monthKey;
   return text.trim() === "" ? removeItem(entryKey) : writeItem(entryKey, text);
+}
+
+/**
+ * Every stored month note, keyed by month.
+ *
+ * Mirrors `loadAllWeeks`, and exists for the same reason: so that export does
+ * not reimplement the scan. Entries are matched by shape rather than by prefix
+ * scanning, which is the rule that loop was rewritten to enforce.
+ */
+export function loadAllMonthNotes(): Record<string, string> {
+  const notes: Record<string, string> = {};
+  for (const entryKey of listKeys()) {
+    const monthKey = monthKeyFromEntryKey(entryKey);
+    if (!monthKey) continue;
+    const text = readItem(entryKey);
+    // An empty entry should not exist — saveMonthNote removes rather than
+    // stores one — but a hand-edited store can hold anything, and shipping "" in
+    // a backup would put back a state this module deliberately has no name for.
+    if (text === null || text === "") continue;
+    notes[monthKey] = text;
+  }
+  return notes;
 }
