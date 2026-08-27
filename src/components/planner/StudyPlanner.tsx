@@ -8,6 +8,8 @@ import DailyView from "./DailyView";
 import MonthlyView from "./MonthlyView";
 import ToolbarActions from "./ToolbarActions";
 import SearchDialog from "./SearchDialog";
+import TemplateDialog from "./TemplateDialog";
+import { applyTemplate } from "@/lib/week-template";
 import WeeklyColorLegend from "./WeeklyColorLegend";
 import CarryForwardBar from "./CarryForwardBar";
 import { ChevronLeft, ChevronRight, Printer, Calendar, CalendarDays, CalendarRange, Eye, EyeOff } from "lucide-react";
@@ -177,6 +179,17 @@ const StudyPlanner: React.FC = () => {
   }, [markDirty]);
 
   /**
+   * The updater form is load-bearing, for the reason bringForward's is. This
+   * is a useCallback with a stable dependency, so closing over weekData would
+   * capture the mount-time week and write it under whatever week is on screen
+   * later.
+   */
+  const applyWeekTemplate = useCallback((source: WeekData) => {
+    markDirty();
+    setWeekData((prev) => applyTemplate(prev, source));
+  }, [markDirty]);
+
+  /**
    * Back to now, from wherever the user has navigated to. Setting both pieces of
    * state covers all three views at once: the day view lands on today itself,
    * the week view on this week, and the month view on this month, since it
@@ -302,6 +315,11 @@ const StudyPlanner: React.FC = () => {
               setViewMode("weekly");
             }}
           />
+          {/* Deliberately after SearchDialog rather than earlier in the
+              toolbar: carry-bar.test.tsx finds the week chevrons positionally,
+              as querySelectorAll("button")[0] and [1], so a button inserted
+              before them renumbers every one and breaks an unrelated file. */}
+          <TemplateDialog week={weekData} weekDate={currentDate} onApply={applyWeekTemplate} />
           <ToolbarActions onDataImported={() => setRefreshKey((k) => k + 1)} />
         </div>
       </div>
