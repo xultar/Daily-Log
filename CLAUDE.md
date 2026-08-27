@@ -9,9 +9,9 @@ Live at https://xultar.github.io/Daily-Log/
 
 **This file is already in your context.** It loads automatically every session,
 so never open it again to "check" something; scroll it. The outstanding work is
-in "Pick up here next" below, where each item is written to be started cold —
-and where an empty list means there is genuinely nothing queued, not that you
-should go looking elsewhere.
+in "Pick up here next" below, where each item is written to be started cold.
+That list is the whole of it: if it is empty, nothing is queued, and that is not
+a cue to go looking elsewhere.
 
 Two habits keep a session cheap:
 
@@ -123,25 +123,65 @@ or cancelled run in this repo does not always say so.
 
 ## Pick up here next — the backlog
 
-**This section is the backlog, and it is currently empty.** If you were asked
-for "the backlog", "what's next", "the todo list" or "outstanding work", the
-answer is that there is none, and this is the only list there would be. One
-other paragraph in this file mentions a backlog being retired; that refers to a
-duplicate of this one deleted on 2026-08-26, not to this.
+**This section is the backlog.** If you were asked for "the backlog", "what's
+next", "the todo list" or "outstanding work", it is the single numbered item
+below and there is no other list. One other paragraph in this file mentions a
+backlog being retired; that refers to a duplicate of this one deleted on
+2026-08-26, not to this.
 
-Nothing is half-finished and nothing is known-broken. The last three items were
-closed on 2026-08-27: month notes shipped, the week's row alignment was fixed in
-the view, and backing up the show-weekends preference was decided against. See
-"Deliberately not doing" for that last one — it is a decision, not a gap.
+**Nothing in the app is broken.** The one item is housekeeping on this machine,
+not a defect: two empty directories that a lock will not let go of. The three
+real items were closed on 2026-08-27 — month notes shipped, the week's row
+alignment was fixed in the view, and backing up the show-weekends preference was
+decided against. See "Deliberately not doing" for that last one; it is a
+decision, not a gap.
 
-**An empty backlog is not an invitation to invent work.** Ask what is wanted.
-If something is agreed, write it here first, in the form described below, and
-then start it.
+**A short backlog is not an invitation to invent work.** Ask what is wanted. If
+something is agreed, write it here first, in the form described below, and then
+start it.
 
 **Each item here is written to be started cold** — what it is, where the code
 is, what is already there to build on, the open questions, and the traps. If you
 find yourself exploring the codebase to understand an item before starting it,
 the item is underwritten; fix the item.
+
+### 1. Delete two locked worktree directories, after a reboot
+
+`.claude/worktrees/charming-jemison-297ab1` and
+`.claude/worktrees/friendly-dirac-5644c4` are empty leftovers from background
+task worktrees. Both are already deregistered — `git worktree list` shows only
+the main checkout — so nothing in git refers to them and `git worktree prune`
+has nothing left to do.
+
+**What to run**, once the machine has been rebooted (planned as of 2026-08-27):
+
+```bash
+rmdir "C:\Claude\Projects\Daily-Log\.claude\worktrees\charming-jemison-297ab1" "C:\Claude\Projects\Daily-Log\.claude\worktrees\friendly-dirac-5644c4"
+```
+
+Then check `.claude/worktrees` is empty or gone, and that `git worktree list`
+still shows only the main checkout.
+
+**Why it is not already done.** A process holds one of them as its working
+directory. Four removal routes were tried on 2026-08-27 and all refused: `rmdir`
+from Git Bash, `Remove-Item -Recurse -Force`, `cmd /c rmdir` run from `C:\`, and
+finally `Rename-Item`. That last one is the diagnosis rather than another
+attempt — a mere open handle still permits a rename, so a refusal there means a
+current-working-directory lock, which only ends when that process does.
+
+**Traps:**
+
+- **Do not run `git worktree remove`.** They are already deregistered; it errors
+  rather than helping.
+- **Do not go hunting for the process to kill.** The holder could not be
+  identified without `handle.exe` or an elevated `openfiles`, and the obvious
+  lead was wrong: four `node` processes started at exactly the background task's
+  start time turned out to be the session's own MCP servers. Killing the wrong
+  one costs somebody their unsaved work, which is a worse outcome than two empty
+  folders.
+- **They are harmless until then.** Empty, untracked, invisible to git, and
+  inside `.claude/`, which eslint already ignores — so they cannot affect a test
+  run, a lint run, or a build.
 
 ### Starting a session here
 
