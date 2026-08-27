@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, cleanup, within } from "@testing-library/react";
 import { startOfWeek, format } from "date-fns";
 import TrendsDialog from "@/components/planner/TrendsDialog";
+import StudyPlanner from "@/components/planner/StudyPlanner";
 import { createEmptyWeek, getWeekKey, WeekData } from "@/lib/planner-data";
 
 const NOW = new Date(2026, 7, 26); // Wed 26 Aug 2026
@@ -39,7 +40,7 @@ function seedTwoTags() {
 
 const open = () => {
   render(<TrendsDialog />);
-  fireEvent.click(screen.getByRole("button", { name: /time across months/i }));
+  fireEvent.click(screen.getByRole("button", { name: /trends by tag/i }));
 };
 
 /** The bar heights of a row, month columns only, null where no bar is drawn. */
@@ -115,5 +116,18 @@ describe("the trends dialog", () => {
 
     expect(screen.getByText(/no time blocked in the last twelve months/i)).toBeInTheDocument();
     expect(screen.queryByRole("table")).toBeNull();
+  });
+});
+
+describe("reaching it from the toolbar", () => {
+  it("opens from the app's toolbar", () => {
+    // The dialog is tested standalone above; this is only about the button
+    // existing where a user can reach it.
+    seedTwoTags();
+    render(<StudyPlanner />);
+
+    fireEvent.click(screen.getByRole("button", { name: /trends by tag/i }));
+
+    expect(screen.getByRole("rowheader", { name: /Thesis/ })).toBeInTheDocument();
   });
 });

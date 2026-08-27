@@ -9,6 +9,7 @@ import MonthlyView from "./MonthlyView";
 import ToolbarActions from "./ToolbarActions";
 import SearchDialog from "./SearchDialog";
 import TemplateDialog from "./TemplateDialog";
+import TrendsDialog from "./TrendsDialog";
 import { applyTemplate } from "@/lib/week-template";
 import WeeklyColorLegend from "./WeeklyColorLegend";
 import CarryForwardBar from "./CarryForwardBar";
@@ -320,6 +321,7 @@ const StudyPlanner: React.FC = () => {
               as querySelectorAll("button")[0] and [1], so a button inserted
               before them renumbers every one and breaks an unrelated file. */}
           <TemplateDialog week={weekData} weekDate={currentDate} onApply={applyWeekTemplate} />
+          <TrendsDialog />
           <ToolbarActions onDataImported={() => setRefreshKey((k) => k + 1)} />
         </div>
       </div>

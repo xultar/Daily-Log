@@ -379,7 +379,10 @@ describe("StudyPlanner carry-forward", () => {
   it("hides the bar in the month view", () => {
     seedLastWeekWithUnfinishedWork();
     render(<StudyPlanner />);
-    fireEvent.click(screen.getByRole("button", { name: /month/i }));
+    // Anchored, as the day-view test beside it already is. The trends dialog's
+    // trigger is named "Trends by tag" for the same reason, but an unanchored
+    // /month/i would match any future button merely containing the word.
+    fireEvent.click(screen.getByRole("button", { name: /^month$/i }));
     expect(screen.queryByText(/unfinished from last week/)).toBeNull();
   });
 

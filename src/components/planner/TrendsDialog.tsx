@@ -64,7 +64,10 @@ const TrendsDialog: React.FC = () => {
           variant="ghost"
           size="icon"
           className="h-7 w-7"
-          aria-label="Time across months"
+          // Deliberately does not contain "month": the view switcher's Month
+          // button is found by name in carry-bar.test.tsx, and two buttons
+          // matching there breaks a file unrelated to this feature.
+          aria-label="Trends by tag"
         >
           <BarChart3 className="h-3.5 w-3.5" />
         </Button>
