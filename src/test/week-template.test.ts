@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { startOfWeek, subWeeks } from "date-fns";
 import { createEmptyWeek, WeekData } from "@/lib/planner-data";
-import { applyTemplate } from "@/lib/week-template";
+import { applyTemplate, previewTemplate } from "@/lib/week-template";
 
 /**
  * Copying fills empty slots and never overwrites, so nothing the user wrote
@@ -212,5 +212,58 @@ describe("applyTemplate — the priority rows", () => {
     const twice = applyTemplate(once, source);
 
     expect(twice).toEqual(once);
+  });
+});
+
+describe("previewTemplate", () => {
+  it("counts exactly what applying actually changes", () => {
+    // The dialog acts on these numbers. previewTemplate and applyTemplate are
+    // wrappers over one pass so they cannot drift, and this proves the wiring
+    // rather than trusting it.
+    const source = createEmptyWeek(SOURCE_MONDAY);
+    paint(source, 0, 0, 0, 1);
+    paint(source, 0, 0, 1, 1);
+    paint(source, 1, 5, 3, 2);
+    source.days[0].subjects[0] = { subject: "Teaching", checked: false };
+    source.days[1].subjects[0] = { subject: "Supervision", checked: false };
+
+    const target = createEmptyWeek(TARGET_MONDAY);
+    paint(target, 0, 0, 1, 9); // one collision
+    target.days[1].subjects[0] = { subject: "Supervision", checked: false }; // one duplicate
+
+    const preview = previewTemplate(target, source);
+    const after = applyTemplate(target, source);
+
+    let blocksChanged = 0;
+    let rowsChanged = 0;
+    target.days.forEach((day, i) => {
+      day.timeBlocks.forEach((hour, h) =>
+        hour.forEach((block, b) => {
+          if (block !== after.days[i].timeBlocks[h][b]) blocksChanged++;
+        })
+      );
+      day.subjects.forEach((row, r) => {
+        if (row.subject !== after.days[i].subjects[r].subject) rowsChanged++;
+      });
+    });
+
+    expect(preview.blocksToFill).toBe(blocksChanged);
+    expect(preview.rowsToFill).toBe(rowsChanged);
+    expect(preview.blocksKept).toBe(1);
+    expect(preview.rowsDropped).toBe(1);
+  });
+
+  it("reports nothing to do for a week that is already full of the template", () => {
+    const source = createEmptyWeek(SOURCE_MONDAY);
+    paint(source, 0, 0, 0, 1);
+
+    const once = applyTemplate(createEmptyWeek(TARGET_MONDAY), source);
+
+    expect(previewTemplate(once, source)).toEqual({
+      blocksToFill: 0,
+      blocksKept: 1,
+      rowsToFill: 0,
+      rowsDropped: 0,
+    });
   });
 });

@@ -153,3 +153,31 @@ export function applyTemplate(target: WeekData, source: WeekData): WeekData {
     }),
   };
 }
+
+/**
+ * What `applyTemplate` would do, without doing it.
+ *
+ * Runs the same `fillDay` pass and keeps the counts instead of the days, so
+ * the numbers the dialog shows are the numbers applying will produce. There is
+ * deliberately no second implementation of the rules here to drift from.
+ */
+export function previewTemplate(target: WeekData, source: WeekData): TemplatePreview {
+  const total: TemplatePreview = {
+    blocksToFill: 0,
+    blocksKept: 0,
+    rowsToFill: 0,
+    rowsDropped: 0,
+  };
+
+  target.days.forEach((day, i) => {
+    const from = source.days[i];
+    if (!from) return;
+    const filled = fillDay(day, from);
+    total.blocksToFill += filled.blocksToFill;
+    total.blocksKept += filled.blocksKept;
+    total.rowsToFill += filled.rowsToFill;
+    total.rowsDropped += filled.rowsDropped;
+  });
+
+  return total;
+}
