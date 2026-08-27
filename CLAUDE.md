@@ -81,7 +81,7 @@ or cancelled run in this repo does not always say so.
 ## Pick up here next — the backlog
 
 **This section is the backlog.** If you were asked for "the backlog", "what's
-next", "the todo list" or "outstanding work", it is the three numbered items
+next", "the todo list" or "outstanding work", it is the two numbered items
 below and there is no other list. One other paragraph in this file mentions a
 backlog being retired; that refers to a duplicate of this one that was deleted
 on 2026-08-26, not to this.
@@ -110,29 +110,7 @@ left is new functionality. Each item below carries what it needs to start cold.
 5. **Work on a branch.** Pushing `main` deploys, and the deploy is gated on
    `npm test`. Merging is the user's call.
 
-### 1. Duplicate a day, or template a week
-
-Recurring schedules get retyped every week. This is the other copy-shaped idea,
-and the natural follow-on from carry-forward.
-
-**Already there:** `applyCarryForward` in `planner-data.ts` is a worked example
-of copying into a week without mutating the source. The `origin` field shows how
-to mark where a copied item came from. `loadWeek`/`saveWeek` handle the storage.
-
-**Open questions:** What a template *is* — a named saved week, last week, or one
-you point at? Does it copy `timeBlocks` as well as text? What happens to a day
-that already has content: merge, replace, or refuse? Does a templated item carry
-an `origin`, and if so, of what?
-
-**Traps:** Copying must never mutate the source — carry-forward's first rule,
-and it exists because last week genuinely ended the way it ended. Writing into a
-week you are *not* currently viewing needs the state updater form; see
-"`bringForward` must keep the updater form" in `docs/design-notes.md`, where closing over `weekData`
-wrote one week's contents under another week's key and the whole suite passed.
-
-**Copy from:** `docs/superpowers/specs/2026-08-25-carry-forward-design.md`.
-
-### 2. Trends across months
+### 1. Trends across months
 
 Time reporting shipped for one month. What is missing is the shape over a year —
 Thesis rising, Admin falling.
@@ -154,7 +132,7 @@ any chart needs names rather than colour alone.
 
 **Copy from:** `src/components/planner/TimeByTag.tsx`.
 
-### 3. Edit colour labels from the weekly strip
+### 2. Edit colour labels from the weekly strip
 
 Rename a tag without going to the day view. No longer blocked: the daily legend
 now has the correct structure to copy rather than a mistake to replicate.
@@ -373,6 +351,10 @@ Read the matching note before changing anything in that area.
   planner data, the bar is mounted with `key={monday}`, and `bringForward` must
   keep the updater form — closing over `weekData` once wrote one week's contents
   under another week's key with the whole suite green.
+- **Templating fills empty slots and never overwrites**, which is what lets the
+  dialog be a preview rather than a warning, and why there is no undo. Days map
+  by index, not date. `previewTemplate` and `applyTemplate` are wrappers over
+  one `fillDay` pass, so the counts cannot drift from the result.
 - **A second tab reloads, or says so.** It never overwrites in silence.
 - **The hour column's last row reads 00**, deliberately.
 
@@ -490,7 +472,7 @@ rather than dropping it.
 
 ## Baselines
 
-- `npm test` — 411 tests across 40 files. `vitest.config.ts` sets
+- `npm test` — 437 tests across 43 files. `vitest.config.ts` sets
   `testTimeout: 15000` against a 5s default, and that is load-bearing: several
   tests render the whole app and click through it, sitting at 3-4s alone. Under
   full-suite contention they cross 5s — `today.test.tsx` timed out at 5597ms on

@@ -423,6 +423,50 @@ tablet, and the cap holds the bar at 154px instead, handing 38px and 55px back
 to the grid. jsdom does no layout, so the test can only pin the classes that
 impose the bound; those numbers were measured in a browser.
 
+## Templating copies a shape, and only into empty slots
+
+`applyTemplate` fills a block only when the target's is `0`, and lands a row
+only in a blank row. Nothing the user wrote can be overwritten, and that single
+safety property is what removes three features: the confirm dialog is a preview
+rather than a warning, undo is unnecessary, and applying twice is a no-op that
+falls out of the rules rather than being enforced.
+
+**Days map by index, not by date.** The template's Monday is this week's
+Monday. Matching on the date would copy nothing at all, because the two weeks
+carry different dates by definition — which is why that test exists, and why
+mutating the mapping kills it along with five others.
+
+**`previewTemplate` and `applyTemplate` are both wrappers over one `fillDay`
+pass**, which returns the filled day *and* the counts of what it did. Two
+implementations of the copy rules would be free to drift, and a dialog that
+promises numbers the result does not deliver is worse than a dialog with no
+numbers. The counts cannot disagree because there is only one pass.
+
+**Rows compact into the first blank row** rather than landing positionally,
+matching `applyCarryForward`. The cost is real and was accepted knowingly: a
+target day with a row in position 1 pushes the whole template down, so a
+timetable's row order does not survive contact with existing content.
+
+**`flagged` and `origin` never copy.** `flagged` is the user saying "this one
+matters *this week*", and `origin` drives the age marker — stamping it would
+render "1w" on a row created seconds ago. `checked` resets too: a source row
+ticked last week arrives unticked.
+
+**`findTemplateSource` is `findCarrySource`'s loop asking a different
+question.** Carry stops at the most recent week that *exists*; templating skips
+to the most recent week with *paint*, because an empty week is a fine thing to
+carry from and a useless thing to copy.
+
+**`applyWeekTemplate` must keep the updater form**, for the reason
+`bringForward` must. It is the same closure hazard in a second place, and it
+has its own test because every other template test acts on the mount week —
+mutation-checked, where closing over `weekData` failed exactly one of the six.
+
+**The toolbar button is rendered after `SearchDialog` deliberately.**
+`carry-bar.test.tsx` finds the week chevrons as `querySelectorAll("button")[0]`
+and `[1]`, so a button inserted earlier renumbers every one of them and breaks
+a file that has nothing to do with templating.
+
 ## A second tab reloads, or says so — it never overwrites in silence
 
 Nothing used to listen for the `storage` event, so a stale second tab reverted
