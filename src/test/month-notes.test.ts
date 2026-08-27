@@ -1,5 +1,11 @@
-import { describe, it, expect } from "vitest";
-import { isMonthKey, monthKeyFromEntryKey, monthKeyOf } from "@/lib/month-notes";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import {
+  isMonthKey,
+  loadMonthNote,
+  monthKeyFromEntryKey,
+  monthKeyOf,
+  saveMonthNote,
+} from "@/lib/month-notes";
 
 /**
  * A month note is the first thing this app stores that is not a week, so the
@@ -28,5 +34,64 @@ describe("the month key", () => {
     expect(monthKeyFromEntryKey("daily-log-month-2026-00")).toBeNull();
     expect(isMonthKey("2026-13")).toBe(false);
     expect(isMonthKey("2026-08")).toBe(true);
+  });
+});
+
+beforeEach(() => localStorage.clear());
+afterEach(() => vi.restoreAllMocks());
+
+describe("one month's note", () => {
+  it("loads back what was saved", () => {
+    saveMonthNote("2026-08", "Teaching ate the month.");
+
+    expect(loadMonthNote("2026-08")).toBe("Teaching ate the month.");
+  });
+
+  it("is an empty string when nothing was ever written", () => {
+    expect(loadMonthNote("2026-08")).toBe("");
+  });
+
+  it("stores under a key of its own, not a week's", () => {
+    saveMonthNote("2026-08", "Something");
+
+    expect(localStorage.getItem("daily-log-month-2026-08")).toBe("Something");
+  });
+
+  it("removes the key when the note is emptied, rather than storing nothing", () => {
+    saveMonthNote("2026-08", "Something");
+
+    saveMonthNote("2026-08", "");
+
+    expect(localStorage.getItem("daily-log-month-2026-08")).toBeNull();
+  });
+
+  it("treats whitespace as emptied — it is the absence of a note", () => {
+    saveMonthNote("2026-08", "Something");
+
+    saveMonthNote("2026-08", "   \n  ");
+
+    expect(localStorage.getItem("daily-log-month-2026-08")).toBeNull();
+  });
+
+  it("keeps the whitespace inside a real note, which is the user's", () => {
+    saveMonthNote("2026-08", "  Went well.\n\n  Change the Fridays.  ");
+
+    expect(loadMonthNote("2026-08")).toBe("  Went well.\n\n  Change the Fridays.  ");
+  });
+
+  it("gives an empty note rather than throwing when storage is denied", () => {
+    vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
+      throw new DOMException("The operation is insecure.", "SecurityError");
+    });
+
+    expect(loadMonthNote("2026-08")).toBe("");
+  });
+
+  it("reports false rather than throwing when storage is full", () => {
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new DOMException("QuotaExceededError", "QuotaExceededError");
+    });
+
+    expect(saveMonthNote("2026-08", "Something")).toBe(false);
   });
 });

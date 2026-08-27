@@ -1,4 +1,5 @@
 import { format, isValid, parse } from "date-fns";
+import { readItem, removeItem, writeItem } from "./storage";
 
 /**
  * Notes on a month.
@@ -49,4 +50,26 @@ export function monthKeyFromEntryKey(entryKey: string): string | null {
 export function monthLabel(monthKey: string): string {
   const date = parse(monthKey, "yyyy-MM", new Date());
   return isValid(date) ? format(date, "MMMM yyyy") : monthKey;
+}
+
+/** The stored note, or "" when there is none. This is the whole repair path. */
+export function loadMonthNote(monthKey: string): string {
+  return readItem(PREFIX + monthKey) ?? "";
+}
+
+/**
+ * Store the note, or remove it when there is nothing left of it.
+ *
+ * The two tests are deliberately not the same. All-whitespace is the *absence*
+ * of a note, and keeping `"   "` would be a third state meaning what the other
+ * two already mean. But once there is a note, its leading and trailing
+ * whitespace belongs to the user — prose has blank lines in it, and a save that
+ * quietly reformatted what was typed would be the worse bug.
+ *
+ * Returns whether the write landed, as `saveWeek` does. That return value is
+ * what stops a storage failure being silent.
+ */
+export function saveMonthNote(monthKey: string, text: string): boolean {
+  const entryKey = PREFIX + monthKey;
+  return text.trim() === "" ? removeItem(entryKey) : writeItem(entryKey, text);
 }
