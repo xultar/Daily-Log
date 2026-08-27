@@ -658,3 +658,127 @@ overwritten. Hence the wording "This week was changed in another tab" and not
 Withholding their writes would mean the typing lived only in memory, and closing
 the tab would lose it with no trace — worse than the problem being solved.
 
+
+## Month notes: the first stored thing that is not a week
+
+### Why the export version stayed at 2
+
+Adding `monthNotes` to the export shape did not move the version number, and
+that was a choice between two losses rather than an oversight.
+
+Bumping to 3 makes a backup written after the change *refused outright* by any
+older cached build: `READABLE_VERSIONS` would not contain 3, so `importFromJSON`
+returns "That file was written by an unsupported version" and the weeks do not
+land either. Staying at 2 lets that build read the file, restore every week and
+every colour label, report success, and drop the notes silently.
+
+The second is the smaller loss, and it only reaches someone restoring from a tab
+cached before the change. But it is the failure mode this feature was written to
+prevent, pointed the other way, so it is worth naming: **a build older than this
+one restores a new backup minus the month notes and says nothing.**
+
+That balance shifts as the unversioned surface grows. If a third stored shape is
+ever added, re-decide this rather than inheriting it.
+
+### Why the save is not debounced
+
+`StudyPlanner` debounces at 300ms and needs `pendingRef` to answer *which week* a
+pending write belongs to, plus three separate flushes — on leaving the week, on
+unmount, and on `pagehide`. Every one of those exists because the debounce
+exists.
+
+A month note is one short string under its own key, so it writes on every
+keystroke and none of that machinery is needed: there is no timer to flush, so
+there is nothing to lose. That is the whole argument. The debounce in
+`StudyPlanner` is not there for elegance — it is there because re-serialising a
+whole `WeekData` on every keystroke is genuinely expensive — and copying it here
+would have bought three failure modes to avoid a cost that is not being paid.
+
+If a month note ever grows large enough for this to matter, the answer is a
+debounce *with* the three flushes, not a quiet change of save timing.
+
+### The auto-grow effect is not the mount-write bug
+
+`MonthNotes` has a `useLayoutEffect` that runs on mount, which is the shape this
+repo has twice been burned by — `DailyView` writing back every label it read, and
+`StudyPlanner` turning an unreadable week into an empty one 300ms after it was
+opened.
+
+It is not the same thing. The rule is about effects that **persist state**. This
+one reads `scrollHeight` and sets `style.height`; it touches no storage and no
+React state. It cannot write anything.
+
+It also cannot be removed. The print block resets `overflow` on the
+`.overflow-auto` family of utility classes, but a `<textarea>` scrolls by its own
+nature rather than through those classes, so a fixed-height one prints only the
+lines that happen to be in view and drops the rest without a mark. The
+alternative was a print-only duplicate of the text, rejected as a second copy of
+something that has to be kept true.
+
+### `scrollHeight` alone is one border too short
+
+The first version of that effect set `el.style.height = el.scrollHeight + "px"`,
+which is the idiom every answer on the subject gives. It is wrong here, and the
+browser is the only place it shows.
+
+Tailwind sets `box-sizing: border-box`, so `height` covers the borders as well as
+the content. Setting it to the content height therefore leaves the field one
+border-width short of its own text, permanently: measured in the running app at
+`clientHeight: 139, scrollHeight: 140`. On screen that single pixel is invisible.
+In print it shaves the descenders off the last line — which is exactly the
+failure the effect exists to prevent, arriving by a different route.
+
+The fix measures the border rather than assuming it:
+
+```ts
+const border = el.offsetHeight - el.clientHeight;
+el.style.height = `${el.scrollHeight + border}px`;
+```
+
+Measuring matters more than it looks. The rendered border here totalled **1px,
+not the 2px** a 1px border on each edge implies — subpixel rounding at this
+element's size — so a hardcoded `+ 2` would have over-sized the box instead. It
+also means changing the border width in the class list cannot quietly bring the
+clipping back.
+
+**jsdom cannot see this.** It does no layout, so `scrollHeight`, `clientHeight`
+and `offsetHeight` are all 0 and the field's real height is unobservable. The
+test pins the *arithmetic* instead, by defining those three properties on
+`HTMLTextAreaElement.prototype` and asserting the resulting `style.height`. That
+is a genuine test of the thing that was wrong, and it is the most a
+layout-less DOM can give.
+
+### The two mutations that mattered
+
+Both produce a green suite and wrong behaviour, and neither is visible by reading
+the diff.
+
+**Dropping `key={monthKey}` from the `MonthNotes` element in `MonthlyView`.**
+Without it the component keeps its state across a month change, so paging from
+August to September shows August's text — and the next keystroke saves it under
+`daily-log-month-2026-09`. One month's reflection is overwritten by another's.
+Guarded by "shows the month it is looking at, not the one before", which
+re-renders rather than mounting twice precisely so it can catch this.
+
+**Dropping the merge-sort in `searchAll`.** Month matches are then appended after
+every week match rather than interleaved by date, so a note filed in August
+appears below a week from the previous July. Guarded by the three-way ordering
+assertion in `month-notes-search.test.tsx`.
+
+### A mutation that cannot be killed, and why the plan was wrong to ask for one
+
+The implementation plan claimed a third mutation: that sorting a month match on
+`monthKey` rather than `` `${monthKey}-01` `` would file the note outside its own
+month and break the ordering test. It does not, and no test can make it.
+
+`"2026-08"` is a *prefix* of every `2026-08-..` date, and a prefix sorts before
+the strings it prefixes. So the bare month key and the `-01` form compare
+identically against every `yyyy-MM-dd` string there is — including dates in their
+own month, in earlier months, and in later ones. The two are order-equivalent by
+construction.
+
+The `-01` stays, because every sort key having the same shape is worth something
+and because the line survives the comparison ever ceasing to be a string compare.
+But the comment on `sortKey` now says outright that it is legibility rather than
+behaviour, so that nobody writes a test claiming to pin it and believes the green
+tick.

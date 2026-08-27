@@ -13,13 +13,13 @@ in "Pick up here next" below, and each item there is written to be started cold.
 
 Two habits keep a session cheap:
 
-**Read one design note, not the file.** `docs/design-notes.md` is 39 KB —
+**Read one design note, not the file.** `docs/design-notes.md` is 45 KB —
 *larger than this file* — and reading it end to end is the single most expensive
 mistake available here. Every bullet under "Area notes" names the note that
 explains it. Open that one section and stop.
 
 **Specs and plans are history, not orientation.** `docs/superpowers/specs/` holds
-fifteen approved designs and `plans/` eleven task lists. Read one when you are
+sixteen approved designs and `plans/` twelve task lists. Read one when you are
 about to change behaviour it describes. Never read them to find out what the app
 does — this file already says.
 
@@ -30,7 +30,8 @@ does — this file already says.
 | Week/day shape, repair, load/save, palette, colour labels | `src/lib/planner-data.ts` (817 lines — the big one) |
 | Anything touching `localStorage` | `src/lib/storage.ts` — nothing else may call it directly |
 | Month totals, tag history, trends | `src/lib/reporting.ts` |
-| Text search across weeks | `src/lib/search.ts` |
+| Text search across weeks and months | `src/lib/search.ts` |
+| Notes on a month | `src/lib/month-notes.ts`, `MonthNotes.tsx` |
 | Copying a week's shape | `src/lib/week-template.ts` |
 | Which past week to carry from | `src/lib/carry-source.ts` |
 | Backup and restore | `src/lib/export-import.ts` |
@@ -72,9 +73,11 @@ the page renders blank.
 
 ## Where things stand
 
-`main` is deployed, `origin/main` is level with it, and there is no unmerged
-work. Everything the backlog once listed has shipped; what is left is in
-"Pick up here next".
+`main` is deployed and `origin/main` is level with it. **There is one unmerged
+branch: `month-notes`** — notes and reflections for the month, built, tested and
+checked in a browser, but deliberately not merged, because merging is the user's
+call. That item has already been struck from the backlog below, so do not go
+looking for it there. What is left is in "Pick up here next".
 
 **What shipped, and when, is `git log` — not this section.** It used to carry a
 hand-written list of every feature and its date. That list drifted within a day
@@ -93,13 +96,13 @@ or cancelled run in this repo does not always say so.
 ## Pick up here next — the backlog
 
 **This section is the backlog.** If you were asked for "the backlog", "what's
-next", "the todo list" or "outstanding work", it is the three numbered items
+next", "the todo list" or "outstanding work", it is the two numbered items
 below and there is no other list. One other paragraph in this file mentions a
 backlog being retired; that refers to a duplicate of this one that was deleted
 on 2026-08-26, not to this.
 
-Nothing is half-finished. Two of the three items are defects found by the
-2026-08-27 shakedown; neither crashes anything or risks stored data.
+Nothing is half-finished. Both items are defects found by the 2026-08-27
+shakedown; neither crashes anything or risks stored data.
 
 **Each item below is written to be started cold** — what it is, where the code
 is, what is already there to build on, the open questions, and the traps. If you
@@ -129,35 +132,7 @@ the item is underwritten; fix the item.
 5. **Work on a branch.** Pushing `main` deploys, and the deploy is gated on
    `npm test`. Merging is the user's call.
 
-### 1. Notes and reflections for the month
-
-Below "Time blocked by tag" in the month view, a free-text area for notes on the
-month — what went well, what to change.
-
-**Already there:** `TimeByTag` sits at the bottom of `MonthlyView`, which is
-where this goes under it. The week's `weekReview` is the closest precedent for
-the field itself: free text, saved through the ordinary autosave path.
-
-**Open questions:** where does the text live? There is no month entity in
-storage — everything stored today is a week — so this needs a new key, probably
-keyed by `yyyy-MM`. Does it print with the month view? Should it be searchable?
-Does it travel in export, import and a backup?
-
-**Traps:**
-
-- **This is the first stored thing that is not a week.** `loadAllWeeks` matches
-  entries by shape and will correctly ignore it — but `exportAllData` was
-  rewritten onto `loadAllWeeks`, so month notes would silently not be backed up
-  unless export is taught about them. A backup that quietly omits something the
-  user typed is worse than no backup.
-- **Nothing calls localStorage directly.** Go through `src/lib/storage.ts`.
-- **A new stored shape needs a repair path.** Read "A stored week is repaired,
-  never replaced" in `docs/design-notes.md` before deciding the shape; every
-  other reader of storage assumes damage is possible, and this one must too.
-- Writing on mount is the recurring bug in this repo — see the `dirtyRef` note
-  and `DailyView.updateLabel`. Save where the change happens.
-
-### 2. Back up the "show weekends" preference, or decide not to
+### 1. Back up the "show weekends" preference, or decide not to
 
 A backup does not carry it. `exportAllData` writes `settings: { colorLabels }`
 and nothing else, so exporting, clearing and re-importing silently resets
@@ -181,7 +156,7 @@ them is work.
 *as a week* — see the comment near the top of `exportAllData`. Adding it to
 `settings` must not undo that.
 
-### 3. Repair a short subjects array back to six rows
+### 2. Repair a short subjects array back to six rows
 
 A day whose `subjects` array is short but not empty stays short, so the week
 view renders that column with fewer priority rows. Its time grid then starts
@@ -412,6 +387,17 @@ area.
   its own busiest month, so a small tag's shape stays readable; the span total
   printed beside the row is what carries the magnitude that hides. One pass over
   `eachStoredDay` buckets all twelve months at once.
+- **A month note is the only stored thing that is not a week.** It lives at
+  `daily-log-month-YYYY-MM`, deliberately off the `planner-` prefix, and is
+  stored as raw text so its whole repair path is `?? ""`. One key per month is
+  what makes an import merge free: writing the months a backup names leaves the
+  ones it does not name alone. It saves on every keystroke, which is affordable
+  precisely because it is one short string — that is what buys the absence of
+  the whole `pendingRef` flush problem. A search result for one carries
+  `kind: "month"` and no Monday, and routes through `onJumpToMonth` rather than
+  `onJump`; transposing those lands the user in the right date and the wrong
+  view. The field auto-grows, and it must add the **border** to `scrollHeight` or
+  it clips its own last line in print.
 - **A second tab reloads, or says so.** It never overwrites in silence.
 - **The hour column's last row reads 00**, deliberately.
 
@@ -529,7 +515,7 @@ rather than dropping it.
 
 ## Baselines
 
-- `npm test` — 471 tests across 48 files. `vitest.config.ts` sets
+- `npm test` — 520 tests across 52 files. `vitest.config.ts` sets
   `testTimeout: 15000` against a 5s default, and that is load-bearing: several
   tests render the whole app and click through it, sitting at 3-4s alone. Under
   full-suite contention they cross 5s — `today.test.tsx` timed out at 5597ms on
@@ -558,7 +544,7 @@ rather than dropping it.
 ## Known open issues
 
 Two, both found by the 2026-08-27 shakedown, and both carried as backlog items
-2 and 3 rather than described twice here: a backup does not include the
+1 and 2 rather than described twice here: a backup does not include the
 show-weekends preference, and a short `subjects` array is not repaired back to
 six rows. Neither crashes anything and neither risks stored data.
 
