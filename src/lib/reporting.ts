@@ -1,4 +1,4 @@
-import { format, parse, isValid } from "date-fns";
+import { format, parse, isValid, subMonths, startOfMonth } from "date-fns";
 import { loadAllWeeks, mondayOfKey } from "./planner-data";
 
 /** Ten minutes per block, as everywhere else that counts painted time. */
@@ -170,4 +170,83 @@ export function tagHistory(colorId: number): TagUse[] {
   return uses.sort(
     (a, b) => b.date.localeCompare(a.date) || b.weekKey.localeCompare(a.weekKey)
   );
+}
+
+/** One tag's shape across the months of a span. */
+export interface TagTrend {
+  colorId: number;
+  /** Minutes in each month of the span, oldest first. Zero where none. */
+  months: number[];
+  /** Minutes across the whole span. */
+  total: number;
+}
+
+export interface Trends {
+  /** "yyyy-MM" per column, oldest first. */
+  months: string[];
+  /** Tags with any time in the span, busiest total first. */
+  tags: TagTrend[];
+}
+
+/**
+ * Minutes per tag per month, for the `monthCount` months ending on `end`.
+ *
+ * **One pass, not one per month.** Twelve `totalsByTag` calls would each walk
+ * every stored week, so two years of history would be traversed twelve times
+ * whenever the dialog opens. This walks `eachStoredDay` once and buckets by
+ * month — the third caller of that iterator, which is why it was extracted.
+ *
+ * A day's column is `date.slice(0, 7)`. ISO dates group as strings, the same
+ * property `totalsByTag`'s range check relies on, so no Date is built per day.
+ *
+ * **Every row is `monthCount` long**, with `0` for a month carrying nothing. A
+ * hole would be indistinguishable from a month nobody worked, and the renderer
+ * would have to align rows against the header itself.
+ *
+ * Rows exist only for tags with time in the span, busiest total first —
+ * `totalsByTag`'s rule, for its reason: a tag with nothing is absent rather
+ * than zero.
+ *
+ * This is deliberately **not** a generalisation of `totalsByTag`, which takes an
+ * arbitrary range rather than whole months. Folding the two together would cost
+ * the month report its ability to be handed any two dates.
+ */
+export function trendsByMonth(end: Date, monthCount: number): Trends {
+  const endMonth = startOfMonth(end);
+  const months: string[] = [];
+  for (let back = monthCount - 1; back >= 0; back--) {
+    months.push(format(subMonths(endMonth, back), "yyyy-MM"));
+  }
+  const columnOf = new Map(months.map((m, i) => [m, i]));
+
+  const rows = new Map<number, number[]>();
+
+  for (const { date, grid } of eachStoredDay()) {
+    if (!date) continue;
+    const at = columnOf.get(date.slice(0, 7));
+    if (at === undefined) continue;
+
+    for (const hour of grid) {
+      if (!Array.isArray(hour)) continue;
+      for (const block of hour) {
+        if (typeof block !== "number" || block <= 0) continue;
+        let row = rows.get(block);
+        if (!row) {
+          row = new Array(months.length).fill(0);
+          rows.set(block, row);
+        }
+        row[at] += MINUTES_PER_BLOCK;
+      }
+    }
+  }
+
+  const tags = [...rows.entries()]
+    .map(([colorId, monthly]) => ({
+      colorId,
+      months: monthly,
+      total: monthly.reduce((sum, m) => sum + m, 0),
+    }))
+    .sort((a, b) => b.total - a.total);
+
+  return { months, tags };
 }
