@@ -782,3 +782,83 @@ and because the line survives the comparison ever ceasing to be a string compare
 But the comment on `sortKey` now says outright that it is legibility rather than
 behaviour, so that nobody writes a test claiming to pin it and believes the green
 tick.
+
+## The week's priority rows line up in the view, not in storage
+
+### The backlog item was wrong, and wrong in an instructive way
+
+The 2026-08-27 shakedown opened a week damaged in every way at once and found
+Monday rendering three priority rows while the other six rendered six, so
+Monday's time grid started higher than its neighbours. It was written up as a
+repair bug with a named root cause — `repairList` pads only when the incoming
+value is missing or empty — and a named fix: pad at the `subjects` call site.
+
+Every part of that was wrong, and each part was checkable before writing code.
+
+**`repairList` preserving length is deliberate, and its own comment says so.**
+*"Both views let a user delete rows down to one, so padding a short-but-real
+list would resurrect rows they removed on purpose."* `DailyView.removeSubject`
+really does delete rows. The proposed fix would have traded a documented data
+rule for a cosmetic one.
+
+**The test the item asked for already existed**, and forbids the fix the item
+proposed. `week-repair.test.ts` has carried "does not resurrect priority rows the
+user deleted" — a stored day sliced to two rows must load as two — since before
+the item was written. The item claimed there was no such case; there was, and it
+was a characterisation test pinning exactly the behaviour the item wanted to
+break.
+
+**No damage is needed to reproduce the symptom.** Delete three rows on Monday in
+the day view and the week view misaligns. The shakedown reached it through a
+corrupted week, which is what made it look like a repair problem.
+
+**Padding to six could not have worked anyway.** `addSubject` is uncapped, so a
+day with eight rows throws the other six columns out in the direction six cannot
+reach. Measured in the browser: with a day at eight rows, every column settles at
+a grid top of 246.43px; a fix pinned to six leaves five of them at the six-row
+height.
+
+The lesson is not that the backlog was sloppy — it was written from a real
+observation. It is that a root cause stated in a backlog item is a hypothesis,
+and the file it names is the place to check it. The comment that refuted the
+whole item was four lines above the function the item accused.
+
+### What the fix actually is
+
+One row count for the week, computed in `StudyPlanner` from `visibleDays` and
+passed to every `DayColumn` as `rowCount`. A column renders its real rows, then
+inert `aria-hidden` spacers up to that count. Nothing stored changes.
+
+`Math.max(1, ...)` rather than a bare spread: `repairWeek` guarantees a repaired
+day has rows, but this reads `weekData` directly and `Math.max()` over an empty
+list is `-Infinity`, which would render no rows at all.
+
+**Visible days, not all seven.** Padding the weekdays out to match a hidden
+Saturday reads as unexplained empty space. `visibleDays` already existed and is
+weekend-aware, so this cost nothing.
+
+**No floor.** If every day holds three rows, three is right. A floor of six shows
+blank rows to someone who deliberately trimmed every day.
+
+### The measurement is the test, because jsdom has no layout
+
+The suite counts row slots and checks that spacers carry no controls. **Not one
+of its assertions can see whether the columns line up** — jsdom performs no
+layout, so every offset is zero.
+
+What confirms the fix is a browser measurement, and it is worth recording
+because it also demonstrates the bug:
+
+| | Monday's grid top | others |
+| --- | --- | --- |
+| spacers suppressed | 166.64px | 214.29px |
+| spacers present | 214.29px | 214.29px |
+
+47.65px of misalignment, three rows' worth, reduced to a single distinct value
+across all seven columns.
+
+**The spacer's height is matched by construction, not by assertion.** Its
+children are empty equivalents of a real row's — the colour stripe, the checkbox,
+the text input — and if a real row's markup changes, the spacer can silently stop
+matching with the whole suite green. Re-measure `TimeGrid`'s `offsetTop` across
+columns after touching either.

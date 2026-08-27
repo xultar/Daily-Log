@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, within } from "@testing-library/react";
 import DailyView from "@/components/planner/DailyView";
 import { createEmptyDay } from "@/lib/planner-data";
 
@@ -10,6 +10,48 @@ const tagged = () => {
   day.subjects[0] = { subject: "Draft", checked: false, colorId: 7 };
   return day;
 };
+
+/**
+ * Deleting rows here is what makes padding the stored `subjects` array wrong,
+ * and it is why the week view lines its columns up in the rendering instead.
+ * It had no test of its own until that fix needed it to stay true.
+ */
+describe("DailyView row deletion", () => {
+  /** The delete control: the last button in a row, and unlabelled. */
+  const removeFirstRow = () => {
+    const row = screen
+      .getAllByPlaceholderText("Add priority / action...")[0]
+      .closest("div.group") as HTMLElement;
+    const buttons = within(row).getAllByRole("button");
+    fireEvent.click(buttons[buttons.length - 1]);
+  };
+
+  it("shortens the day rather than blanking the row", () => {
+    const onChange = vi.fn();
+    render(
+      <DailyView day={createEmptyDay(MONDAY)} dayIndex={0} onChange={onChange}
+                 activeColor={1} onActiveColorChange={() => {}} />
+    );
+
+    removeFirstRow();
+
+    expect(onChange.mock.calls[0][0].subjects).toHaveLength(5);
+  });
+
+  it("refuses to delete the last remaining row", () => {
+    const onChange = vi.fn();
+    const day = createEmptyDay(MONDAY);
+    day.subjects = day.subjects.slice(0, 1);
+    render(
+      <DailyView day={day} dayIndex={0} onChange={onChange}
+                 activeColor={1} onActiveColorChange={() => {}} />
+    );
+
+    removeFirstRow();
+
+    expect(onChange).not.toHaveBeenCalled();
+  });
+});
 
 describe("DailyView row mutation", () => {
   it("preserves a row colorId when the subject text changes", () => {

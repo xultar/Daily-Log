@@ -232,6 +232,20 @@ const StudyPlanner: React.FC = () => {
   // always equals the real day index in weekData.days for both branches.
   const visibleDays = showWeekends ? weekData.days : weekData.days.slice(0, 5);
 
+  // One priority-row count for the whole week, so the columns line up and the
+  // grid can be read across days. The longest *visible* day: padding the
+  // weekdays out to match a Saturday that is hidden reads as unexplained empty
+  // space.
+  //
+  // Math.max(1, ...) rather than a bare spread. repairWeek rebuilds an empty
+  // subjects array to six, so a repaired day always has a row — but this reads
+  // weekData directly, and Math.max() over an empty list is -Infinity, which
+  // would render no rows at all. One argument removes the whole outcome.
+  const subjectRows = useMemo(
+    () => Math.max(1, ...visibleDays.map((d) => d.subjects.length)),
+    [visibleDays]
+  );
+
   const getNavLabel = () => {
     if (viewMode === "monthly") return format(currentDate, "MMMM yyyy");
     if (viewMode === "daily") return format(dates[selectedDayIndex], "EEEE, MMMM d, yyyy");
@@ -419,6 +433,7 @@ const StudyPlanner: React.FC = () => {
                   <DayColumn
                     day={day}
                     dayIndex={i}
+                    rowCount={subjectRows}
                     onChange={(d) => updateDay(i, d)}
                     activeColor={activeColor}
                     onActiveColorChange={setActiveColor}

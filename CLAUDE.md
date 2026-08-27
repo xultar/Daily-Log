@@ -13,13 +13,13 @@ in "Pick up here next" below, and each item there is written to be started cold.
 
 Two habits keep a session cheap:
 
-**Read one design note, not the file.** `docs/design-notes.md` is 45 KB —
+**Read one design note, not the file.** `docs/design-notes.md` is 49 KB —
 *larger than this file* — and reading it end to end is the single most expensive
 mistake available here. Every bullet under "Area notes" names the note that
 explains it. Open that one section and stop.
 
 **Specs and plans are history, not orientation.** `docs/superpowers/specs/` holds
-sixteen approved designs and `plans/` twelve task lists. Read one when you are
+seventeen approved designs and `plans/` twelve task lists. Read one when you are
 about to change behaviour it describes. Never read them to find out what the app
 does — this file already says.
 
@@ -74,10 +74,11 @@ the page renders blank.
 ## Where things stand
 
 `main` is deployed and `origin/main` is level with it. **There is one unmerged
-branch: `month-notes`** — notes and reflections for the month, built, tested and
-checked in a browser, but deliberately not merged, because merging is the user's
-call. That item has already been struck from the backlog below, so do not go
-looking for it there. What is left is in "Pick up here next".
+branch: `week-row-alignment`** — the week's priority rows lining up across days,
+built, tested and measured in a browser, but deliberately not merged, because
+merging is the user's call. Its backlog item has already been struck from the
+list below, so do not go looking for it there. What is left is in "Pick up here
+next".
 
 **What shipped, and when, is `git log` — not this section.** It used to carry a
 hand-written list of every feature and its date. That list drifted within a day
@@ -96,13 +97,13 @@ or cancelled run in this repo does not always say so.
 ## Pick up here next — the backlog
 
 **This section is the backlog.** If you were asked for "the backlog", "what's
-next", "the todo list" or "outstanding work", it is the two numbered items
+next", "the todo list" or "outstanding work", it is the single numbered item
 below and there is no other list. One other paragraph in this file mentions a
 backlog being retired; that refers to a duplicate of this one that was deleted
 on 2026-08-26, not to this.
 
-Nothing is half-finished. Both items are defects found by the 2026-08-27
-shakedown; neither crashes anything or risks stored data.
+Nothing is half-finished. The one item left is a gap found by the 2026-08-27
+shakedown; it does not crash anything or risk stored data.
 
 **Each item below is written to be started cold** — what it is, where the code
 is, what is already there to build on, the open questions, and the traps. If you
@@ -155,35 +156,6 @@ them is work.
 **Trap:** `planner-show-weekends` is deliberately excluded from being collected
 *as a week* — see the comment near the top of `exportAllData`. Adding it to
 `settings` must not undo that.
-
-### 2. Repair a short subjects array back to six rows
-
-A day whose `subjects` array is short but not empty stays short, so the week
-view renders that column with fewer priority rows. Its time grid then starts
-higher than its neighbours and the week's rows stop lining up across days.
-
-**Found by** the 2026-08-27 shakedown, opening a week damaged in every way at
-once: Monday carried three subject rows and rendered three, while the other six
-days rendered six.
-
-**Root cause:** `repairList` in `src/lib/planner-data.ts` pads to full length
-**only when the incoming value is missing or empty**. Otherwise it does
-`value.map(repairItem)`, which preserves whatever length arrived.
-
-**Why it was missed:** `repairList` serves two callers with opposite contracts —
-`subjects` is a fixed six, and `weeklyTodos` is genuinely variable because the
-sidebar has an Add button. Length-preserving is right for one and wrong for the
-other. `repairWeek` already pads a short week's *days* and says so in its
-comment, so the gap is only at the row level.
-
-**Trap:** do not add padding inside `repairList` itself — that would also pad
-`weeklyTodos`, which is meant to grow and shrink. Pad at the `subjects` call
-site, or give the helper an explicit fixed-length mode.
-
-**Not a crash, and the guards held.** The app rendered the damaged week with no
-error boundary, and storage still held the damaged copy afterwards — `dirtyRef`
-correctly refused to write on open. `week-repair.test.ts` has no case with a
-short subjects array, which is the test to add first.
 
 ### The working rhythm in this repo
 
@@ -387,6 +359,14 @@ area.
   its own busiest month, so a small tag's shape stays readable; the span total
   printed beside the row is what carries the magnitude that hides. One pass over
   `eachStoredDay` buckets all twelve months at once.
+- **The week's columns share one priority-row count**, the longest visible day,
+  computed in `StudyPlanner` and passed to `DayColumn` as `rowCount`; shorter
+  columns pad with inert `aria-hidden` spacers. The alignment lives in the view
+  because the stored lengths are *correct* — a day may hold any number of rows,
+  since the day view deletes down to one and adds without limit. Padding stored
+  `subjects` instead would resurrect deleted rows; `repairList` says so. No test
+  can confirm the columns line up, because jsdom has no layout — measure
+  `TimeGrid`'s `offsetTop` across columns in a browser.
 - **A month note is the only stored thing that is not a week.** It lives at
   `daily-log-month-YYYY-MM`, deliberately off the `planner-` prefix, and is
   stored as raw text so its whole repair path is `?? ""`. One key per month is
@@ -515,7 +495,7 @@ rather than dropping it.
 
 ## Baselines
 
-- `npm test` — 520 tests across 52 files. `vitest.config.ts` sets
+- `npm test` — 530 tests across 52 files. `vitest.config.ts` sets
   `testTimeout: 15000` against a 5s default, and that is load-bearing: several
   tests render the whole app and click through it, sitting at 3-4s alone. Under
   full-suite contention they cross 5s — `today.test.tsx` timed out at 5597ms on
@@ -543,10 +523,14 @@ rather than dropping it.
 
 ## Known open issues
 
-Two, both found by the 2026-08-27 shakedown, and both carried as backlog items
-1 and 2 rather than described twice here: a backup does not include the
-show-weekends preference, and a short `subjects` array is not repaired back to
-six rows. Neither crashes anything and neither risks stored data.
+One, found by the 2026-08-27 shakedown and carried as backlog item 1 rather
+than described twice here: a backup does not include the show-weekends
+preference. It does not crash anything and does not risk stored data.
+
+The shakedown's other finding — a short `subjects` array rendering fewer rows
+than its neighbours — turned out not to be a repair bug at all, and the fix the
+backlog proposed for it would have resurrected rows users deleted on purpose.
+See `docs/superpowers/specs/2026-08-27-week-row-alignment-design.md`.
 
 Before those, the last two — the `<input>` nested inside a `<button>` in the
 daily legend, and the label write that happened on mount — were both fixed on

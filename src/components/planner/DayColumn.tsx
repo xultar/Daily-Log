@@ -11,11 +11,23 @@ interface DayColumnProps {
   onChange: (day: DayData) => void;
   activeColor: number;
   onActiveColorChange: (color: number) => void;
+  /**
+   * How many priority row slots to draw, real rows plus spacers.
+   *
+   * The week grid only reads across days if every column agrees on this, and a
+   * column cannot know the longest day by itself — `StudyPlanner` computes it
+   * from `visibleDays` and passes it down.
+   *
+   * Optional, defaulting to this day's own length, which is exactly the
+   * unpadded behaviour. A caller that renders one column in isolation has
+   * nothing to line up against and should not have to say so.
+   */
+  rowCount?: number;
 }
 
 const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
-const DayColumn: React.FC<DayColumnProps> = ({ day, dayIndex, onChange, activeColor, onActiveColorChange }) => {
+const DayColumn: React.FC<DayColumnProps> = ({ day, dayIndex, onChange, activeColor, onActiveColorChange, rowCount }) => {
   const dateObj = parse(day.date, "yyyy-MM-dd", new Date());
   const total = calcDayTotal(day);
   // isToday compares against an invalid date without throwing, so a damaged
@@ -82,6 +94,7 @@ const DayColumn: React.FC<DayColumnProps> = ({ day, dayIndex, onChange, activeCo
           return (
           <div
             key={idx}
+            data-row-slot=""
             className="flex items-stretch border-b border-campus-grid last:border-b-0"
             style={tint ? { backgroundColor: tint } : undefined}
           >
@@ -129,6 +142,31 @@ const DayColumn: React.FC<DayColumnProps> = ({ day, dayIndex, onChange, activeCo
           </div>
           );
         })}
+
+        {/* Spacers, so this column ends up the same height as its neighbours.
+            A day may hold any number of rows — the day view can delete down to
+            one and add without limit — and the week grid only reads across days
+            if every column agrees. Padding the stored array instead would
+            resurrect rows the user deleted on purpose; see repairList.
+
+            Each child below is the empty equivalent of a real row's: the colour
+            stripe, the checkbox, the text input. The height is matched **by
+            construction, not by assertion** — jsdom does no layout, so nothing
+            in the suite can catch this drifting if a real row's markup changes.
+            Re-measure TimeGrid's offsetTop across columns in a browser if you
+            touch either. */}
+        {Array.from({ length: Math.max(0, (rowCount ?? day.subjects.length) - day.subjects.length) }, (_, i) => (
+          <div
+            key={`spacer-${i}`}
+            data-row-slot=""
+            aria-hidden="true"
+            className="flex items-stretch border-b border-campus-grid last:border-b-0"
+          >
+            <span className="w-[8px] shrink-0 border-l-[3px] border-transparent" />
+            <span className="h-3 w-3 shrink-0 self-center" />
+            <span className="flex-1 self-center text-[9px] px-0.5 py-[1px] min-w-0">&nbsp;</span>
+          </div>
+        ))}
       </div>
 
       {/* Time Grid */}
