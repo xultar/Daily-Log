@@ -61,6 +61,29 @@ on serving the last good build rather than a broken one.
 A flaky test can now hold up a deploy. That is the price of the gate, and the
 reason the test timeout was raised in `vitest.config.ts` — see Baselines.
 
+**The deploy builds on Node 24, and the two Nodes are not the same Node.**
+`deploy.yml` pins `node-version: 24`, and that is what runs `npm ci`, `npm test`
+and `npm run build`. It is a different thing from the Node each action's own
+JavaScript executes on, which the runner picks and which is what the "Node.js 20
+is deprecated" annotations were about. Bumping an action version changes the
+second and therefore cannot change the bundle; bumping `node-version` changes
+the first and can. Do not carry a conclusion about one across to the other.
+
+**Verify a `node-version` change by building, not by reading release notes** —
+and it is cheap, because Vite names bundles by content hash, so the filename is
+a checksum. Build the same commit on both versions and compare: equal hash is
+equal bytes. Node 20 and Node 24 both emitted `index-XVrAZMIj.js` for `c67f704`,
+which is what made the 2026-08-27 bump from 20 a non-event rather than a leap.
+Nothing else pins the version — no `engines`, no `packageManager`, no `.nvmrc`.
+
+**`upload-pages-artifact` drops dotfiles.** From v4 on, hidden files are left out
+of the Pages artifact. Nothing in `dist/` or `public/` is hidden and Pages
+deployed through Actions runs no Jekyll, so there is no `.nojekyll` to lose — but
+a dotted file added to `public/` will silently not ship. The actions were taken
+to their current majors on 2026-08-27 (`checkout` and `setup-node` at v7,
+`upload-pages-artifact` and `deploy-pages` at v5); the breaking change above is
+the only one that reaches this repo.
+
 **The runner is not the slow environment.** This said the opposite until the
 gate actually ran: 342 tests took **19s** on the runner against 70s on an
 8-core dev machine, because `npm ci` leaves a warm cache and nothing there
