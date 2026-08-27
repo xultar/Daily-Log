@@ -1,4 +1,6 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { render, screen, fireEvent, cleanup } from "@testing-library/react";
+import SearchDialog from "@/components/planner/SearchDialog";
 import { createEmptyWeek } from "@/lib/planner-data";
 import { saveMonthNote } from "@/lib/month-notes";
 import { searchAll, searchMonthNotes } from "@/lib/search";
@@ -83,5 +85,54 @@ describe("searchAll", () => {
       else expect(match.monthKey).toBe("2026-08");
     }
     expect(searchAll("repeat")).toHaveLength(2);
+  });
+});
+
+afterEach(cleanup);
+
+const openDialog = () => {
+  const onJump = vi.fn();
+  const onJumpToMonth = vi.fn();
+  render(<SearchDialog onJump={onJump} onJumpToMonth={onJumpToMonth} />);
+  fireEvent.click(screen.getByRole("button", { name: /search all weeks/i }));
+  return { onJump, onJumpToMonth };
+};
+
+const typeQuery = (value: string) =>
+  fireEvent.change(screen.getByRole("textbox", { name: /search all weeks/i }), {
+    target: { value },
+  });
+
+describe("a month note in the search dialog", () => {
+  it("names the month and the field it came from", () => {
+    saveMonthNote("2026-08", "Teaching ate the month.");
+    openDialog();
+
+    typeQuery("Teaching");
+
+    expect(screen.getByText(/August 2026/)).toBeInTheDocument();
+    expect(screen.getByText(/Month notes/)).toBeInTheDocument();
+  });
+
+  it("opens the month, not a week", () => {
+    saveMonthNote("2026-08", "Teaching ate the month.");
+    const { onJump, onJumpToMonth } = openDialog();
+
+    typeQuery("Teaching");
+    fireEvent.click(screen.getByText("Teaching ate the month."));
+
+    expect(onJumpToMonth).toHaveBeenCalledWith("2026-08");
+    expect(onJump).not.toHaveBeenCalled();
+  });
+
+  it("still opens a week for a week result", () => {
+    storeWeekWithGoal("2026-W35", AUG, "Finish the chapter");
+    const { onJump, onJumpToMonth } = openDialog();
+
+    typeQuery("Finish the chapter");
+    fireEvent.click(screen.getByText("Finish the chapter"));
+
+    expect(onJump).toHaveBeenCalledWith("2026-08-24");
+    expect(onJumpToMonth).not.toHaveBeenCalled();
   });
 });

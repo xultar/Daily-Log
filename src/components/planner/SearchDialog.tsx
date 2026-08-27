@@ -10,7 +10,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { SearchField, SearchMatch, searchWeeks } from "@/lib/search";
+import { SearchField, SearchMatch, searchAll } from "@/lib/search";
+import { monthLabel } from "@/lib/month-notes";
 import TagHistoryPanel from "./TagHistoryPanel";
 
 /** What a result row calls the field it matched. */
@@ -20,6 +21,7 @@ const FIELD_LABEL: Record<SearchField, string> = {
   action: "Weekly action",
   priority: "Priority",
   memo: "Daily Log / Notes",
+  month: "Month notes",
 };
 
 /** "24 – 30 Aug 2026", from the Monday a match reported. */
@@ -43,7 +45,16 @@ const dayName = (monday: string, dayIndex: number) =>
  * Results are not capped. A cap reads as "that is everything" when it is not,
  * and the list scrolls.
  */
-const SearchDialog: React.FC<{ onJump: (monday: string) => void }> = ({ onJump }) => {
+const SearchDialog: React.FC<{
+  onJump: (monday: string) => void;
+  /**
+   * Separate from `onJump` rather than a widened version of it. `onJump` is
+   * shared with TagHistoryPanel, which navigates to weeks and only to weeks;
+   * pushing a view discriminator into that caller to spare one prop here would
+   * be the wrong trade.
+   */
+  onJumpToMonth: (monthKey: string) => void;
+}> = ({ onJump, onJumpToMonth }) => {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [mode, setMode] = useState<"text" | "tag">("text");
@@ -51,12 +62,18 @@ const SearchDialog: React.FC<{ onJump: (monday: string) => void }> = ({ onJump }
   // Recomputed when the dialog opens as well as on every keystroke: weeks may
   // have changed since it was last closed, including from another tab.
   const matches = useMemo<SearchMatch[]>(
-    () => (open && mode === "text" ? searchWeeks(query) : []),
+    () => (open && mode === "text" ? searchAll(query) : []),
     [query, open, mode]
   );
 
   const jump = (monday: string) => {
     onJump(monday);
+    setOpen(false);
+    setQuery("");
+  };
+
+  const jumpToMonth = (monthKey: string) => {
+    onJumpToMonth(monthKey);
     setOpen(false);
     setQuery("");
   };
@@ -75,7 +92,7 @@ const SearchDialog: React.FC<{ onJump: (monday: string) => void }> = ({ onJump }
           <DialogTitle className="text-sm">Find</DialogTitle>
           <DialogDescription className="text-xs">
             {mode === "text"
-              ? "Goals, reviews, weekly actions, priorities and notes."
+              ? "Goals, reviews, weekly actions, priorities, notes and month reflections."
               : "When you last used a tag, and every time before that."}
           </DialogDescription>
         </DialogHeader>
@@ -122,16 +139,24 @@ const SearchDialog: React.FC<{ onJump: (monday: string) => void }> = ({ onJump }
               ) : (
                 <ul className="flex flex-col gap-0.5">
                   {matches.map((m, i) => (
-                    <li key={`${m.weekKey}-${m.field}-${m.dayIndex ?? ""}-${i}`}>
+                    // The index is enough: the list is recomputed wholesale on
+                    // every query, and a month key and a week key are no longer
+                    // strings from the same space.
+                    <li key={`${m.kind}-${i}`}>
                       <button
                         type="button"
-                        onClick={() => jump(m.monday)}
+                        onClick={() =>
+                          m.kind === "week" ? jump(m.monday) : jumpToMonth(m.monthKey)
+                        }
                         className="w-full text-left px-2 py-1.5 rounded hover:bg-muted/50 transition-colors"
                       >
                         <span className="block text-sm text-foreground">{m.snippet}</span>
                         <span className="block text-[10px] text-muted-foreground">
-                          {weekLabel(m.monday)} · {FIELD_LABEL[m.field]}
-                          {m.dayIndex === undefined ? "" : ` · ${dayName(m.monday, m.dayIndex)}`}
+                          {m.kind === "week" ? weekLabel(m.monday) : monthLabel(m.monthKey)} ·{" "}
+                          {FIELD_LABEL[m.field]}
+                          {m.kind === "week" && m.dayIndex !== undefined
+                            ? ` · ${dayName(m.monday, m.dayIndex)}`
+                            : ""}
                         </span>
                       </button>
                     </li>

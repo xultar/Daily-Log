@@ -16,7 +16,7 @@ function seed() {
 }
 
 const open = (onJump = vi.fn()) => {
-  render(<SearchDialog onJump={onJump} />);
+  render(<SearchDialog onJump={onJump} onJumpToMonth={vi.fn()} />);
   fireEvent.click(screen.getByRole("button", { name: /search/i }));
   return onJump;
 };
