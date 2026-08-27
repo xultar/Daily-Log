@@ -5,6 +5,43 @@ A weekly planner that runs entirely in the browser. All data lives in the user's
 
 Live at https://xultar.github.io/Daily-Log/
 
+## Start here — and what not to read
+
+**This file is already in your context.** It loads automatically every session,
+so never open it again to "check" something; scroll it. The outstanding work is
+in "Pick up here next" below, and each item there is written to be started cold.
+
+Two habits keep a session cheap:
+
+**Read one design note, not the file.** `docs/design-notes.md` is 39 KB —
+*larger than this file* — and reading it end to end is the single most expensive
+mistake available here. Every bullet under "Area notes" names the note that
+explains it. Open that one section and stop.
+
+**Specs and plans are history, not orientation.** `docs/superpowers/specs/` holds
+fifteen approved designs and `plans/` eleven task lists. Read one when you are
+about to change behaviour it describes. Never read them to find out what the app
+does — this file already says.
+
+### Where things live
+
+| To change | Go to |
+| --- | --- |
+| Week/day shape, repair, load/save, palette, colour labels | `src/lib/planner-data.ts` (817 lines — the big one) |
+| Anything touching `localStorage` | `src/lib/storage.ts` — nothing else may call it directly |
+| Month totals, tag history, trends | `src/lib/reporting.ts` |
+| Text search across weeks | `src/lib/search.ts` |
+| Copying a week's shape | `src/lib/week-template.ts` |
+| Which past week to carry from | `src/lib/carry-source.ts` |
+| Backup and restore | `src/lib/export-import.ts` |
+| App state, autosave, cross-tab, the toolbar | `src/components/planner/StudyPlanner.tsx` |
+| A week column / the day view / the paint grid / the month | `DayColumn` / `DailyView` / `TimeGrid` / `MonthlyView` |
+| The four dialogs | `SearchDialog`, `TemplateDialog`, `TrendsDialog`, `RenameTagsDialog` |
+| The weekly colour strip | `WeeklyColorLegend.tsx` |
+
+Tests sit in `src/test/` named for the behaviour, not the module — `carry-bar`,
+`legend-cell`, `tag-history`, `trends`. Grep the behaviour, not the file.
+
 ## Before you change anything
 
 **Pushing to `main` deploys.** `.github/workflows/deploy.yml` fires on every push
@@ -61,8 +98,13 @@ below and there is no other list. One other paragraph in this file mentions a
 backlog being retired; that refers to a duplicate of this one that was deleted
 on 2026-08-26, not to this.
 
-Nothing is half-finished and there are no known defects outstanding. What is
-left is new functionality. Each item below carries what it needs to start cold.
+Nothing is half-finished. Two of the three items are defects found by the
+2026-08-27 shakedown; neither crashes anything or risks stored data.
+
+**Each item below is written to be started cold** — what it is, where the code
+is, what is already there to build on, the open questions, and the traps. If you
+find yourself exploring the codebase to understand an item before starting it,
+the item is underwritten; fix the item.
 
 ### Starting a session here
 
