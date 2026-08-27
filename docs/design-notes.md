@@ -589,6 +589,30 @@ The longer placeholder was expected to clip in the week column and does not:
 measured in a browser, "Daily Log / Notes..." is 68.9px at 8px against 97px of
 available width. There is room for a longer label there if one is ever wanted.
 
+**Today's notes area is washed with `--primary`, and it is the only `dark:`
+variant in the app.** The column header already marks today with `bg-primary/80`;
+the notes area below it repeats that at low strength so the active day is
+distinguishable the whole way down. Riding `--primary` rather than a fixed
+colour is what makes it follow all six accent themes as well as light and dark —
+verified by switching Lavender to Campus Blue and watching both the header and
+the wash move to the same new hue.
+
+The alpha differs per theme, which is why the `dark:` variant exists at all.
+Tokens flip themselves, so nothing here had ever needed one — but alpha is not a
+token, and `--primary` is a deep purple in dark against a pale lavender in
+light. A single 10% wash moved the light page by three of 255, which is
+invisible. Measured: `bg-primary/40` composites to `rgb(242, 236, 248)` on
+white, `dark:bg-primary/15` to `rgb(25, 24, 41)` on the dark page.
+
+**Unlike the month view's wash, nothing here threatens text contrast** — the
+wash is weak in both themes and the note text sits on an all-but-unchanged
+background. The constraint is the opposite one: that the wash be seen at all.
+Do not carry the month view's ceilings into this.
+
+**The wash carries no `aria-current`.** The header alone is the semantic marker,
+and `today.test.tsx` asserts exactly one such element across the week — adding a
+second would break that count and announce the same day twice.
+
 ## A second tab reloads, or says so — it never overwrites in silence
 
 Nothing used to listen for the `storage` event, so a stale second tab reverted

@@ -108,6 +108,35 @@ describe("marking today in the week view", () => {
     expect(container.querySelectorAll('[aria-current="date"]')).toHaveLength(1);
   });
 
+  it("washes today's notes area in the theme's own colour", () => {
+    // Classes rather than computed styles, because jsdom applies no Tailwind.
+    // The wash is decoration only: aria-current stays on the header alone, or
+    // the week would announce the same day twice and the count above would be
+    // two rather than one.
+    const { container } = render(
+      <DayColumn day={createEmptyDay(NOW)} dayIndex={2} onChange={() => {}}
+                 activeColor={1} onActiveColorChange={() => {}} />
+    );
+    const notes = container.querySelector("textarea")!.parentElement!;
+
+    // Both halves: the two themes need different alpha, because --primary is a
+    // deep purple in dark and a pale lavender in light, and one value that
+    // reads in either is invisible in the other.
+    expect(notes.className).toContain("bg-primary/40");
+    expect(notes.className).toContain("dark:bg-primary/15");
+    expect(notes.querySelector('[aria-current="date"]')).toBeNull();
+  });
+
+  it("leaves another day's notes area unwashed", () => {
+    const { container } = render(
+      <DayColumn day={createEmptyDay(new Date(2026, 7, 24))} dayIndex={0} onChange={() => {}}
+                 activeColor={1} onActiveColorChange={() => {}} />
+    );
+    const notes = container.querySelector("textarea")!.parentElement!;
+
+    expect(notes.className).not.toContain("bg-primary");
+  });
+
   it("marks the column whose date is today", () => {
     const { container } = render(<StudyPlanner />);
     const marked = container.querySelector('[aria-current="date"]')!;

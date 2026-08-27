@@ -148,8 +148,25 @@ const DayColumn: React.FC<DayColumnProps> = ({ day, dayIndex, onChange, activeCo
         </span>
       </div>
 
-      {/* Daily Log / Notes — fills remaining height */}
-      <div className="flex-1 p-0.5 min-h-0">
+      {/* Daily Log / Notes — fills remaining height.
+          Today's column gets a wash of the same token the header uses at full
+          strength, so it follows the accent theme rather than being a fixed
+          colour. Decoration only: aria-current belongs to the header alone, or
+          the week announces the same day twice.
+
+          Different alpha per theme, and the first place in this app to need
+          one. Tokens flip themselves, which is why no `dark:` variant existed
+          before — but alpha is not a token. `--primary` is a deep purple in
+          dark and a pale lavender in light, so a single value that reads in one
+          is invisible in the other: at 10% the light wash moved the page by
+          three of 255. Measured rather than guessed, and unlike the month
+          view's wash nothing here threatens text contrast — the constraint is
+          only that it be seen. */}
+      <div
+        className={`flex-1 p-0.5 min-h-0 ${
+          isCurrentDay ? "bg-primary/40 dark:bg-primary/15" : ""
+        }`}
+      >
         <textarea
           value={day.memo}
           onChange={(e) => onChange({ ...day, memo: e.target.value })}
