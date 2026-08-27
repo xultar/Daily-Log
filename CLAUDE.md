@@ -35,53 +35,28 @@ the page renders blank.
 
 ## Where things stand
 
-`main` is deployed and carries the data-integrity work: week repair on load, the
-week-key migration, the export fix, the error boundary, import validation,
-storage guards and the autosave flush.
+`main` is deployed, `origin/main` is level with it, and there is no unmerged
+work. Everything the backlog once listed has shipped; what is left is in
+"Pick up here next".
 
-Everything below merged into `main` and **deployed on 2026-08-25**: the priority
-flag, dark mode with the print fix, native widgets following the colour scheme,
-the whole of carry-forward, and the cross-tab reload notice.
+**What shipped, and when, is `git log` — not this section.** It used to carry a
+hand-written list of every feature and its date. That list drifted within a day
+of being written, which is the same failure this file records under
+"Deliberately not doing": a second copy of something is a second thing to keep
+true, and it will not be. For what a feature does and why it was built that way,
+read `docs/superpowers/specs/`; for the reasoning behind a rule, read
+`docs/design-notes.md`.
 
-Carry-forward shipped as eight tasks — schema, rules, the backwards scan, the
-review bar, the `StudyPlanner` wiring, the sidebar age marker — verified by
-tests and seen working in a browser in both light and dark. Spec and plan are in
-`docs/superpowers/`.
-
-Shipped on **2026-08-26**, all merged, pushed and confirmed live:
-
-- Carry-forward's four non-blocking review items — the review bar's height
-  bound, an ordering assertion for the age marker, a test for the quarantine
-  write, and the shared `AgeMarker`.
-- The `npm test` step in `deploy.yml`, so a red suite now blocks a deploy. It
-  had never existed; before it, a commit with every test failing would have
-  published as readily as a green one.
-- A twelve-tag palette: red, chartreuse and brown, with `0` selecting the tenth
-  and the last two reachable only by picker.
-- Colour labels in backups. The exporter collected week-shaped entries only, so
-  a restore handed back every week and none of the names you gave your tags.
-- A ratchet on palette legibility, across four visions and both themes, computed
-  without a browser.
-- Magenta off lavender, then pink off gray. Pink and gray were the same colour
-  to a deuteranope at ΔE 0.7.
-- The daily legend cell split into a button and a field, which is valid HTML,
-  and the label write moved off mount.
-- Text search across every stored week, from a dialog in the toolbar.
-- Colour in the month view: each cell tints with its dominant tag and names it.
-- Time reporting: bars under the month calendar showing time blocked per tag,
-  which read a future month as a plan.
-
-There is no unmerged work and nothing waiting to deploy.
-
-One note kept because it cost time: GitHub Actions was in a major outage that
-day and cancelled two queued runs without executing a step, reporting one as
+One operational note kept, because it is nowhere else and it cost time: GitHub
+Actions was in a major outage on 2026-08-26 and cancelled two queued runs
+without executing a step, reporting one as
 `failure` and one as `startup_failure`. Neither was a real failure. A superseded
 or cancelled run in this repo does not always say so.
 
 ## Pick up here next — the backlog
 
 **This section is the backlog.** If you were asked for "the backlog", "what's
-next", "the todo list" or "outstanding work", it is the single numbered item
+next", "the todo list" or "outstanding work", it is the two numbered items
 below and there is no other list. One other paragraph in this file mentions a
 backlog being retired; that refers to a duplicate of this one that was deleted
 on 2026-08-26, not to this.
@@ -139,6 +114,31 @@ Does it travel in export, import and a backup?
   other reader of storage assumes damage is possible, and this one must too.
 - Writing on mount is the recurring bug in this repo — see the `dirtyRef` note
   and `DailyView.updateLabel`. Save where the change happens.
+
+### 2. A full shakedown
+
+Nothing here has ever been exercised end to end in one sitting on realistic
+data. Seven features merged on 2026-08-26 alone, each verified on its own.
+
+**What it is:** one deliberate pass over the whole app, with a year of
+real-shaped data, in both appearances and across the six accent themes,
+checking what unit tests structurally cannot — layout, colour, print output, and
+how features behave *together* rather than each alone.
+
+**Worth covering:** printing from the week and month views; an export → clear →
+import round-trip, colour labels included; the cross-tab notice with two real
+tabs open; a week the app has had to repair; all four dialogs at a narrow window;
+the 1–9 paint shortcuts while each dialog is open; and a month boundary, since a
+week straddles one and a day does not.
+
+**Why this is not just clicking around:** jsdom draws nothing, so every measured
+claim in `docs/design-notes.md` — the wash alphas, the contrast ceilings, the
+24px minimum hit target, bar legibility at 24px — was verified once, in
+isolation, at one window size. This is the pass that would catch two of them
+disagreeing with each other.
+
+**Output:** anything found becomes its own backlog item. The shakedown is done
+when the pass is complete, not when everything it found is fixed.
 
 ### The working rhythm in this repo
 
@@ -292,12 +292,11 @@ alignment happens in what the tags are called.
 
 ## Area notes — the rules, with the reasoning in docs/design-notes.md
 
-Twelve long sections moved to `docs/design-notes.md` on 2026-08-26, because this
-file is loaded into every session and had grown to 54 KB. **Nothing was
-deleted.** Each rule that bites is below; the measurements, the failure
-histories and the rejected alternatives are there, verbatim.
-
-Read the matching note before changing anything in that area.
+Each rule that bites is below. The measurements, the failure histories and the
+rejected alternatives live in `docs/design-notes.md`, because this file is
+loaded into every session and the long form had grown past 50 KB. **Nothing was
+deleted; it moved.** Read the matching note before changing anything in that
+area.
 
 - **Time reporting reports blocked time, not spent time.** The app cannot tell a
   plan from a record, so never write "spent" or "went" — a future month is a
@@ -508,21 +507,17 @@ public with no user data in it, and why there is no server to run.
 Export/import into a synced folder gets most of the value for none of the
 architecture.
 
-This heading used to be "Discussed but not started" and held a second copy of
-the outstanding work. It drifted: it went on describing search and month-view
-colour as future work after both had shipped, and repeated three items that
-"Pick up here next" already carried. It was deleted on 2026-08-26.
-
-**The live list is "Pick up here next" and there is no other.** A second copy is
-a second thing to keep true, and it will not be. Nothing here says the work
-itself went away — only this duplicate of it did.
+**The live list is "Pick up here next" and there is no other.** This heading
+once held a second copy of the outstanding work and drifted, describing shipped
+features as future work. A second copy is a second thing to keep true, and it
+will not be. This section is for decisions *not* to build something, not for
+things not yet built.
 
 ## Design docs
 
 - **`docs/design-notes.md`** — the long-form reasoning behind the rules in this
   file: how the numbers were measured, what failed before, which alternatives
-  were rejected. Twelve sections moved there on 2026-08-26 to keep this file
-  loadable. Read the note covering whatever you are about to change.
+  were rejected. Read the note covering whatever you are about to change.
 - **`docs/superpowers/specs/`** — the approved design for each feature, written
   before it was built.
 - **`docs/superpowers/plans/`** — task-by-task implementation plans, for the
@@ -530,8 +525,3 @@ itself went away — only this duplicate of it did.
 
 They record why decisions were made, including several that were reversed after
 review — read the spec before changing behaviour it describes.
-
-One history note: commit `a51b69e` has a message about plan updates but also
-contains `src/hooks/use-is-dark.ts` and a `ColorPicker.tsx` change, because a
-`git add -A` ran while other edits were in progress. The code is correct; only the
-commit boundary is untidy.
