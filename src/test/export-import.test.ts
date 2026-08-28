@@ -111,7 +111,7 @@ describe("exportAsCSV", () => {
   });
 
   it("survives a week whose day lost its fields", () => {
-    const week: Record<string, unknown> = createEmptyWeek(WEEK);
+    const week = createEmptyWeek(WEEK) as unknown as Record<string, unknown>;
     const days = week.days as Record<string, unknown>[];
     delete days[2].timeBlocks;
     delete days[3].subjects;

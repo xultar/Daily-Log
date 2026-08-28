@@ -13,7 +13,10 @@ import { deltaEAs, hslToRgb, simulate, Vision } from "./color-distance";
  * against itself. It says nothing about how any particular person sees.
  */
 
-const VISIONS: Vision[] = ["protanopia", "deuteranopia", "tritanopia"];
+/** The three dichromacies. "normal" is a Vision but is not a floor to hold. */
+type Dichromacy = Exclude<Vision, "normal">;
+
+const VISIONS: Dichromacy[] = ["protanopia", "deuteranopia", "tritanopia"];
 
 function worstPair(mode: "light" | "dark", vision: Vision) {
   let worst = { pair: "", dE: Infinity };
@@ -97,7 +100,7 @@ describe("twelve tags under colourblindness", () => {
   //
   // Pink's lightness is load-bearing in a way that is easy to undo: at 54% in
   // dark it drops tritanopia from 2.4 to 0.2. Re-measure before touching it.
-  const FLOORS: Record<Vision, { light: number; dark: number }> = {
+  const FLOORS: Record<Dichromacy, { light: number; dark: number }> = {
     protanopia: { light: 4.0, dark: 6.5 },
     deuteranopia: { light: 2.5, dark: 5.5 },
     tritanopia: { light: 1.0, dark: 2.3 },

@@ -64,7 +64,7 @@ describe("a search result's field label", () => {
     week.days[4].memo = "Library until four";
     localStorage.setItem("planner-2026-W35", JSON.stringify(week));
 
-    render(<SearchDialog onJump={vi.fn()} />);
+    render(<SearchDialog onJump={vi.fn()} onJumpToMonth={vi.fn()} />);
     fireEvent.click(screen.getByRole("button", { name: /search/i }));
     fireEvent.change(screen.getByRole("textbox", { name: /search/i }), {
       target: { value: "Library" },
@@ -77,7 +77,7 @@ describe("a search result's field label", () => {
     // The dialog's own description listed what it searches and said "memos".
     // Asserted as an absence across the whole dialog, so a fourth copy of the
     // old word cannot reappear somewhere this file did not think to look.
-    render(<SearchDialog onJump={vi.fn()} />);
+    render(<SearchDialog onJump={vi.fn()} onJumpToMonth={vi.fn()} />);
     fireEvent.click(screen.getByRole("button", { name: /search/i }));
 
     expect(screen.queryByText(/memos?/i)).toBeNull();

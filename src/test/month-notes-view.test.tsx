@@ -129,7 +129,7 @@ const mockMetrics = ({ scrollHeight, borderTotal }: { scrollHeight: number; bord
 
 const unmockMetrics = () => {
   for (const name of ["scrollHeight", "clientHeight", "offsetHeight"]) {
-    delete (HTMLTextAreaElement.prototype as Record<string, unknown>)[name];
+    delete (HTMLTextAreaElement.prototype as unknown as Record<string, unknown>)[name];
   }
 };
 

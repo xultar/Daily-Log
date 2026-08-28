@@ -54,10 +54,11 @@ Tests sit in `src/test/` named for the behaviour, not the module — `carry-bar`
 to `main` and publishes to GitHub Pages. Work on a branch and merge only when the
 change has been seen working. Merging is the user's call, not yours.
 
-**A red suite now blocks the deploy.** `deploy.yml` is `npm ci` → `npm test` →
-`npm run build` → Pages. The test step was added on 2026-08-26; until then
+**A red suite or a type error now blocks the deploy.** `deploy.yml` is `npm ci`
+→ `npm run typecheck` → `npm test` → `npm run build` → Pages. The test step was
+added on 2026-08-26 and the typecheck on 2026-08-28; before the first of those,
 nothing verified this repo before it published, and 300 failing tests would have
-deployed as cheerfully as 300 passing ones. Because the step sits before the
+deployed as cheerfully as 300 passing ones. Because both checks sit before the
 build, a failure stops the artifact ever being uploaded, so the live site goes
 on serving the last good build rather than a broken one.
 
@@ -601,13 +602,21 @@ rather than dropping it.
   `react-refresh/only-export-components` and `react-hooks/exhaustive-deps` in
   `src/components/ui/*`, `MonthlyView.tsx` and `theme-context.tsx`. Do not treat
   them as new; do treat any error as new.
-- `npm run build` — clean. **It does not typecheck.** `vite build` transpiles
-  and never runs `tsc`, so a reference to a symbol that has moved or does not
-  exist builds perfectly and fails at runtime. Splitting `planner-data.ts` on
-  2026-08-28 left `dominantTag` calling a palette function it no longer imported;
-  the build was green and ten tests failed. When moving symbols between modules,
-  run `npx tsc --noEmit -p tsconfig.app.json`. It is not in CI and reports six
-  pre-existing errors in test fixtures — read past those and look for yours.
+- `npm run build` — clean. **It does not typecheck**, and never has: `vite
+  build` transpiles and never runs `tsc`, so a reference to a symbol that has
+  moved or does not exist builds perfectly and fails at runtime. Splitting
+  `planner-data.ts` on 2026-08-28 left `dominantTag` calling a palette function
+  it no longer imported; the build was green and ten tests failed.
+- `npm run typecheck` — `tsc -b`, clean, and **now the first step of the deploy
+  gate**, added 2026-08-28 for exactly the reason above. It covers both projects
+  the root `tsconfig.json` references, so `vite.config.ts` is checked too. It
+  writes `*.tsbuildinfo` beside the tsconfigs, which is why `.gitignore` names
+  them.
+
+  Six pre-existing errors in test fixtures were fixed to make this possible —
+  three components rendered without a required `onJumpToMonth`, a vision record
+  missing `normal`, and two casts that needed to go via `unknown`. None was a
+  bug in the app; all were tests the compiler had never been asked about.
 - `npm run dev` — serves at `http://localhost:8080/Daily-Log/`.
   `.claude/launch.json` starts it for the browser preview, so step 4 of
   "Starting a session here" does not mean rediscovering how to run the app.

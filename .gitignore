@@ -12,6 +12,9 @@ dist
 dist-ssr
 *.local
 
+# tsc -b writes these beside the tsconfigs; the typecheck gate runs it
+*.tsbuildinfo
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
