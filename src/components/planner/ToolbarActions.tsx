@@ -55,7 +55,7 @@ const ToolbarActions: React.FC<{ onDataImported: () => void }> = ({ onDataImport
       {/* Theme picker */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="icon" className="h-7 w-7">
+          <Button variant="ghost" size="icon" className="h-7 w-7" aria-label="Appearance and theme">
             <Palette className="h-3.5 w-3.5" />
           </Button>
         </DropdownMenuTrigger>
@@ -105,7 +105,7 @@ const ToolbarActions: React.FC<{ onDataImported: () => void }> = ({ onDataImport
       {/* Export */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="icon" className="h-7 w-7">
+          <Button variant="ghost" size="icon" className="h-7 w-7" aria-label="Export a backup">
             <Download className="h-3.5 w-3.5" />
           </Button>
         </DropdownMenuTrigger>
@@ -118,7 +118,7 @@ const ToolbarActions: React.FC<{ onDataImported: () => void }> = ({ onDataImport
       </DropdownMenu>
 
       {/* Import */}
-      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleImport}>
+      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleImport} aria-label="Import a backup">
         <Upload className="h-3.5 w-3.5" />
       </Button>
     </div>

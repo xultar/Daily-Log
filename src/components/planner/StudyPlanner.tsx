@@ -22,6 +22,13 @@ import { toast } from "@/hooks/use-toast";
 
 type ViewMode = "daily" | "weekly" | "monthly";
 
+/**
+ * The planner's week starts on Monday; `getDay()` counts Sunday as 0. Shared by
+ * the initial state and `goToToday` so the two cannot drift apart — they did
+ * once, and opening the day view landed on the week's Monday rather than today.
+ */
+const weekdayIndex = (d: Date) => (d.getDay() === 0 ? 6 : d.getDay() - 1);
+
 const StudyPlanner: React.FC = () => {
   /**
    * The date being looked at — not the Monday of its week.
@@ -37,7 +44,7 @@ const StudyPlanner: React.FC = () => {
   const [currentDate, setCurrentDate] = useState(() => new Date());
   const [weekData, setWeekData] = useState<WeekData>(() => loadWeek(currentDate));
   const [viewMode, setViewMode] = useState<ViewMode>("weekly");
-  const [selectedDayIndex, setSelectedDayIndex] = useState(0);
+  const [selectedDayIndex, setSelectedDayIndex] = useState(() => weekdayIndex(new Date()));
   const [refreshKey, setRefreshKey] = useState(0);
   const [showWeekends, setShowWeekends] = useState(() => {
     return readItem("planner-show-weekends") !== "false";
@@ -213,8 +220,7 @@ const StudyPlanner: React.FC = () => {
   const goToToday = () => {
     const now = new Date();
     setCurrentDate(now);
-    // getDay() counts Sunday as 0; the planner's week starts on Monday.
-    setSelectedDayIndex(now.getDay() === 0 ? 6 : now.getDay() - 1);
+    setSelectedDayIndex(weekdayIndex(now));
   };
 
   const navigatePrev = () => {
@@ -260,6 +266,10 @@ const StudyPlanner: React.FC = () => {
     [visibleDays]
   );
 
+  // The arrows move by a different unit in each view, so a fixed "Previous"
+  // would be wrong in two views out of three.
+  const navUnit = viewMode === "daily" ? "day" : viewMode === "weekly" ? "week" : "month";
+
   const getNavLabel = () => {
     if (viewMode === "monthly") return format(currentDate, "MMMM yyyy");
     if (viewMode === "daily") return format(dates[selectedDayIndex], "EEEE, MMMM d, yyyy");
@@ -277,13 +287,13 @@ const StudyPlanner: React.FC = () => {
       {/* Top toolbar */}
       <div className="no-print flex items-center justify-between px-3 py-1.5 bg-primary/30 border-b border-border shrink-0">
         <div className="flex items-center gap-1">
-          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={navigatePrev}>
+          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={navigatePrev} aria-label={`Previous ${navUnit}`}>
             <ChevronLeft className="h-4 w-4" />
           </Button>
           <span className="text-xs font-semibold text-primary-foreground min-w-[180px] text-center">
             {getNavLabel()}
           </span>
-          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={navigateNext}>
+          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={navigateNext} aria-label={`Next ${navUnit}`}>
             <ChevronRight className="h-4 w-4" />
           </Button>
           <Button

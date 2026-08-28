@@ -385,7 +385,11 @@ area.
   whenever the current week began in the previous one — 38 days of 2026, and the
   wrong *year* on 1 January, in both the Today button and the initial open. Every
   consumer derives what it needs (`getWeekDates` and `getWeekKey` both work back
-  to the Monday), so nothing requires one.
+  to the Monday), so nothing requires one. **`selectedDayIndex` is the other
+  half of the same position and has to agree with it** — it started at 0 while
+  `currentDate` started at now, so the day view opened on the week's Monday
+  rather than today until 2026-08-28. Both now come from `weekdayIndex`, which
+  exists so the two cannot drift apart again.
 - **Today is marked on the month cell's *number*, not the cell.** A day with
   painted time carries an inline `backgroundColor` for its tag wash, and an
   inline style beats a class, so a cell-level highlight would do nothing on
@@ -529,7 +533,7 @@ rather than dropping it.
 
 ## Baselines
 
-- `npm test` — 541 tests across 53 files. `vitest.config.ts` sets
+- `npm test` — 548 tests across 54 files. `vitest.config.ts` sets
   `testTimeout: 15000` against a 5s default, and that is load-bearing: several
   tests render the whole app and click through it, sitting at 3-4s alone. Under
   full-suite contention they cross 5s — `today.test.tsx` timed out at 5597ms on

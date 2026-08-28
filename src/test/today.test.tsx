@@ -226,3 +226,33 @@ describe("marking today in the week view", () => {
     expect(within(marked as HTMLElement).getByText("8/26")).toBeTruthy();
   });
 });
+
+/**
+ * `goToToday` sets `currentDate` and `selectedDayIndex` together, and its own
+ * comment says why: "the day view lands on today itself". The initial state
+ * used to disagree with it — `currentDate` started at `new Date()` while
+ * `selectedDayIndex` started at 0 — so opening the day view before pressing
+ * Today landed on the week's Monday. On a Friday that is four days wrong, and
+ * the week view beside it was already marking Friday as today.
+ *
+ * The test above cannot catch it: it clicks prev ten times and then Today, so
+ * it only ever sees an index that `goToToday` has already set.
+ */
+describe("opening the day view for the first time", () => {
+  it("lands on today, not on the week's Monday", async () => {
+    render(<StudyPlanner />);
+
+    await click(viewButton("Day"));
+
+    expect(navLabel()).toBe("Wednesday, August 26, 2026");
+  });
+
+  it("lands on today when today is a Sunday", async () => {
+    vi.setSystemTime(new Date(2026, 7, 30, 9, 30)); // Sun 30 Aug 2026
+    render(<StudyPlanner />);
+
+    await click(viewButton("Day"));
+
+    expect(navLabel()).toBe("Sunday, August 30, 2026");
+  });
+});
