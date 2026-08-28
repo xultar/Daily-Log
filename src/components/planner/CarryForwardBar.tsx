@@ -1,5 +1,5 @@
 import React, { useId, useState } from "react";
-import { CarryCandidate, carriedWeeks } from "@/lib/planner-data";
+import { CarryCandidate, carriedWeeks } from "@/lib/carry";
 import { carryRuleClass } from "@/lib/carry-age";
 import { CornerDownRight } from "lucide-react";
 import AgeMarker from "./AgeMarker";

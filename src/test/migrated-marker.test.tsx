@@ -4,13 +4,8 @@ import DailyView from "@/components/planner/DailyView";
 import DayColumn from "@/components/planner/DayColumn";
 import WeeklyTodoSidebar from "@/components/planner/WeeklyTodoSidebar";
 import StudyPlanner from "@/components/planner/StudyPlanner";
-import {
-  createEmptyDay,
-  createEmptyWeek,
-  saveWeek,
-  loadWeek,
-  markMigrated,
-} from "@/lib/planner-data";
+import { createEmptyDay, createEmptyWeek, saveWeek, loadWeek } from "@/lib/planner-data";
+import { markMigrated } from "@/lib/carry";
 import { startOfWeek, subWeeks } from "date-fns";
 import { toast } from "@/hooks/use-toast";
 

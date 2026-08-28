@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { isTagRunStart, displayPositionForColorId } from "@/lib/planner-data";
+import { isTagRunStart, displayPositionForColorId } from "@/lib/palette";
 
 describe("isTagRunStart", () => {
   it("marks the first block of a full-hour run and no others", () => {

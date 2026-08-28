@@ -1,7 +1,8 @@
 import { describe, it, expect, afterEach } from "vitest";
 import { render, cleanup } from "@testing-library/react";
 import DailyView from "@/components/planner/DailyView";
-import { createEmptyDay, getPaletteInDisplayOrder, legendCellBorders } from "@/lib/planner-data";
+import { createEmptyDay } from "@/lib/planner-data";
+import { getPaletteInDisplayOrder, legendCellBorders } from "@/lib/palette";
 
 /**
  * The colour legend is a two-column grid inside a bordered box. Nine entries

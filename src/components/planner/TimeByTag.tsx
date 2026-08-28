@@ -1,5 +1,6 @@
 import React from "react";
-import { BLOCK_COLORS, formatMinutes, getBlockColor, loadColorLabels } from "@/lib/planner-data";
+import { formatMinutes } from "@/lib/planner-data";
+import { BLOCK_COLORS, getBlockColor, loadColorLabels } from "@/lib/palette";
 import { totalsByTag } from "@/lib/reporting";
 
 interface TimeByTagProps {

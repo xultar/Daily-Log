@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { BLOCK_COLORS } from "@/lib/planner-data";
+import { BLOCK_COLORS } from "@/lib/palette";
 import { deltaEAs, hslToRgb, simulate, Vision } from "./color-distance";
 
 /**

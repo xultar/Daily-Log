@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { exportAllData, exportAsJSON, importFromJSON } from "@/lib/export-import";
-import { createEmptyWeek, getWeekKey, loadColorLabels } from "@/lib/planner-data";
+import { createEmptyWeek, getWeekKey } from "@/lib/planner-data";
+import { loadColorLabels } from "@/lib/palette";
 
 /**
  * The labels are the only user-typed content that does not live inside a week,

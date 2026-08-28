@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { carriedWeeks, collectCarryForward, applyCarryForward, createEmptyWeek, WeekData } from "@/lib/planner-data";
+import { createEmptyWeek, WeekData } from "@/lib/planner-data";
+import { carriedWeeks, collectCarryForward, applyCarryForward } from "@/lib/carry";
 
 describe("carriedWeeks", () => {
   it("is zero when the item originated in this week", () => {

@@ -1,5 +1,6 @@
 import React from "react";
-import { TodoItem, carriedWeeks } from "@/lib/planner-data";
+import { TodoItem } from "@/lib/planner-data";
+import { carriedWeeks } from "@/lib/carry";
 import { carryRuleClass } from "@/lib/carry-age";
 import { Plus, Strikethrough } from "lucide-react";
 import MigratedMarker from "./MigratedMarker";

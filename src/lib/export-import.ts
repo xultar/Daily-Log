@@ -1,11 +1,5 @@
-import {
-  BLOCK_COLORS,
-  WeekData,
-  loadAllWeeks,
-  loadColorLabels,
-  saveColorLabels,
-  weekKeyForStoredWeek,
-} from "./planner-data";
+import { WeekData, loadAllWeeks, weekKeyForStoredWeek } from "./planner-data";
+import { BLOCK_COLORS, loadColorLabels, saveColorLabels } from "./palette";
 import { writeItem } from "./storage";
 import { isMonthKey, loadAllMonthNotes, saveMonthNote } from "./month-notes";
 

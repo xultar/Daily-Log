@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { format, parse, isToday } from "date-fns";
-import { DayData, calcDayTotal, getBlockColor, getBlockTint } from "@/lib/planner-data";
+import { DayData, calcDayTotal } from "@/lib/planner-data";
+import { getBlockColor, getBlockTint } from "@/lib/palette";
 import TimeGrid from "./TimeGrid";
 import ColorPicker from "./ColorPicker";
 import { Flag } from "lucide-react";

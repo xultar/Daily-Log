@@ -7,7 +7,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { scheduleToWeek } from "@/lib/planner-data";
+import { scheduleToWeek } from "@/lib/carry";
 import { toast } from "@/hooks/use-toast";
 
 /**

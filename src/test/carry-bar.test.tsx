@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, cleanup, act, within } from "@testing-library/react";
 import CarryForwardBar from "@/components/planner/CarryForwardBar";
-import { CarryCandidate, saveWeek, createEmptyWeek, loadWeek } from "@/lib/planner-data";
+import { saveWeek, createEmptyWeek, loadWeek } from "@/lib/planner-data";
+import { CarryCandidate } from "@/lib/carry";
 import { startOfWeek, subWeeks, addWeeks } from "date-fns";
 import StudyPlanner from "@/components/planner/StudyPlanner";
 

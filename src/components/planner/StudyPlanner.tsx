@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { startOfWeek, addWeeks, subWeeks, addMonths, subMonths, format, parse } from "date-fns";
-import { WeekData, DayData, TodoItem, CarryCandidate, loadWeek, saveWeek, collectCarryForward, applyCarryForward, markMigrated } from "@/lib/planner-data";
+import { WeekData, DayData, TodoItem, loadWeek, saveWeek } from "@/lib/planner-data";
+import { CarryCandidate, collectCarryForward, applyCarryForward, markMigrated } from "@/lib/carry";
 import { findCarrySource, isCurrentOrFutureWeek } from "@/lib/carry-source";
 import WeeklyTodoSidebar from "./WeeklyTodoSidebar";
 import DayColumn from "./DayColumn";

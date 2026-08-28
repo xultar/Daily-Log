@@ -10,12 +10,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-  BLOCK_COLORS,
-  formatMinutes,
-  getBlockColor,
-  loadColorLabels,
-} from "@/lib/planner-data";
+import { formatMinutes } from "@/lib/planner-data";
+import { BLOCK_COLORS, getBlockColor, loadColorLabels } from "@/lib/palette";
 import { Trends, trendsByMonth } from "@/lib/reporting";
 
 /** A rolling year. Twelve columns fit at dialog width without crowding. */

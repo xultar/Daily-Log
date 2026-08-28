@@ -15,7 +15,8 @@ import MonthNotes from "./MonthNotes";
 import { monthKeyOf } from "@/lib/month-notes";
 import { useTheme } from "@/lib/theme-context";
 import { resolveScheme, prefersDark } from "@/lib/color-scheme";
-import { loadWeek, calcDayTotal, getWeekKey, getWeekDates, dominantTag, getBlockTint, tintAlpha, WASH_CEILING_DARK, WASH_CEILING_LIGHT, loadColorLabels, BLOCK_COLORS } from "@/lib/planner-data";
+import { loadWeek, calcDayTotal, getWeekKey, getWeekDates, dominantTag, tintAlpha, WASH_CEILING_DARK, WASH_CEILING_LIGHT } from "@/lib/planner-data";
+import { getBlockTint, loadColorLabels, BLOCK_COLORS } from "@/lib/palette";
 
 interface MonthlyViewProps {
   currentDate: Date;

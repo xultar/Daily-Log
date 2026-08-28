@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { exportAllData, exportAsCSV, exportAsJSON, importFromJSON } from "@/lib/export-import";
-import { createEmptyWeek, getWeekKey, saveColorLabels } from "@/lib/planner-data";
+import { createEmptyWeek, getWeekKey } from "@/lib/planner-data";
+import { saveColorLabels } from "@/lib/palette";
 
 /**
  * exportAllData used to treat every `planner-*` entry as a week. Two settings

@@ -2,7 +2,7 @@ import { describe, it, expect, vi, afterEach } from "vitest";
 import { render, screen, fireEvent, cleanup } from "@testing-library/react";
 import CarryForwardBar from "@/components/planner/CarryForwardBar";
 import WeeklyTodoSidebar from "@/components/planner/WeeklyTodoSidebar";
-import { CarryCandidate } from "@/lib/planner-data";
+import { CarryCandidate } from "@/lib/carry";
 import { carryRuleClass } from "@/lib/carry-age";
 
 /**

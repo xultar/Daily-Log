@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { buildTagPaletteCss, buildThemeCss } from "@/lib/tag-palette";
-import { BLOCK_COLORS } from "@/lib/planner-data";
+import { BLOCK_COLORS } from "@/lib/palette";
 
 describe("buildTagPaletteCss", () => {
   const css = buildTagPaletteCss();

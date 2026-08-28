@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { format, parse, isValid, startOfWeek } from "date-fns";
-import { DayData, calcDayTotal, calcDayColorMinutes, formatMinutes, getPaletteInDisplayOrder, legendCellBorders, loadColorLabels, saveColorLabels, getBlockColor, getBlockTint } from "@/lib/planner-data";
+import { DayData, calcDayTotal, calcDayColorMinutes, formatMinutes } from "@/lib/planner-data";
+import { getPaletteInDisplayOrder, legendCellBorders, loadColorLabels, saveColorLabels, getBlockColor, getBlockTint } from "@/lib/palette";
 import TimeGrid from "./TimeGrid";
 import { Flag, Plus, Strikethrough, X } from "lucide-react";
 import MigratedMarker from "./MigratedMarker";

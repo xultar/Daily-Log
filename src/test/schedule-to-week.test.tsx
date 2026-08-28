@@ -3,14 +3,8 @@ import { render, screen, cleanup, fireEvent } from "@testing-library/react";
 import DailyView from "@/components/planner/DailyView";
 import DayColumn from "@/components/planner/DayColumn";
 import WeeklyTodoSidebar from "@/components/planner/WeeklyTodoSidebar";
-import {
-  createEmptyDay,
-  createEmptyWeek,
-  saveWeek,
-  loadWeek,
-  hasStoredWeek,
-  scheduleToWeek,
-} from "@/lib/planner-data";
+import { createEmptyDay, createEmptyWeek, saveWeek, loadWeek, hasStoredWeek } from "@/lib/planner-data";
+import { scheduleToWeek } from "@/lib/carry";
 
 /**
  * The Bullet Journal `<` bullet. Carry-forward answers "not this week, next

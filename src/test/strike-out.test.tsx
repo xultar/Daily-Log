@@ -3,14 +3,8 @@ import { render, screen, cleanup, fireEvent } from "@testing-library/react";
 import DailyView from "@/components/planner/DailyView";
 import DayColumn from "@/components/planner/DayColumn";
 import WeeklyTodoSidebar from "@/components/planner/WeeklyTodoSidebar";
-import {
-  createEmptyDay,
-  createEmptyWeek,
-  repairWeek,
-  collectCarryForward,
-  saveWeek,
-  loadWeek,
-} from "@/lib/planner-data";
+import { createEmptyDay, createEmptyWeek, repairWeek, saveWeek, loadWeek } from "@/lib/planner-data";
+import { collectCarryForward } from "@/lib/carry";
 import { applyTemplate } from "@/lib/week-template";
 
 /**

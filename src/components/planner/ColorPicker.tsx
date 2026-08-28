@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from "react";
-import { getPaletteInDisplayOrder, COLOR_IDS_IN_DISPLAY_ORDER } from "@/lib/planner-data";
+import { getPaletteInDisplayOrder, COLOR_IDS_IN_DISPLAY_ORDER } from "@/lib/palette";
 
 interface ColorPickerProps {
   /** Raw client coordinates of the triggering event. Clamped internally. */

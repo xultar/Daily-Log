@@ -1,13 +1,5 @@
 import { describe, it, expect } from "vitest";
-import {
-  createEmptyDay,
-  dominantTag,
-  tintAlpha,
-  WASH_FLOOR,
-  WASH_CEILING_DARK,
-  WASH_CEILING_LIGHT,
-  DayData,
-} from "@/lib/planner-data";
+import { createEmptyDay, dominantTag, tintAlpha, WASH_FLOOR, WASH_CEILING_DARK, WASH_CEILING_LIGHT, DayData } from "@/lib/planner-data";
 
 const DATE = new Date(2026, 7, 26);
 

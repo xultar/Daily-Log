@@ -1,21 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import {
-  BLOCK_COLORS,
-  getBlockColor,
-  COLOR_IDS_IN_DISPLAY_ORDER,
-  getPaletteInDisplayOrder,
-  colorIdForDisplayPosition,
-  createEmptyDay,
-  createEmptyWeek,
-  calcDayTotal,
-  calcDayColorMinutes,
-  calcWeekColorMinutes,
-  formatMinutes,
-  saveWeek,
-  loadWeek,
-  getBlockTint,
-  mondayOfKey,
-} from "@/lib/planner-data";
+import { createEmptyDay, createEmptyWeek, calcDayTotal, calcDayColorMinutes, calcWeekColorMinutes, formatMinutes, saveWeek, loadWeek, mondayOfKey } from "@/lib/planner-data";
+import { BLOCK_COLORS, getBlockColor, COLOR_IDS_IN_DISPLAY_ORDER, getPaletteInDisplayOrder, colorIdForDisplayPosition, getBlockTint } from "@/lib/palette";
 
 describe("BLOCK_COLORS", () => {
   it("has twelve entries", () => {

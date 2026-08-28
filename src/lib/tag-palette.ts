@@ -1,4 +1,4 @@
-import { BLOCK_COLORS } from "./planner-data";
+import { BLOCK_COLORS } from "./palette";
 
 /**
  * The tag palette as CSS custom properties, defined three times.

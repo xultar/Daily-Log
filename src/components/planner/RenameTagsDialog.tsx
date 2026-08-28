@@ -9,7 +9,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { getPaletteInDisplayOrder } from "@/lib/planner-data";
+import { getPaletteInDisplayOrder } from "@/lib/palette";
 
 /**
  * Rename every colour tag in one place.

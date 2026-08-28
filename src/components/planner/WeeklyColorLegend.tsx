@@ -1,10 +1,6 @@
 import React, { useState } from "react";
-import {
-  getPaletteInDisplayOrder,
-  loadColorLabels,
-  saveColorLabels,
-  formatMinutes,
-} from "@/lib/planner-data";
+import { formatMinutes } from "@/lib/planner-data";
+import { getPaletteInDisplayOrder, loadColorLabels, saveColorLabels } from "@/lib/palette";
 import RenameTagsDialog from "./RenameTagsDialog";
 
 interface WeeklyColorLegendProps {

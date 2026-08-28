@@ -1,12 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import {
-  HOUR_LABELS,
-  formatHourLabel,
-  getBlockColor,
-  isTagRunStart,
-  displayPositionForColorId,
-  colorIdForDisplayPosition,
-} from "@/lib/planner-data";
+import { HOUR_LABELS, formatHourLabel } from "@/lib/planner-data";
+import { getBlockColor, isTagRunStart, displayPositionForColorId, colorIdForDisplayPosition } from "@/lib/palette";
 import ColorPicker from "./ColorPicker";
 
 interface TimeGridProps {

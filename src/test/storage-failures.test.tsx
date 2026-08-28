@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { render, screen, cleanup, act, fireEvent } from "@testing-library/react";
-import { loadWeek, saveWeek, createEmptyWeek, saveColorLabels, loadColorLabels } from "@/lib/planner-data";
+import { loadWeek, saveWeek, createEmptyWeek } from "@/lib/planner-data";
+import { saveColorLabels, loadColorLabels } from "@/lib/palette";
 import { exportAllData } from "@/lib/export-import";
 import { ThemeProvider, THEMES } from "@/lib/theme-context";
 import StudyPlanner from "@/components/planner/StudyPlanner";

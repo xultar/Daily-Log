@@ -1,12 +1,7 @@
 import React from "react";
 import { format, parse } from "date-fns";
-import {
-  BLOCK_COLORS,
-  COLOR_IDS_IN_DISPLAY_ORDER,
-  formatMinutes,
-  getBlockColor,
-  loadColorLabels,
-} from "@/lib/planner-data";
+import { formatMinutes } from "@/lib/planner-data";
+import { BLOCK_COLORS, COLOR_IDS_IN_DISPLAY_ORDER, getBlockColor, loadColorLabels } from "@/lib/palette";
 import { TagUse, tagHistory } from "@/lib/reporting";
 
 /** "Tue 19 Aug 2026" — the day, since that is the answer being given. */

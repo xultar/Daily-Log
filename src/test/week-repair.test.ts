@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { loadWeek, getWeekKey, getWeekDates, createEmptyWeek, BLOCK_COLORS } from "@/lib/planner-data";
+import { loadWeek, getWeekKey, getWeekDates, createEmptyWeek } from "@/lib/planner-data";
+import { BLOCK_COLORS } from "@/lib/palette";
 import { format } from "date-fns";
 
 /**

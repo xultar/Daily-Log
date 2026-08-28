@@ -21,7 +21,7 @@ mistake available here. Every bullet under "Area notes" names the note that
 explains it. Open that one section and stop.
 
 **Specs and plans are history, not orientation.** `docs/superpowers/specs/` holds
-twenty-two approved designs and `plans/` twelve task lists. Read one when you are
+twenty-three approved designs and `plans/` twelve task lists. Read one when you are
 about to change behaviour it describes. Never read them to find out what the app
 does — this file already says.
 
@@ -29,13 +29,16 @@ does — this file already says.
 
 | To change | Go to |
 | --- | --- |
-| Week/day shape, repair, load/save, palette, colour labels | `src/lib/planner-data.ts` (817 lines — the big one) |
+| Week/day shape, repair, load/save, week keys | `src/lib/planner-data.ts` (568 lines) |
+| The palette, display order, colour labels | `src/lib/palette.ts` |
+| Carrying, migrating and scheduling work | `src/lib/carry.ts` |
 | Anything touching `localStorage` | `src/lib/storage.ts` — nothing else may call it directly |
 | Month totals, tag history, trends | `src/lib/reporting.ts` |
 | Text search across weeks and months | `src/lib/search.ts` |
 | Notes on a month | `src/lib/month-notes.ts`, `MonthNotes.tsx` |
 | Copying a week's shape | `src/lib/week-template.ts` |
 | Which past week to carry from | `src/lib/carry-source.ts` |
+| How an item's age is drawn | `src/lib/carry-age.ts` |
 | Backup and restore | `src/lib/export-import.ts` |
 | App state, autosave, cross-tab, the toolbar | `src/components/planner/StudyPlanner.tsx` |
 | A week column / the day view / the paint grid / the month | `DayColumn` / `DailyView` / `TimeGrid` / `MonthlyView` |
@@ -185,7 +188,9 @@ Two habits earned their keep repeatedly and are worth keeping:
 ## The one rule that can corrupt user data
 
 There are two numbers that both look like "the colour number", and confusing them
-writes wrong values into weeks people have already planned.
+writes wrong values into weeks people have already planned. They live in
+`src/lib/palette.ts`, split out of `planner-data.ts` on 2026-08-28 so the rule
+has a file named after it.
 
 - **Storage id** — the 1-based position in `BLOCK_COLORS`. It is what gets
   persisted: the values inside `timeBlocks`, the keys of `planner-color-labels`,
@@ -596,7 +601,13 @@ rather than dropping it.
   `react-refresh/only-export-components` and `react-hooks/exhaustive-deps` in
   `src/components/ui/*`, `MonthlyView.tsx` and `theme-context.tsx`. Do not treat
   them as new; do treat any error as new.
-- `npm run build` — clean
+- `npm run build` — clean. **It does not typecheck.** `vite build` transpiles
+  and never runs `tsc`, so a reference to a symbol that has moved or does not
+  exist builds perfectly and fails at runtime. Splitting `planner-data.ts` on
+  2026-08-28 left `dominantTag` calling a palette function it no longer imported;
+  the build was green and ten tests failed. When moving symbols between modules,
+  run `npx tsc --noEmit -p tsconfig.app.json`. It is not in CI and reports six
+  pre-existing errors in test fixtures — read past those and look for yours.
 - `npm run dev` — serves at `http://localhost:8080/Daily-Log/`.
   `.claude/launch.json` starts it for the browser preview, so step 4 of
   "Starting a session here" does not mean rediscovering how to run the app.
