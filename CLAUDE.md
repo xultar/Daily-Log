@@ -559,7 +559,13 @@ rather than dropping it.
   `src/components/ui/*`, `MonthlyView.tsx` and `theme-context.tsx`. Do not treat
   them as new; do treat any error as new.
 - `npm run build` — clean
-- `npm run dev` — serves at `http://localhost:8080/Daily-Log/`
+- `npm run dev` — serves at `http://localhost:8080/Daily-Log/`.
+  `.claude/launch.json` starts it for the browser preview, so step 4 of
+  "Starting a session here" does not mean rediscovering how to run the app.
+  **The config's `url` is the bare origin and has to be** — a launch entry may
+  not carry a path — so the preview opens at `/`, which serves the shell with
+  every asset 404ing, and you then navigate to `/Daily-Log/` yourself. A blank
+  first frame there is the base path, not a broken build.
 
 ## Known open issues
 
