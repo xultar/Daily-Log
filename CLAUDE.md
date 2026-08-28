@@ -21,7 +21,7 @@ mistake available here. Every bullet under "Area notes" names the note that
 explains it. Open that one section and stop.
 
 **Specs and plans are history, not orientation.** `docs/superpowers/specs/` holds
-twenty-one approved designs and `plans/` twelve task lists. Read one when you are
+twenty-two approved designs and `plans/` twelve task lists. Read one when you are
 about to change behaviour it describes. Never read them to find out what the app
 does — this file already says.
 
@@ -134,7 +134,7 @@ backlog being retired; that refers to a duplicate of this one deleted on
 around the Bullet Journal method, where reviewing an open task ends by migrating
 it, scheduling it, or striking it out. Striking out, the migration escalation
 and the `>` marker all shipped on 2026-08-28; scheduling is the last of the four
-and is agreed in principle only.
+and has an approved design ready to build.
 
 **A backlog is not an invitation to invent work beyond it.** Ask what is wanted.
 If something else is agreed, write it here first, in the form described below,
@@ -145,25 +145,40 @@ is, what is already there to build on, the open questions, and the traps. If you
 find yourself exploring the codebase to understand an item before starting it,
 the item is underwritten; fix the item.
 
-### 1. Schedule a task to a chosen week
+### 1. Schedule a task to a chosen week — design approved, ready to build
 
-The `<` bullet, and the closest thing to a Future Log this app needs: push a
-task to a specific later week rather than only the next one. `findCarrySource`
-and `applyCarryForward` already do the copying; what is missing is choosing the
-destination.
+The `<` bullet: send an open item to a week you pick rather than only to the
+next one. Carry-forward answers "not this week, next week" and has nothing for
+"not for a month", so those tasks either get migrated over and over or leave the
+planner and are forgotten.
 
-**Open questions for the spec:** where the week picker lives, whether a
-scheduled item is visible in the origin week before its target arrives, and
-whether it should be offered from the carry bar or from the row.
+**The design is `docs/superpowers/specs/2026-08-28-schedule-to-week-design.md`.
+Read it before starting.** In short: a row button in `DailyView` and
+`WeeklyTodoSidebar` opening a relative-week menu; `scheduleToWeek` writes the
+item into that week's Weekly Actions, creating the week if it does not exist;
+the origin gains the existing `migratedTo` marker.
 
-**Traps:** the same cross-week write as item 3, plus the week-key rules — a
-destination key must come from `getWeekKey` with `getISOWeekYear`, never from
-the calendar year, and a week's home is decided by the dates it carries. See
-"Week keys pair an ISO week with an ISO week-year".
+**Traps:**
 
-**Not doing a Future Log as a separate view.** Month notes on a future month
-already give somewhere to write "September: conference", and a second place to
-put future items is a second place to forget them.
+- **Do not mark the origin with `markMigrated`.** It matches by text and marks
+  only *flagged* daily rows, because it serves a bulk carry where the rows are
+  unknown. Here the component knows the exact item, so an unflagged row would be
+  silently skipped. The origin is the week on screen — mark it through the
+  ordinary `onChange`, spreading the item.
+- **Destination first, origin second.** A refused destination write must leave
+  nothing scheduled and nothing claiming to be. Marking first would leave a week
+  saying an item went somewhere it never arrived.
+- **A scheduled item lands with no `origin`.** `origin` means slippage and drives
+  the age marker; an item placed eight weeks out has not slipped eight times.
+- **Offsets come from `addWeeks` on the viewed Monday, and the key from
+  `getWeekKey`.** Never build a key from a calendar year — see "Week keys pair an
+  ISO week with an ISO week-year", and note an eight-week offset from October
+  lands squarely in the December weeks that collide.
+- **Keep the menu's `role="menu"`.** `TimeGrid`'s keydown guard tests for it so
+  an open menu swallows digits; without it, typing arms colour tags.
+
+**This is the last of the four Bullet Journal items.** When it ships the backlog
+is empty, and that is not a cue to invent more.
 
 ### Starting a session here
 
