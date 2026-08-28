@@ -1058,3 +1058,61 @@ The two Node 24 runs sit inside the Node 20 spread, which is 15s wide. Two
 samples against a spread that size supports no conclusion in either direction,
 so none is drawn. If the question ever matters, it needs enough runs to separate
 the medians, not two runs that happen to look tidy.
+
+## Two directories Windows would not delete, and the rename that diagnosed it
+
+Background-task worktrees are created at `.claude/worktrees/<name>`. Two of them
+— `charming-jemison-297ab1` and `friendly-dirac-5644c4` — outlived their tasks
+on 2026-08-27 as empty directories that would not delete. They were the whole of
+the backlog for a day, and are recorded here because the technique that ended
+them is worth more than the incident.
+
+Git had already let go of both. `git worktree list` showed only the main
+checkout, so nothing referred to them and `git worktree prune` had nothing to
+do. `git worktree remove` is the wrong tool for that state and errors rather
+than helping — it wants a registered worktree. This was purely a filesystem
+problem.
+
+### Four attempts, and then an instrument
+
+Refused, in order: `rmdir` from Git Bash, `Remove-Item -Recurse -Force`, and
+`cmd /c rmdir` run from `C:\` so that no shell of ours was standing inside the
+tree. Three routes, one failure, and the obvious next move is a fourth flag.
+
+The fourth command was `Rename-Item`, and it was not another attempt. On Windows
+a directory that merely contains an open handle can still be renamed; a
+directory that is some process's **current working directory** cannot. So the
+rename is a probe that separates two lock classes which produce identical
+"access denied" text on delete. It refused, which said: not a stray handle
+somebody could close, but a live process's cwd — and that ends when the process
+does, not when you find a better flag.
+
+**The claim the probe supports is narrower than it looks**, and the honest
+version is worth keeping. A reboot on 2026-08-28 at 09:03 released both, and the
+first `rmdir` afterwards exited 0. That is consistent with the diagnosis but
+does not prove it: *any* process-held lock ends when the process does, so one
+reboot cannot distinguish a cwd lock from the alternatives. What the probe
+actually earned was the decision to stop escalating and wait, and that decision
+was correct.
+
+### The lead that was wrong
+
+Four `node` processes had started at exactly the background task's start time,
+which reads like a confession. They were this session's own MCP servers. The
+holder could not be identified at all without `handle.exe` or an elevated
+`openfiles`, neither of which was worth installing for this.
+
+Killing on that evidence was rejected on cost, not on doubt. The downside of
+waiting was two empty, untracked directories inside `.claude/`, which eslint
+already ignores — invisible to git, and incapable of affecting a test run, a
+lint run or a build. The downside of a wrong kill was somebody's unsaved work.
+When the failure modes are that asymmetric the weak evidence does not need
+resolving; it needs declining.
+
+### What to carry forward
+
+Escalating privileges and flags against a lock is guessing. Identify the lock
+class first — the rename probe costs one command — then decide between clearing
+it and outliving it. A thing that is provably harmless in the meantime can
+simply be left on the backlog with the release condition written into it, which
+is what made this one a two-command job the following morning.

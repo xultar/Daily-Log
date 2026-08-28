@@ -15,7 +15,7 @@ a cue to go looking elsewhere.
 
 Two habits keep a session cheap:
 
-**Read one design note, not the file.** `docs/design-notes.md` is 51 KB —
+**Read one design note, not the file.** `docs/design-notes.md` is 60 KB —
 *larger than this file* — and reading it end to end is the single most expensive
 mistake available here. Every bullet under "Area notes" names the note that
 explains it. Open that one section and stop.
@@ -123,20 +123,22 @@ or cancelled run in this repo does not always say so.
 
 ## Pick up here next — the backlog
 
-**This section is the backlog.** If you were asked for "the backlog", "what's
-next", "the todo list" or "outstanding work", it is the single numbered item
-below and there is no other list. One other paragraph in this file mentions a
-backlog being retired; that refers to a duplicate of this one deleted on
-2026-08-26, not to this.
+**This section is the backlog, and it is empty.** If you were asked for "the
+backlog", "what's next", "the todo list" or "outstanding work", the answer is
+that there is none and there is no other list to go and check. One other
+paragraph in this file mentions a backlog being retired; that refers to a
+duplicate of this one deleted on 2026-08-26, not to this.
 
-**Nothing in the app is broken.** The one item is housekeeping on this machine,
-not a defect: two empty directories that a lock will not let go of. The three
-real items were closed on 2026-08-27 — month notes shipped, the week's row
-alignment was fixed in the view, and backing up the show-weekends preference was
-decided against. See "Deliberately not doing" for that last one; it is a
-decision, not a gap.
+**Nothing in the app is broken.** The last three real items were closed on
+2026-08-27 — month notes shipped, the week's row alignment was fixed in the
+view, and backing up the show-weekends preference was decided against. See
+"Deliberately not doing" for that last one; it is a decision, not a gap. The
+fourth item was housekeeping rather than a defect: two empty worktree
+directories held by a process's working directory, which four removal routes
+refused on 2026-08-27 and a reboot released on 2026-08-28. `.claude/worktrees`
+is empty and `git worktree list` shows only the main checkout.
 
-**A short backlog is not an invitation to invent work.** Ask what is wanted. If
+**An empty backlog is not an invitation to invent work.** Ask what is wanted. If
 something is agreed, write it here first, in the form described below, and then
 start it.
 
@@ -144,44 +146,6 @@ start it.
 is, what is already there to build on, the open questions, and the traps. If you
 find yourself exploring the codebase to understand an item before starting it,
 the item is underwritten; fix the item.
-
-### 1. Delete two locked worktree directories, after a reboot
-
-`.claude/worktrees/charming-jemison-297ab1` and
-`.claude/worktrees/friendly-dirac-5644c4` are empty leftovers from background
-task worktrees. Both are already deregistered — `git worktree list` shows only
-the main checkout — so nothing in git refers to them and `git worktree prune`
-has nothing left to do.
-
-**What to run**, once the machine has been rebooted (planned as of 2026-08-27):
-
-```bash
-rmdir "C:\Claude\Projects\Daily-Log\.claude\worktrees\charming-jemison-297ab1" "C:\Claude\Projects\Daily-Log\.claude\worktrees\friendly-dirac-5644c4"
-```
-
-Then check `.claude/worktrees` is empty or gone, and that `git worktree list`
-still shows only the main checkout.
-
-**Why it is not already done.** A process holds one of them as its working
-directory. Four removal routes were tried on 2026-08-27 and all refused: `rmdir`
-from Git Bash, `Remove-Item -Recurse -Force`, `cmd /c rmdir` run from `C:\`, and
-finally `Rename-Item`. That last one is the diagnosis rather than another
-attempt — a mere open handle still permits a rename, so a refusal there means a
-current-working-directory lock, which only ends when that process does.
-
-**Traps:**
-
-- **Do not run `git worktree remove`.** They are already deregistered; it errors
-  rather than helping.
-- **Do not go hunting for the process to kill.** The holder could not be
-  identified without `handle.exe` or an elevated `openfiles`, and the obvious
-  lead was wrong: four `node` processes started at exactly the background task's
-  start time turned out to be the session's own MCP servers. Killing the wrong
-  one costs somebody their unsaved work, which is a worse outcome than two empty
-  folders.
-- **They are harmless until then.** Empty, untracked, invisible to git, and
-  inside `.claude/`, which eslint already ignores — so they cannot affect a test
-  run, a lint run, or a build.
 
 ### Starting a session here
 
