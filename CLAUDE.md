@@ -21,7 +21,7 @@ mistake available here. Every bullet under "Area notes" names the note that
 explains it. Open that one section and stop.
 
 **Specs and plans are history, not orientation.** `docs/superpowers/specs/` holds
-eighteen approved designs and `plans/` twelve task lists. Read one when you are
+twenty-one approved designs and `plans/` twelve task lists. Read one when you are
 about to change behaviour it describes. Never read them to find out what the app
 does — this file already says.
 
@@ -133,9 +133,10 @@ backlog being retired; that refers to a duplicate of this one deleted on
 2026-08-28, not defects. They come from one observation: the app is built around
 the Bullet Journal method, where reviewing an open task ends by migrating it,
 scheduling it, or striking it out. Striking out and the migration escalation
-both shipped on 2026-08-28. The two below are agreed in principle and each needs
-its own spec first — and both write to a week that is not the one loaded, the
-shape of the `bringForward` bug, so neither is a casual afternoon.
+both shipped on 2026-08-28. Item 1 has an approved design and is ready to build;
+item 2 is agreed in principle and needs its own spec first. Both write to a week
+that is not the one loaded — the shape of the `bringForward` bug, so neither is
+a casual afternoon.
 
 **A backlog is not an invitation to invent work beyond it.** Ask what is wanted.
 If something else is agreed, write it here first, in the form described below,
@@ -146,23 +147,37 @@ is, what is already there to build on, the open questions, and the traps. If you
 find yourself exploring the codebase to understand an item before starting it,
 the item is underwritten; fix the item.
 
-### 1. Mark the source row as migrated
+### 1. Mark the source row as migrated — design approved, ready to build
 
-The `>` signifier: once an item has been carried, the week it came from should
-show it as moved on rather than still open. Today carry-forward copies and
-leaves the source untouched, so a past week reads as having open tasks that were
-in fact migrated.
+The `>` signifier: once an item has been carried, the week it came from shows it
+as moved on rather than still open. Today a past week reads as having open tasks
+that were in fact migrated, and it reads falser the more diligently they are.
 
-**This is the risky one and should not be started casually.** It writes to a
-week that is not the one loaded in `weekData`, which is exactly the shape of the
-`bringForward` bug — closing over `weekData` once wrote one week's contents
-under another week's key with the whole suite green. Read "Carrying unfinished
-work forward copies; it never moves" in `docs/design-notes.md` first.
+**The design is `docs/superpowers/specs/2026-08-28-migrated-marker-design.md`.
+Read it before starting** — most of it is about the write, not the feature. In
+short: `migratedTo` holds the destination Monday on the source row or todo,
+drawn as a `›` before the text, written by a new `markMigrated` in
+`planner-data.ts` from `bringForward`.
 
-**Open questions for the spec:** whether marking the source counts as "moving"
-and therefore contradicts the copies-never-moves rule, or is merely an
-annotation; and what happens when the carried copy is later struck out or
-deleted.
+**This is the first thing in the app that writes to a week other than the one on
+screen**, and the traps are all about that:
+
+- **Reload the source week; never write the scanned snapshot.** The week
+  captured when the bar was built is minutes old, and writing it back reverts
+  every edit made since, silently. Same class as closing over `weekData`.
+- **Never `setWeekData`.** That writes the week on screen — the `bringForward`
+  bug exactly.
+- **The source key can never be the viewed week**, because the bar shows only on
+  current-or-future weeks and the scan runs strictly backwards. The direct
+  `saveWeek` is safe only while that holds; if it stops holding, the write races
+  the autosave debounce.
+- **A refused mark must not roll back the carry.** They are separate writes;
+  `saveWeek` returns a boolean and `saveFailedRef` already owns the toast.
+- **Parse the source Monday back to a Date carefully.** A December Monday is
+  where the calendar year and the ISO week-year disagree — see "Week keys pair
+  an ISO week with an ISO week-year".
+- **`StudyPlanner` currently discards the source Monday**, and a candidate has
+  no locator back to its row; the spec closes both gaps.
 
 ### 2. Schedule a task to a chosen week
 
