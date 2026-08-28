@@ -2,6 +2,7 @@ import React from "react";
 import { TodoItem, carriedWeeks } from "@/lib/planner-data";
 import { carryRuleClass } from "@/lib/carry-age";
 import { Plus, Strikethrough } from "lucide-react";
+import MigratedMarker from "./MigratedMarker";
 import AgeMarker from "./AgeMarker";
 
 interface WeeklyTodoSidebarProps {
@@ -57,6 +58,7 @@ const WeeklyTodoSidebar: React.FC<WeeklyTodoSidebarProps> = ({ todos, mondayISO,
               onChange={(e) => update(idx, "checked", e.target.checked)}
               className="h-3 w-3 shrink-0 accent-campus-blue-dark"
             />
+            <MigratedMarker migratedTo={todo.migratedTo} className="text-[11px] leading-none text-muted-foreground shrink-0" />
             <input
               type="text"
               value={todo.text}

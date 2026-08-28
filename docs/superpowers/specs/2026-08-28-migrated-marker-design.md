@@ -1,6 +1,26 @@
 # Marking a migrated row
 
-Approved 2026-08-28. Not yet implemented.
+Approved 2026-08-28. Built 2026-08-28. Three notes from the building, none of
+them a reversal.
+
+**The glyph needed weight and size the spec did not think to give it.** Measured
+in a browser, `›` at the 9px used by the week columns and the sidebar is 2.7px
+wide at weight 400 — a speck beside 12px row text. It ships bold at 11px, which
+measures 3.5 x 11px and leaves both row heights at 20.1px, so the legibility
+costs no layout.
+
+**An existing test had to be rewritten, not deleted.** `carry-bar` asserted last
+week was byte-identical after a carry — the absolute this document ends. What
+that absolute protected is unchanged and is what it now asserts: the item is
+still present, still unticked, still says what it said, and additionally records
+where it went. Still exact equality, so an undecided field still fails it.
+
+**A surviving mutation found a gap the test list missed.** Removing the
+empty-chosen guard from `bringForward` changed nothing that any test saw,
+because Skip goes through `dismissCarry` and never reaches the marker. What the
+guard actually prevents is a failure toast when the user unticks everything and
+presses Bring — nothing was asked for, so nothing failed. That case now has a
+test.
 
 ## Summary
 

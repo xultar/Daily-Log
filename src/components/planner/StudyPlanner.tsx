@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { startOfWeek, addWeeks, subWeeks, addMonths, subMonths, format, parse } from "date-fns";
-import { WeekData, DayData, TodoItem, CarryCandidate, loadWeek, saveWeek, collectCarryForward, applyCarryForward } from "@/lib/planner-data";
+import { WeekData, DayData, TodoItem, CarryCandidate, loadWeek, saveWeek, collectCarryForward, applyCarryForward, markMigrated } from "@/lib/planner-data";
 import { findCarrySource, isCurrentOrFutureWeek } from "@/lib/carry-source";
 import WeeklyTodoSidebar from "./WeeklyTodoSidebar";
 import DayColumn from "./DayColumn";
@@ -56,14 +56,19 @@ const StudyPlanner: React.FC = () => {
   // weekData change would re-scan storage on every keystroke. This reads only,
   // so it cannot write to a week the user has merely opened.
   const [candidates, setCandidates] = useState<CarryCandidate[]>([]);
+  // Kept because bringForward has to write back to the week the candidates came
+  // from, and it is not always last week — findCarrySource scans back four.
+  const [carrySourceMonday, setCarrySourceMonday] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isCurrentOrFutureWeek(currentDate)) {
       setCandidates([]);
+      setCarrySourceMonday(null);
       return;
     }
     const source = findCarrySource(currentDate);
     setCandidates(source ? collectCarryForward(source.week, source.monday) : []);
+    setCarrySourceMonday(source ? source.monday : null);
   }, [currentDate, refreshKey]);
 
   // Two separate questions, both refs so that neither causes a render:
@@ -185,10 +190,30 @@ const StudyPlanner: React.FC = () => {
 
   const keepMine = useCallback(() => setConflict(false), []);
 
+  /**
+   * Two writes, deliberately separate. The carry lands in the week on screen
+   * through the updater form and the ordinary autosave; the `>` mark lands in
+   * the *source* week through markMigrated, which loads and saves that week
+   * itself. Routing the mark through setWeekData would write it into the week
+   * being viewed — the bringForward bug exactly.
+   *
+   * A refused mark does not roll back a migration that already happened. It
+   * says so instead, because a silent failure here leaves a past week quietly
+   * lying about what became of its work.
+   */
   const bringForward = useCallback((chosen: CarryCandidate[]) => {
     markDirty();
     setWeekData((prev) => ({ ...applyCarryForward(prev, chosen), carryResolved: true }));
-  }, [markDirty]);
+    if (!carrySourceMonday || chosen.length === 0) return;
+    const destination = format(getWeekDates(currentDate)[0], "yyyy-MM-dd");
+    if (!markMigrated(carrySourceMonday, destination, chosen)) {
+      toast({
+        title: "Brought forward, but the old week was not updated",
+        description: "It will still show those items as open.",
+        variant: "destructive",
+      });
+    }
+  }, [markDirty, carrySourceMonday, currentDate]);
 
   const dismissCarry = useCallback(() => {
     markDirty();

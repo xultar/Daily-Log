@@ -3,6 +3,7 @@ import { format, parse } from "date-fns";
 import { DayData, calcDayTotal, calcDayColorMinutes, formatMinutes, getPaletteInDisplayOrder, legendCellBorders, loadColorLabels, saveColorLabels, getBlockColor, getBlockTint } from "@/lib/planner-data";
 import TimeGrid from "./TimeGrid";
 import { Flag, Plus, Strikethrough, X } from "lucide-react";
+import MigratedMarker from "./MigratedMarker";
 import ColorPicker from "./ColorPicker";
 
 interface DailyViewProps {
@@ -147,6 +148,7 @@ const DailyView: React.FC<DailyViewProps> = ({ day, dayIndex, onChange, activeCo
                   onChange={(e) => updateSubject(idx, "checked", e.target.checked)}
                   className="h-4 w-4 shrink-0 accent-campus-blue-dark mr-2"
                 />
+                <MigratedMarker migratedTo={s.migratedTo} className="text-muted-foreground mr-1 shrink-0" />
                 <input
                   type="text"
                   value={s.subject}

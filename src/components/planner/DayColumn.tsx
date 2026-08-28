@@ -4,6 +4,7 @@ import { DayData, calcDayTotal, getBlockColor, getBlockTint } from "@/lib/planne
 import TimeGrid from "./TimeGrid";
 import ColorPicker from "./ColorPicker";
 import { Flag } from "lucide-react";
+import MigratedMarker from "./MigratedMarker";
 
 interface DayColumnProps {
   day: DayData;
@@ -118,6 +119,7 @@ const DayColumn: React.FC<DayColumnProps> = ({ day, dayIndex, onChange, activeCo
               onChange={(e) => updateSubject(idx, "checked", e.target.checked)}
               className="h-3 w-3 shrink-0 self-center accent-campus-blue-dark"
             />
+            <MigratedMarker migratedTo={s.migratedTo} className="text-[11px] leading-none text-muted-foreground shrink-0 self-center" />
             <input
               type="text"
               value={s.subject}

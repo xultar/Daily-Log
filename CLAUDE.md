@@ -105,7 +105,7 @@ the page renders blank.
 ## Where things stand
 
 `main` is deployed, `origin/main` is level with it, and there is no unmerged
-work. The backlog below holds two agreed items, neither of them a defect.
+work. The backlog below holds one agreed item, and it is not a defect.
 
 **What shipped, and when, is `git log` — not this section.** It used to carry a
 hand-written list of every feature and its date. That list drifted within a day
@@ -124,19 +124,17 @@ or cancelled run in this repo does not always say so.
 ## Pick up here next — the backlog
 
 **This section is the backlog.** If you were asked for "the backlog", "what's
-next", "the todo list" or "outstanding work", it is the two numbered items
+next", "the todo list" or "outstanding work", it is the single numbered item
 below and there is no other list. One other paragraph in this file mentions a
 backlog being retired; that refers to a duplicate of this one deleted on
 2026-08-26, not to this.
 
-**Nothing in the app is broken.** Both items are new functionality agreed on
-2026-08-28, not defects. They come from one observation: the app is built around
-the Bullet Journal method, where reviewing an open task ends by migrating it,
-scheduling it, or striking it out. Striking out and the migration escalation
-both shipped on 2026-08-28. Item 1 has an approved design and is ready to build;
-item 2 is agreed in principle and needs its own spec first. Both write to a week
-that is not the one loaded — the shape of the `bringForward` bug, so neither is
-a casual afternoon.
+**Nothing in the app is broken.** The one item is new functionality agreed on
+2026-08-28, not a defect. It comes from the observation that the app is built
+around the Bullet Journal method, where reviewing an open task ends by migrating
+it, scheduling it, or striking it out. Striking out, the migration escalation
+and the `>` marker all shipped on 2026-08-28; scheduling is the last of the four
+and is agreed in principle only.
 
 **A backlog is not an invitation to invent work beyond it.** Ask what is wanted.
 If something else is agreed, write it here first, in the form described below,
@@ -147,39 +145,7 @@ is, what is already there to build on, the open questions, and the traps. If you
 find yourself exploring the codebase to understand an item before starting it,
 the item is underwritten; fix the item.
 
-### 1. Mark the source row as migrated — design approved, ready to build
-
-The `>` signifier: once an item has been carried, the week it came from shows it
-as moved on rather than still open. Today a past week reads as having open tasks
-that were in fact migrated, and it reads falser the more diligently they are.
-
-**The design is `docs/superpowers/specs/2026-08-28-migrated-marker-design.md`.
-Read it before starting** — most of it is about the write, not the feature. In
-short: `migratedTo` holds the destination Monday on the source row or todo,
-drawn as a `›` before the text, written by a new `markMigrated` in
-`planner-data.ts` from `bringForward`.
-
-**This is the first thing in the app that writes to a week other than the one on
-screen**, and the traps are all about that:
-
-- **Reload the source week; never write the scanned snapshot.** The week
-  captured when the bar was built is minutes old, and writing it back reverts
-  every edit made since, silently. Same class as closing over `weekData`.
-- **Never `setWeekData`.** That writes the week on screen — the `bringForward`
-  bug exactly.
-- **The source key can never be the viewed week**, because the bar shows only on
-  current-or-future weeks and the scan runs strictly backwards. The direct
-  `saveWeek` is safe only while that holds; if it stops holding, the write races
-  the autosave debounce.
-- **A refused mark must not roll back the carry.** They are separate writes;
-  `saveWeek` returns a boolean and `saveFailedRef` already owns the toast.
-- **Parse the source Monday back to a Date carefully.** A December Monday is
-  where the calendar year and the ISO week-year disagree — see "Week keys pair
-  an ISO week with an ISO week-year".
-- **`StudyPlanner` currently discards the source Monday**, and a candidate has
-  no locator back to its row; the spec closes both gaps.
-
-### 2. Schedule a task to a chosen week
+### 1. Schedule a task to a chosen week
 
 The `<` bullet, and the closest thing to a Future Log this app needs: push a
 task to a specific later week rather than only the next one. `findCarrySource`
@@ -426,6 +392,21 @@ area.
   cannot drift; thickness carries the signal because colour does not survive
   deuteranopia or a mono print. The three-week cap is the sidebar's *layout*
   limit, not a semantic one.
+- **`markMigrated` is the only thing that writes a week other than the one on
+  screen.** It takes the source *Monday*, not a week object, so there is no
+  snapshot to write back over edits made since the carry bar was built; it loads
+  and saves that week itself and must never be routed through `setWeekData`.
+  It is safe as a direct write only because the source key can never be the
+  viewed week — the bar renders on current-or-future weeks and `findCarrySource`
+  scans strictly backwards. The mark is a *second* write and a refused one must
+  not roll back a migration that already happened. Matching is by text and
+  self-verifying, gated by `carriesForward` so the marker cannot stamp what the
+  bar would not have offered.
+- **Carry-forward copies, and now says where the copy went.** The source week is
+  no longer byte-identical after a carry: chosen items gain `migratedTo`, the
+  Bullet Journal `>`. That is an annotation, not a move — the item stays put,
+  unticked, with its text, so "last week ended with these unfinished" is still
+  true. `applyCarryForward`'s comment still governs everything else about it.
 - **Carry-forward copies; it never moves.** `findCarrySource` never writes
   planner data, the bar is mounted with `key={monday}`, and `bringForward` must
   keep the updater form — closing over `weekData` once wrote one week's contents
@@ -603,7 +584,7 @@ rather than dropping it.
 
 ## Baselines
 
-- `npm test` — 586 tests across 56 files. `vitest.config.ts` sets
+- `npm test` — 614 tests across 57 files. `vitest.config.ts` sets
   `testTimeout: 15000` against a 5s default, and that is load-bearing: several
   tests render the whole app and click through it, sitting at 3-4s alone. Under
   full-suite contention they cross 5s — `today.test.tsx` timed out at 5597ms on

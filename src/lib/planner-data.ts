@@ -18,6 +18,12 @@ export interface TodoItem {
    * load without a type error, because strict is off.
    */
   struck?: boolean;
+  /**
+   * ISO Monday of the week this item was carried to — the Bullet Journal `>`.
+   * A date rather than a boolean for origin's reason: a date can only be right
+   * or absent, and it lets the marker name the week rather than only the fact.
+   */
+  migratedTo?: string;
 }
 
 export interface SubjectRow {
@@ -49,6 +55,8 @@ export interface SubjectRow {
    * be, and a row may hold both. Optional on the same terms as flagged.
    */
   struck?: boolean;
+  /** As TodoItem.migratedTo. */
+  migratedTo?: string;
 }
 
 export interface DayData {
@@ -328,6 +336,19 @@ export interface CarryCandidate {
  * `week` must already have been through `repairWeek` — this does not guard
  * against missing arrays or non-string text.
  */
+/**
+ * Whether an item is the kind of unfinished work that carries: not ticked, not
+ * struck out, not blank.
+ *
+ * Shared by collectCarryForward and markMigrated so the marker cannot stamp
+ * something the bar would never have offered. The `flagged` requirement is not
+ * here on purpose — it applies to daily rows and not to weekly actions, so it
+ * stays with each caller.
+ */
+export function carriesForward(text: string, checked: boolean, struck: boolean | undefined): boolean {
+  return !checked && struck !== true && text.trim() !== "";
+}
+
 export function collectCarryForward(week: WeekData, sourceMonday: string): CarryCandidate[] {
   const out: CarryCandidate[] = [];
   // Deduped here, not only at landing. The same text can arrive twice — once as
@@ -341,7 +362,7 @@ export function collectCarryForward(week: WeekData, sourceMonday: string): Carry
   // count reads as boxes unticked rather than decisions outstanding.
   const take = (text: string, checked: boolean, struck: boolean | undefined, origin: string | undefined) => {
     const trimmed = text.trim();
-    if (checked || struck === true || trimmed === "" || seen.has(trimmed)) return;
+    if (!carriesForward(text, checked, struck) || seen.has(trimmed)) return;
     seen.add(trimmed);
     // An existing origin wins, so carrying twice reports two weeks rather than
     // resetting to one. This is what makes a repeated carry idempotent.
@@ -434,6 +455,8 @@ function repairSubject(value: unknown): SubjectRow {
   if (raw.struck === true) row.struck = true;
   const origin = asOrigin(raw.origin);
   if (origin) row.origin = origin;
+  const migratedTo = asOrigin(raw.migratedTo);
+  if (migratedTo) row.migratedTo = migratedTo;
   return row;
 }
 
@@ -456,6 +479,8 @@ function repairTodo(value: unknown): TodoItem {
   if (raw.struck === true) todo.struck = true;
   const origin = asOrigin(raw.origin);
   if (origin) todo.origin = origin;
+  const migratedTo = asOrigin(raw.migratedTo);
+  if (migratedTo) todo.migratedTo = migratedTo;
   return todo;
 }
 
@@ -643,6 +668,66 @@ export function migrateWeekKeys(): { moved: number; conflicts: string[] } {
     moved++;
   }
   return { moved, conflicts };
+}
+
+/**
+ * Record on the source week that chosen items were migrated out of it — the
+ * Bullet Journal `>`.
+ *
+ * **This writes a week other than the one on screen**, which nothing else here
+ * does, so two things are deliberate. It takes the source Monday rather than a
+ * week object: there is no snapshot to hold, so it cannot write back a
+ * minutes-old copy over edits made since the carry bar was built. And it must
+ * never be routed through `setWeekData`, which writes the week being viewed —
+ * that confusion is the `bringForward` bug, which once put one week's contents
+ * under another week's key with the whole suite green.
+ *
+ * Safe as a direct write only because the source key can never be the viewed
+ * week: the bar renders on current-or-future weeks and `findCarrySource` scans
+ * strictly backwards. If either changes, this races the autosave debounce.
+ *
+ * Matching is by text, and self-verifying: only an item that *currently* reads
+ * that way is stamped, so a concurrent edit cannot redirect the mark. One
+ * commitment held as both a weekly action and a flagged row is stamped in both
+ * places, because both moved on.
+ *
+ * Returns whether a write landed, so the caller can warn. A refused write must
+ * not roll back the migration itself — they are separate writes.
+ */
+export function markMigrated(
+  sourceMonday: string,
+  destinationMonday: string,
+  chosen: CarryCandidate[]
+): boolean {
+  const wanted = new Set(chosen.map((c) => c.text.trim()).filter((t) => t !== ""));
+  if (wanted.size === 0) return false;
+  const sourceDate = parse(sourceMonday, "yyyy-MM-dd", new Date());
+  if (!isValid(sourceDate) || !hasStoredWeek(sourceDate)) return false;
+
+  const week = loadWeek(sourceDate);
+  let changed = false;
+  const stampable = (text: string, checked: boolean, struck: boolean | undefined) =>
+    wanted.has(text.trim()) && carriesForward(text, checked, struck);
+
+  const marked: WeekData = {
+    ...week,
+    weeklyTodos: week.weeklyTodos.map((t) => {
+      if (!stampable(t.text, t.checked, t.struck)) return t;
+      changed = true;
+      return { ...t, migratedTo: destinationMonday };
+    }),
+    days: week.days.map((d) => ({
+      ...d,
+      subjects: d.subjects.map((row) => {
+        if (row.flagged !== true || !stampable(row.subject, row.checked, row.struck)) return row;
+        changed = true;
+        return { ...row, migratedTo: destinationMonday };
+      }),
+    })),
+  };
+
+  if (!changed) return false;
+  return saveWeek(sourceDate, marked);
 }
 
 /**

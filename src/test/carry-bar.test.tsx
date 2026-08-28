@@ -302,13 +302,29 @@ describe("StudyPlanner carry-forward", () => {
     expect(now.carryResolved).toBe(true);
   });
 
-  it("leaves last week untouched, because carrying copies", async () => {
+  /**
+   * This asserted last week was byte-identical after a carry until 2026-08-28,
+   * when the `>` marker gave it one annotation — see
+   * docs/superpowers/specs/2026-08-28-migrated-marker-design.md.
+   *
+   * What that absolute protected is unchanged and is what is asserted here: the
+   * item is still present, still unticked, and still says what it said. Carrying
+   * copies, and last week genuinely ended with this unfinished. The week now
+   * also records where the work went, which is true and was previously missing.
+   *
+   * Still exact equality, so a field arriving that nobody decided on fails.
+   */
+  it("leaves last week's item in place and unfinished, noting only where it went", async () => {
     seedLastWeekWithUnfinishedWork();
     render(<StudyPlanner />);
     fireEvent.click(screen.getByRole("button", { name: /bring/i }));
     await settle();
     const last = loadWeek(subWeeks(thisMonday(), 1));
-    expect(last.weeklyTodos[0]).toEqual({ text: "Book viva slot", checked: false });
+    expect(last.weeklyTodos[0]).toEqual({
+      text: "Book viva slot",
+      checked: false,
+      migratedTo: "2026-08-24",
+    });
   });
 
   it("dismissing marks the week resolved and adds nothing", async () => {
