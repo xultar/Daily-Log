@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { format, parse } from "date-fns";
 import { DayData, calcDayTotal, calcDayColorMinutes, formatMinutes, getPaletteInDisplayOrder, legendCellBorders, loadColorLabels, saveColorLabels, getBlockColor, getBlockTint } from "@/lib/planner-data";
 import TimeGrid from "./TimeGrid";
-import { Flag, Plus, X } from "lucide-react";
+import { Flag, Plus, Strikethrough, X } from "lucide-react";
 import ColorPicker from "./ColorPicker";
 
 interface DailyViewProps {
@@ -66,6 +66,18 @@ const DailyView: React.FC<DailyViewProps> = ({ day, dayIndex, onChange, activeCo
 
   // The spread is what carries colorId and the row text through the change;
   // listing fields here would drop them with no type error.
+  /**
+   * The Bullet Journal "irrelevant" bullet. Spreads the row like every other
+   * updater here — rebuilding it from named fields would drop colorId, flagged
+   * and origin with no type error, because strict is off.
+   */
+  const toggleStruck = (idx: number) => {
+    const subjects = day.subjects.map((s, i) =>
+      i === idx ? { ...s, struck: !s.struck } : s
+    );
+    onChange({ ...day, subjects });
+  };
+
   const toggleFlag = (idx: number) => {
     const subjects = day.subjects.map((s, i) =>
       i === idx ? { ...s, flagged: !s.flagged } : s
@@ -139,9 +151,23 @@ const DailyView: React.FC<DailyViewProps> = ({ day, dayIndex, onChange, activeCo
                   type="text"
                   value={s.subject}
                   onChange={(e) => updateSubject(idx, "subject", e.target.value)}
-                  className={`flex-1 text-sm bg-transparent border-none outline-none text-foreground placeholder:text-muted-foreground/50 ${s.checked ? "line-through text-muted-foreground" : ""}`}
+                  className={`flex-1 text-sm bg-transparent border-none outline-none text-foreground placeholder:text-muted-foreground/50 ${s.checked ? "line-through text-muted-foreground" : ""} ${s.struck ? "line-through opacity-50" : ""}`}
                   placeholder="Add priority / action..."
                 />
+                <button
+                  type="button"
+                  onClick={() => toggleStruck(idx)}
+                  aria-pressed={!!s.struck}
+                  aria-label={s.struck ? "Restore" : "Strike out"}
+                  title={s.struck ? "Restore" : "Strike out"}
+                  className={`shrink-0 p-0.5 transition-colors ${
+                    s.struck
+                      ? "text-foreground"
+                      : "text-muted-foreground/40 hover:text-muted-foreground"
+                  }`}
+                >
+                  <Strikethrough className="h-3.5 w-3.5" />
+                </button>
                 <button
                   type="button"
                   onClick={() => toggleFlag(idx)}

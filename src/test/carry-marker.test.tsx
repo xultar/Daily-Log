@@ -81,7 +81,10 @@ describe("the age marker", () => {
     const at = (el: Element | null) => children.indexOf(el as Element);
 
     const text = row.querySelector('input[type="text"]');
-    const remove = row.querySelector("button");
+    // Selected by title, not as "the first button": the row grew a strike-out
+    // control on 2026-08-28, and an unqualified querySelector would quietly
+    // start pinning the marker against that instead of against remove.
+    const remove = row.querySelector('button[title="Remove"]');
     const token = [...row.querySelectorAll('[aria-hidden="true"]')][0];
     const spoken = row.querySelector(".sr-only");
 

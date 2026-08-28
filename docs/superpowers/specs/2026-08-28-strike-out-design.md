@@ -1,6 +1,25 @@
 # Striking a task out
 
-Approved 2026-08-28. Not yet implemented.
+Approved 2026-08-28. Built 2026-08-28. Two things below did not survive contact
+with the browser; both are corrected here rather than quietly left wrong.
+
+**The 24px target was not achievable and should not have been specified.** These
+rows are dense: the existing remove control measures 12x12 and the week column's
+flag 12x10, in a sidebar row 20px tall. A 24px control would be twice its
+neighbours and would grow the row. The strike button ships at 18x18 in the day
+view and 16x16 in the sidebar — the largest control in either row. The 24px
+figure in CLAUDE.md belongs to the daily legend cell, which is 25px tall; it was
+carried across to a context it does not fit. Expanding the hit area with a
+pseudo-element would give the accessibility benefit without the layout cost, but
+it would be the only control in the app doing so, and that is a separate
+decision about all of these rows rather than part of this feature.
+
+**The sidebar button sits after the age marker, not beside the text.**
+`carry-marker.test.tsx` pins the marker's position, on the reasoning that a
+control between the marker and the text shoves the text sideways in a 128px
+column. That test selected "the first button" in the row, which this feature
+made ambiguous; its selector now names the remove control explicitly, so it
+keeps meaning what its name says.
 
 ## Summary
 

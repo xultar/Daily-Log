@@ -1,6 +1,6 @@
 import React from "react";
 import { TodoItem, carriedWeeks } from "@/lib/planner-data";
-import { Plus } from "lucide-react";
+import { Plus, Strikethrough } from "lucide-react";
 import AgeMarker from "./AgeMarker";
 
 interface WeeklyTodoSidebarProps {
@@ -20,6 +20,14 @@ const WeeklyTodoSidebar: React.FC<WeeklyTodoSidebarProps> = ({ todos, mondayISO,
 
   const addTodo = () => {
     onChange([...todos, { text: "", checked: false }]);
+  };
+
+  /**
+   * As DailyView.toggleStruck. Weekly Actions are carry candidates too, so
+   * leaving them out would keep the bar offering items already decided against.
+   */
+  const toggleStruck = (idx: number) => {
+    onChange(todos.map((t, i) => (i === idx ? { ...t, struck: !t.struck } : t)));
   };
 
   const removeTodo = (idx: number) => {
@@ -55,10 +63,24 @@ const WeeklyTodoSidebar: React.FC<WeeklyTodoSidebarProps> = ({ todos, mondayISO,
               type="text"
               value={todo.text}
               onChange={(e) => update(idx, "text", e.target.value)}
-              className={`flex-1 text-[9px] px-1 py-[3px] bg-transparent border-none outline-none min-w-0 text-foreground placeholder:text-muted-foreground/50 ${todo.checked ? "line-through text-muted-foreground" : ""}`}
+              className={`flex-1 text-[9px] px-1 py-[3px] bg-transparent border-none outline-none min-w-0 text-foreground placeholder:text-muted-foreground/50 ${todo.checked ? "line-through text-muted-foreground" : ""} ${todo.struck ? "line-through opacity-50" : ""}`}
               placeholder="—"
             />
             <AgeMarker age={age} className="text-[7px] text-muted-foreground shrink-0 tabular-nums" />
+            <button
+              type="button"
+              onClick={() => toggleStruck(idx)}
+              aria-pressed={!!todo.struck}
+              aria-label={todo.struck ? "Restore" : "Strike out"}
+              title={todo.struck ? "Restore" : "Strike out"}
+              className={`shrink-0 p-0.5 transition-colors ${
+                todo.struck
+                  ? "text-foreground"
+                  : "text-muted-foreground/40 hover:text-muted-foreground"
+              }`}
+            >
+              <Strikethrough className="h-3 w-3" />
+            </button>
             <button
               onClick={() => removeTodo(idx)}
               className="opacity-0 group-hover:opacity-50 hover:!opacity-100 text-[8px] text-muted-foreground px-0.5 transition-opacity"

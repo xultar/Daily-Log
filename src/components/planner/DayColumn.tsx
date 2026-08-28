@@ -122,7 +122,7 @@ const DayColumn: React.FC<DayColumnProps> = ({ day, dayIndex, onChange, activeCo
               type="text"
               value={s.subject}
               onChange={(e) => updateSubject(idx, "subject", e.target.value)}
-              className="flex-1 self-center text-[9px] px-0.5 py-[1px] bg-transparent border-none outline-none min-w-0 text-foreground placeholder:text-muted-foreground/50"
+              className={`flex-1 self-center text-[9px] px-0.5 py-[1px] bg-transparent border-none outline-none min-w-0 text-foreground placeholder:text-muted-foreground/50 ${s.struck ? "line-through opacity-50" : ""}`}
               placeholder="—"
             />
             <button

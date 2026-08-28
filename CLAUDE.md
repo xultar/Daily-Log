@@ -105,7 +105,7 @@ the page renders blank.
 ## Where things stand
 
 `main` is deployed, `origin/main` is level with it, and there is no unmerged
-work. The backlog below holds four agreed items, none of them a defect.
+work. The backlog below holds three agreed items, none of them a defect.
 
 **What shipped, and when, is `git log` — not this section.** It used to carry a
 hand-written list of every feature and its date. That list drifted within a day
@@ -124,17 +124,18 @@ or cancelled run in this repo does not always say so.
 ## Pick up here next — the backlog
 
 **This section is the backlog.** If you were asked for "the backlog", "what's
-next", "the todo list" or "outstanding work", it is the four numbered items
+next", "the todo list" or "outstanding work", it is the three numbered items
 below and there is no other list. One other paragraph in this file mentions a
 backlog being retired; that refers to a duplicate of this one deleted on
 2026-08-26, not to this.
 
-**Nothing in the app is broken.** All four items are new functionality agreed on
-2026-08-28, not defects. They come from one observation: the app is built around
-the Bullet Journal method, where reviewing an open task ends by migrating it,
-scheduling it, or striking it out — and only migration exists. Item 1 has an
-approved design and is ready to build; items 2 to 4 are agreed in principle and
-each needs its own spec first.
+**Nothing in the app is broken.** All three items are new functionality agreed
+on 2026-08-28, not defects. They come from one observation: the app is built
+around the Bullet Journal method, where reviewing an open task ends by migrating
+it, scheduling it, or striking it out. Striking out shipped on 2026-08-28; the
+three below are agreed in principle and each needs its own spec first. Items 2
+and 3 both write to a week that is not the one loaded, which is the shape of the
+`bringForward` bug — neither is a casual afternoon.
 
 **A backlog is not an invitation to invent work beyond it.** Ask what is wanted.
 If something else is agreed, write it here first, in the form described below,
@@ -145,31 +146,7 @@ is, what is already there to build on, the open questions, and the traps. If you
 find yourself exploring the codebase to understand an item before starting it,
 the item is underwritten; fix the item.
 
-### 1. Strike a task out — design approved, ready to build
-
-The Bullet Journal "irrelevant" bullet: a third outcome for an open task, beside
-migrating it. Without it, "I have decided this does not matter" and "I have not
-looked at this yet" are both an unchecked box, and the carry bar goes on
-offering abandoned items indefinitely.
-
-**The design is `docs/superpowers/specs/2026-08-28-strike-out-design.md`. Read
-it before starting** — it settles the decisions and records why. In short: an
-optional `struck` field on the row and on a weekly todo, a toggle button in
-`DailyView` and `WeeklyTodoSidebar`, strikethrough rendering that is read-only
-in `DayColumn`, and one more condition in `collectCarryForward`'s `take()`.
-
-**Traps**, all of them already written down elsewhere in this file:
-
-- **`repairSubject` must name the field.** `strict` is off, so a typo compiles
-  and silently discards the user's decision on every load.
-- **Keep the `{ ...s, [field]: value }` spread** in `DailyView`/`DayColumn`. It
-  is the only thing preserving optional fields through a keystroke.
-- **The button is a sibling of the text field, never a parent.**
-- **No fifth control in the week's day columns** — a column is ~160px and a
-  fifth target would fall under the 24px minimum.
-- **Assert the class, not the computed style.** jsdom v20 drops the values.
-
-### 2. Escalate a repeatedly migrated item
+### 1. Escalate a repeatedly migrated item
 
 BuJo treats an item that keeps moving as the signal to question it. The data is
 already there: `origin` holds the Monday an item was first carried from, and
@@ -187,7 +164,7 @@ flattens every tag to the same grey.
 keeps counting — `collectCarryForward`'s `take()` comments say an existing
 origin wins, and that is what makes a repeated carry idempotent. Do not reset it.
 
-### 3. Mark the source row as migrated
+### 2. Mark the source row as migrated
 
 The `>` signifier: once an item has been carried, the week it came from should
 show it as moved on rather than still open. Today carry-forward copies and
@@ -205,7 +182,7 @@ and therefore contradicts the copies-never-moves rule, or is merely an
 annotation; and what happens when the carried copy is later struck out or
 deleted.
 
-### 4. Schedule a task to a chosen week
+### 3. Schedule a task to a chosen week
 
 The `<` bullet, and the closest thing to a Future Log this app needs: push a
 task to a specific later week rather than only the next one. `findCarrySource`
@@ -431,9 +408,18 @@ area.
   rendering. Its fallback offers a backup download; that is not decoration.
 - **Optional row fields are dropped unless `repairSubject` names them.** Spread
   the existing row; never rebuild it from a list of fields. `strict` is off, so
-  nothing catches a dropped tag.
+  nothing catches a dropped tag. `repairTodo` is a *separate* function for
+  weekly actions, and `repairList` dispatches to them per item — a field added
+  to one and not the other is lost on exactly half the rows.
 - **Printing is a real use case** and the print CSS is thinner than it looks.
 - **Colour is decided by the cascade**, not at paint time.
+- **A struck item never carries.** Striking a row or a weekly action out is the
+  Bullet Journal "irrelevant" bullet — the third way a review ends, beside
+  migrating it — and `collectCarryForward` skips it. It is toggled in the day
+  view and the Weekly Actions sidebar only; the week's columns render the
+  strike but offer no control, because those rows are 20px with 12px controls
+  and have no room for a fifth. Striking is independent of `checked`: checked
+  says the task was done, struck says it will not be, and a row may hold both.
 - **Carry-forward copies; it never moves.** `findCarrySource` never writes
   planner data, the bar is mounted with `key={monday}`, and `bringForward` must
   keep the updater form — closing over `weekData` once wrote one week's contents
@@ -611,7 +597,7 @@ rather than dropping it.
 
 ## Baselines
 
-- `npm test` — 548 tests across 54 files. `vitest.config.ts` sets
+- `npm test` — 570 tests across 55 files. `vitest.config.ts` sets
   `testTimeout: 15000` against a 5s default, and that is load-bearing: several
   tests render the whole app and click through it, sitting at 3-4s alone. Under
   full-suite contention they cross 5s — `today.test.tsx` timed out at 5597ms on

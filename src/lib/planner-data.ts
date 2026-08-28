@@ -12,6 +12,12 @@ export interface TodoItem {
    * detect it was wrong. A date can only be right or absent.
    */
   origin?: string;
+  /**
+   * Struck out: the user has decided this no longer matters. Optional on the
+   * same terms as origin, and repairTodo has to name it or it is dropped on
+   * load without a type error, because strict is off.
+   */
+  struck?: boolean;
 }
 
 export interface SubjectRow {
@@ -36,6 +42,13 @@ export interface SubjectRow {
   flagged?: boolean;
   /** As TodoItem.origin. Optional on the same terms as colorId and flagged. */
   origin?: string;
+  /**
+   * Struck out — the Bullet Journal "irrelevant" bullet, and the third way a
+   * review of an open task can end beside migrating it. Distinct from
+   * `checked`: checked records that the task was done, struck that it will not
+   * be, and a row may hold both. Optional on the same terms as flagged.
+   */
+  struck?: boolean;
 }
 
 export interface DayData {
@@ -323,20 +336,23 @@ export function collectCarryForward(week: WeekData, sourceMonday: string): Carry
   // it lists the item twice and offers to "Bring 2 forward" while bringing one.
   // No data was ever at risk; the count was simply lying to the user.
   const seen = new Set<string>();
-  const take = (text: string, checked: boolean, origin: string | undefined) => {
+  // `struck` is the user having decided the item no longer matters, which is a
+  // review outcome in its own right — the bar must stop offering it, or its
+  // count reads as boxes unticked rather than decisions outstanding.
+  const take = (text: string, checked: boolean, struck: boolean | undefined, origin: string | undefined) => {
     const trimmed = text.trim();
-    if (checked || trimmed === "" || seen.has(trimmed)) return;
+    if (checked || struck === true || trimmed === "" || seen.has(trimmed)) return;
     seen.add(trimmed);
     // An existing origin wins, so carrying twice reports two weeks rather than
     // resetting to one. This is what makes a repeated carry idempotent.
     out.push({ text: trimmed, origin: origin ?? sourceMonday });
   };
   for (const todo of week.weeklyTodos) {
-    take(todo.text, todo.checked, todo.origin);
+    take(todo.text, todo.checked, todo.struck, todo.origin);
   }
   for (const day of week.days) {
     for (const row of day.subjects) {
-      if (row.flagged === true) take(row.subject, row.checked, row.origin);
+      if (row.flagged === true) take(row.subject, row.checked, row.struck, row.origin);
     }
   }
   return out;
@@ -413,6 +429,9 @@ function repairSubject(value: unknown): SubjectRow {
   // storing false, which keeps rows written before the field existed identical
   // to rows whose flag has been cleared.
   if (raw.flagged === true) row.flagged = true;
+  // Same contract as flagged: only a real true survives, so a row that was
+  // never struck stays free of the field rather than storing false.
+  if (raw.struck === true) row.struck = true;
   const origin = asOrigin(raw.origin);
   if (origin) row.origin = origin;
   return row;
@@ -434,6 +453,7 @@ function repairTodo(value: unknown): TodoItem {
   const raw = asRecord(value);
   const todo: TodoItem = { text: asText(raw.text), checked: raw.checked === true };
   // Assigned only when present, so a fresh item stays free of the field.
+  if (raw.struck === true) todo.struck = true;
   const origin = asOrigin(raw.origin);
   if (origin) todo.origin = origin;
   return todo;
