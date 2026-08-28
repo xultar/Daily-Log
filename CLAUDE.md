@@ -132,10 +132,11 @@ backlog being retired; that refers to a duplicate of this one deleted on
 **Nothing in the app is broken.** All three items are new functionality agreed
 on 2026-08-28, not defects. They come from one observation: the app is built
 around the Bullet Journal method, where reviewing an open task ends by migrating
-it, scheduling it, or striking it out. Striking out shipped on 2026-08-28; the
-three below are agreed in principle and each needs its own spec first. Items 2
-and 3 both write to a week that is not the one loaded, which is the shape of the
-`bringForward` bug — neither is a casual afternoon.
+it, scheduling it, or striking it out. Striking out shipped on 2026-08-28. Item
+1 has an approved design and is ready to build; items 2 and 3 are agreed in
+principle and each needs its own spec first, and both write to a week that is
+not the one loaded — the shape of the `bringForward` bug, so neither is a casual
+afternoon.
 
 **A backlog is not an invitation to invent work beyond it.** Ask what is wanted.
 If something else is agreed, write it here first, in the form described below,
@@ -146,23 +147,37 @@ is, what is already there to build on, the open questions, and the traps. If you
 find yourself exploring the codebase to understand an item before starting it,
 the item is underwritten; fix the item.
 
-### 1. Escalate a repeatedly migrated item
+### 1. Escalate a repeatedly migrated item — design approved, ready to build
 
-BuJo treats an item that keeps moving as the signal to question it. The data is
-already there: `origin` holds the Monday an item was first carried from, and
-`CarryForwardBar` already prints an age ("1w", "carried 1 week"). This is
-presentation only — nothing new is stored.
+BuJo treats an item that keeps moving as the signal to question it, and the
+carry bar says nothing about it: an item pushed five times looks identical to
+one pushed once, at the moment the user decides whether to push it again.
 
-**Open questions for the spec:** what the threshold is, whether the escalation
-is wording, colour, or ordering within the bar, and whether it should also show
-on the row itself rather than only in the bar. Note that colour alone is not
-enough — see the colourblindness figures under "The one rule that can corrupt
-user data", and the run-number treatment that exists because a mono print
-flattens every tag to the same grey.
+**The design is `docs/superpowers/specs/2026-08-28-carry-escalation-design.md`.
+Read it before starting.** In short: `CarryForwardBar` sorts candidates oldest
+first and gives each a left rule that thickens with age, on the scale
+`WeeklyTodoSidebar` already uses, extracted to a new `src/lib/carry-age.ts` so
+the two cannot drift. Presentation only.
 
-**Trap:** `origin` is deliberately preserved across repeated carries so the age
-keeps counting — `collectCarryForward`'s `take()` comments say an existing
-origin wins, and that is what makes a repeated carry idempotent. Do not reset it.
+**Traps:**
+
+- **The tick state is keyed by position.** `excluded` holds indices into
+  `candidates` and `chosen` filters by index. Sorting the array naively glues an
+  untick to a slot rather than an item, so unticking one row drops a different
+  task — silently, and only when ages differ, which no existing test creates.
+  Sort a `{ candidate, originalIndex, age }` view and keep every index reference
+  on `originalIndex`. Write that test first.
+- **Do not sort in `collectCarryForward`.** Its order is part of its contract
+  and is asserted by existing tests. This is presentation.
+- **Do not reset `origin` on a repeat carry.** Preserving it is what makes the
+  age keep counting and a repeated carry idempotent; `take()` says so.
+- **The sidebar's three-week cap is a layout constraint**, not a semantic one —
+  its comment says a long-slipped item must not crowd the text out of a 128px
+  column. The bar mirrors it for consistency, and that is the reason the two
+  could legitimately diverge later.
+- **Colour is never the only channel.** Order and thickness must carry the
+  signal on their own; the palette collapses under deuteranopia and a mono print
+  flattens every tint to the same grey.
 
 ### 2. Mark the source row as migrated
 
