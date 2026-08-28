@@ -3,6 +3,7 @@ import { TodoItem, carriedWeeks } from "@/lib/planner-data";
 import { carryRuleClass } from "@/lib/carry-age";
 import { Plus, Strikethrough } from "lucide-react";
 import MigratedMarker from "./MigratedMarker";
+import ScheduleMenu from "./ScheduleMenu";
 import AgeMarker from "./AgeMarker";
 
 interface WeeklyTodoSidebarProps {
@@ -28,6 +29,11 @@ const WeeklyTodoSidebar: React.FC<WeeklyTodoSidebarProps> = ({ todos, mondayISO,
    * As DailyView.toggleStruck. Weekly Actions are carry candidates too, so
    * leaving them out would keep the bar offering items already decided against.
    */
+  /** Stamped only after the item has actually landed in the chosen week. */
+  const markScheduled = (idx: number, destinationMonday: string) => {
+    onChange(todos.map((t, i) => (i === idx ? { ...t, migratedTo: destinationMonday } : t)));
+  };
+
   const toggleStruck = (idx: number) => {
     onChange(todos.map((t, i) => (i === idx ? { ...t, struck: !t.struck } : t)));
   };
@@ -67,6 +73,11 @@ const WeeklyTodoSidebar: React.FC<WeeklyTodoSidebarProps> = ({ todos, mondayISO,
               placeholder="—"
             />
             <AgeMarker age={age} className="text-[7px] text-muted-foreground shrink-0 tabular-nums" />
+            <ScheduleMenu
+              mondayISO={mondayISO}
+              text={todo.text}
+              onScheduled={(destination) => markScheduled(idx, destination)}
+            />
             <button
               type="button"
               onClick={() => toggleStruck(idx)}

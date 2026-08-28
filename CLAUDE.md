@@ -105,7 +105,7 @@ the page renders blank.
 ## Where things stand
 
 `main` is deployed, `origin/main` is level with it, and there is no unmerged
-work. The backlog below holds one agreed item, and it is not a defect.
+work. The backlog below is empty.
 
 **What shipped, and when, is `git log` — not this section.** It used to carry a
 hand-written list of every feature and its date. That list drifted within a day
@@ -123,18 +123,16 @@ or cancelled run in this repo does not always say so.
 
 ## Pick up here next — the backlog
 
-**This section is the backlog.** If you were asked for "the backlog", "what's
-next", "the todo list" or "outstanding work", it is the single numbered item
-below and there is no other list. One other paragraph in this file mentions a
+**This section is the backlog, and it is empty.** If you were asked for "the
+backlog", "what's next", "the todo list" or "outstanding work", the answer is
+that there is none and there is no other list to go and check. One other paragraph in this file mentions a
 backlog being retired; that refers to a duplicate of this one deleted on
 2026-08-26, not to this.
 
-**Nothing in the app is broken.** The one item is new functionality agreed on
-2026-08-28, not a defect. It comes from the observation that the app is built
-around the Bullet Journal method, where reviewing an open task ends by migrating
-it, scheduling it, or striking it out. Striking out, the migration escalation
-and the `>` marker all shipped on 2026-08-28; scheduling is the last of the four
-and has an approved design ready to build.
+**Nothing in the app is broken.** The four Bullet Journal items agreed on
+2026-08-28 all shipped that day: striking out, escalating a repeatedly migrated
+item, the `>` marker on a migrated source row, and scheduling to a chosen week.
+Reviewing an open task can now end all three ways the method describes.
 
 **A backlog is not an invitation to invent work beyond it.** Ask what is wanted.
 If something else is agreed, write it here first, in the form described below,
@@ -144,41 +142,6 @@ and then start it.
 is, what is already there to build on, the open questions, and the traps. If you
 find yourself exploring the codebase to understand an item before starting it,
 the item is underwritten; fix the item.
-
-### 1. Schedule a task to a chosen week — design approved, ready to build
-
-The `<` bullet: send an open item to a week you pick rather than only to the
-next one. Carry-forward answers "not this week, next week" and has nothing for
-"not for a month", so those tasks either get migrated over and over or leave the
-planner and are forgotten.
-
-**The design is `docs/superpowers/specs/2026-08-28-schedule-to-week-design.md`.
-Read it before starting.** In short: a row button in `DailyView` and
-`WeeklyTodoSidebar` opening a relative-week menu; `scheduleToWeek` writes the
-item into that week's Weekly Actions, creating the week if it does not exist;
-the origin gains the existing `migratedTo` marker.
-
-**Traps:**
-
-- **Do not mark the origin with `markMigrated`.** It matches by text and marks
-  only *flagged* daily rows, because it serves a bulk carry where the rows are
-  unknown. Here the component knows the exact item, so an unflagged row would be
-  silently skipped. The origin is the week on screen — mark it through the
-  ordinary `onChange`, spreading the item.
-- **Destination first, origin second.** A refused destination write must leave
-  nothing scheduled and nothing claiming to be. Marking first would leave a week
-  saying an item went somewhere it never arrived.
-- **A scheduled item lands with no `origin`.** `origin` means slippage and drives
-  the age marker; an item placed eight weeks out has not slipped eight times.
-- **Offsets come from `addWeeks` on the viewed Monday, and the key from
-  `getWeekKey`.** Never build a key from a calendar year — see "Week keys pair an
-  ISO week with an ISO week-year", and note an eight-week offset from October
-  lands squarely in the December weeks that collide.
-- **Keep the menu's `role="menu"`.** `TimeGrid`'s keydown guard tests for it so
-  an open menu swallows digits; without it, typing arms colour tags.
-
-**This is the last of the four Bullet Journal items.** When it ships the backlog
-is empty, and that is not a cue to invent more.
 
 ### Starting a session here
 
@@ -407,8 +370,17 @@ area.
   cannot drift; thickness carries the signal because colour does not survive
   deuteranopia or a mono print. The three-week cap is the sidebar's *layout*
   limit, not a semantic one.
-- **`markMigrated` is the only thing that writes a week other than the one on
-  screen.** It takes the source *Monday*, not a week object, so there is no
+- **Scheduling writes a week that may never have been opened.**
+  `scheduleToWeek` loads the destination — `loadWeek` returns a repaired empty
+  week when nothing is stored, so there is no absent case to branch on — adds
+  the item to its Weekly Actions and saves. **A `planner-` entry therefore no
+  longer implies someone visited that week.** The item lands with *no* `origin`:
+  origin means slippage and drives the age marker, and something placed eight
+  weeks out has not slipped eight times. The origin week is the one on screen,
+  so its `migratedTo` mark is an ordinary `onChange` edit — not `markMigrated`,
+  which matches by text and marks only flagged rows. Destination first, origin
+  second, or a week ends up claiming an item went somewhere it never arrived.
+- **`markMigrated` is the only thing that writes a *past* week.** It takes the source *Monday*, not a week object, so there is no
   snapshot to write back over edits made since the carry bar was built; it loads
   and saves that week itself and must never be routed through `setWeekData`.
   It is safe as a direct write only because the source key can never be the
@@ -599,7 +571,7 @@ rather than dropping it.
 
 ## Baselines
 
-- `npm test` — 614 tests across 57 files. `vitest.config.ts` sets
+- `npm test` — 634 tests across 58 files. `vitest.config.ts` sets
   `testTimeout: 15000` against a 5s default, and that is load-bearing: several
   tests render the whole app and click through it, sitting at 3-4s alone. Under
   full-suite contention they cross 5s — `today.test.tsx` timed out at 5597ms on

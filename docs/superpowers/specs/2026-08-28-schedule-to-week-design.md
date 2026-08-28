@@ -1,6 +1,23 @@
 # Scheduling a task to a chosen week
 
-Approved 2026-08-28. Not yet implemented.
+Approved 2026-08-28. Built 2026-08-28. Three notes from the building.
+
+**"Create the week if it does not exist" was dead code.** `loadWeek` already
+returns a repaired empty week when nothing is stored, so the `hasStoredWeek`
+branch this document called for never ran. A mutation deleting it changed
+nothing, which is how it was found. The function just loads.
+
+**The spread trap needed two more tests than the plan listed.** The plan covered
+editing a row's text afterwards, which exercises `updateSubject`. It did not
+cover `markScheduled`, which rebuilds the item too — so a row carrying a tag, a
+flag or a strike would have lost them the moment it was scheduled, in both the
+day view and the sidebar. Both surfaced as surviving mutations, one after the
+other.
+
+**Radix menus do not open under jsdom from a synthetic pointer event.** There is
+no `PointerEvent`, so the trigger never sees a button of 0 and the menu stays
+shut. The tests open it with Enter instead, which is a real path a keyboard user
+has anyway.
 
 ## Summary
 

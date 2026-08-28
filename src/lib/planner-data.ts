@@ -731,6 +731,53 @@ export function markMigrated(
 }
 
 /**
+ * Put an item into a chosen later week's Weekly Actions — the Bullet Journal
+ * `<`. Creates that week if it does not exist yet.
+ *
+ * **This is the first thing that brings a week into existence without the user
+ * visiting it.** A `planner-` entry no longer implies someone opened that week,
+ * which matters to anything that reads storage to ask which weeks have been
+ * used.
+ *
+ * The item lands with **no `origin`**, and that is not an oversight. `origin`
+ * means slippage and drives the age marker, so an item deliberately placed four
+ * weeks out would otherwise arrive claiming it had been carried four times. It
+ * is new work in that week; if it then goes unfinished, collectCarryForward
+ * stamps an origin from the week it actually failed in.
+ *
+ * Writes the destination and nothing else. The origin week is the one on screen,
+ * so its marker is an ordinary edit through the component's own onChange —
+ * deliberately not markMigrated, which matches by text and marks only *flagged*
+ * daily rows because it serves a bulk carry where the rows are unknown.
+ *
+ * Returns whether the write landed, so the caller can mark the origin only if
+ * the item really arrived.
+ */
+export function scheduleToWeek(destinationMonday: string, text: string): boolean {
+  const wanted = text.trim();
+  if (wanted === "") return false;
+  const destination = parse(destinationMonday, "yyyy-MM-dd", new Date());
+  if (!isValid(destination)) return false;
+
+  // loadWeek already returns a repaired empty week when nothing is stored, so
+  // there is no absent case to branch on. A hasStoredWeek guard here looked
+  // reasonable and was dead code — a mutation removing it changed nothing.
+  const week = loadWeek(destination);
+  const todos = week.weeklyTodos.map((t) => ({ ...t }));
+  if (todos.some((t) => t.text.trim() === wanted)) return true;
+
+  // The first empty slot, or a new row when the week is full — the same shape
+  // applyCarryForward lands into, so a scheduled item is indistinguishable from
+  // any other weekly action once it arrives.
+  const blank = todos.findIndex((t) => t.text.trim() === "");
+  const landed = { text: wanted, checked: false };
+  if (blank === -1) todos.push(landed);
+  else todos[blank] = landed;
+
+  return saveWeek(destination, { ...week, weeklyTodos: todos });
+}
+
+/**
  * Store a week. Returns whether the write landed, so a caller can warn rather
  * than let the user go on typing into a planner that stopped saving.
  */

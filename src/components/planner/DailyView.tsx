@@ -1,9 +1,10 @@
 import React, { useState } from "react";
-import { format, parse } from "date-fns";
+import { format, parse, isValid, startOfWeek } from "date-fns";
 import { DayData, calcDayTotal, calcDayColorMinutes, formatMinutes, getPaletteInDisplayOrder, legendCellBorders, loadColorLabels, saveColorLabels, getBlockColor, getBlockTint } from "@/lib/planner-data";
 import TimeGrid from "./TimeGrid";
 import { Flag, Plus, Strikethrough, X } from "lucide-react";
 import MigratedMarker from "./MigratedMarker";
+import ScheduleMenu from "./ScheduleMenu";
 import ColorPicker from "./ColorPicker";
 
 interface DailyViewProps {
@@ -72,6 +73,24 @@ const DailyView: React.FC<DailyViewProps> = ({ day, dayIndex, onChange, activeCo
    * updater here — rebuilding it from named fields would drop colorId, flagged
    * and origin with no type error, because strict is off.
    */
+  /**
+   * The week this day sits in, for the scheduling offsets. Derived rather than
+   * passed: every consumer of a date here works back to the Monday itself, and
+   * a second source for it is a second thing that can disagree.
+   */
+  const viewedMonday = (() => {
+    const d = parse(day.date, "yyyy-MM-dd", new Date());
+    return isValid(d) ? format(startOfWeek(d, { weekStartsOn: 1 }), "yyyy-MM-dd") : "";
+  })();
+
+  /** Stamped only after the item has actually landed in the chosen week. */
+  const markScheduled = (idx: number, destinationMonday: string) => {
+    const subjects = day.subjects.map((s, i) =>
+      i === idx ? { ...s, migratedTo: destinationMonday } : s
+    );
+    onChange({ ...day, subjects });
+  };
+
   const toggleStruck = (idx: number) => {
     const subjects = day.subjects.map((s, i) =>
       i === idx ? { ...s, struck: !s.struck } : s
@@ -155,6 +174,11 @@ const DailyView: React.FC<DailyViewProps> = ({ day, dayIndex, onChange, activeCo
                   onChange={(e) => updateSubject(idx, "subject", e.target.value)}
                   className={`flex-1 text-sm bg-transparent border-none outline-none text-foreground placeholder:text-muted-foreground/50 ${s.checked ? "line-through text-muted-foreground" : ""} ${s.struck ? "line-through opacity-50" : ""}`}
                   placeholder="Add priority / action..."
+                />
+                <ScheduleMenu
+                  mondayISO={viewedMonday}
+                  text={s.subject}
+                  onScheduled={(destination) => markScheduled(idx, destination)}
                 />
                 <button
                   type="button"
