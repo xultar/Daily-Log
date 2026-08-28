@@ -105,7 +105,7 @@ the page renders blank.
 ## Where things stand
 
 `main` is deployed, `origin/main` is level with it, and there is no unmerged
-work. The backlog below holds three agreed items, none of them a defect.
+work. The backlog below holds two agreed items, neither of them a defect.
 
 **What shipped, and when, is `git log` — not this section.** It used to carry a
 hand-written list of every feature and its date. That list drifted within a day
@@ -124,19 +124,18 @@ or cancelled run in this repo does not always say so.
 ## Pick up here next — the backlog
 
 **This section is the backlog.** If you were asked for "the backlog", "what's
-next", "the todo list" or "outstanding work", it is the three numbered items
+next", "the todo list" or "outstanding work", it is the two numbered items
 below and there is no other list. One other paragraph in this file mentions a
 backlog being retired; that refers to a duplicate of this one deleted on
 2026-08-26, not to this.
 
-**Nothing in the app is broken.** All three items are new functionality agreed
-on 2026-08-28, not defects. They come from one observation: the app is built
-around the Bullet Journal method, where reviewing an open task ends by migrating
-it, scheduling it, or striking it out. Striking out shipped on 2026-08-28. Item
-1 has an approved design and is ready to build; items 2 and 3 are agreed in
-principle and each needs its own spec first, and both write to a week that is
-not the one loaded — the shape of the `bringForward` bug, so neither is a casual
-afternoon.
+**Nothing in the app is broken.** Both items are new functionality agreed on
+2026-08-28, not defects. They come from one observation: the app is built around
+the Bullet Journal method, where reviewing an open task ends by migrating it,
+scheduling it, or striking it out. Striking out and the migration escalation
+both shipped on 2026-08-28. The two below are agreed in principle and each needs
+its own spec first — and both write to a week that is not the one loaded, the
+shape of the `bringForward` bug, so neither is a casual afternoon.
 
 **A backlog is not an invitation to invent work beyond it.** Ask what is wanted.
 If something else is agreed, write it here first, in the form described below,
@@ -147,39 +146,7 @@ is, what is already there to build on, the open questions, and the traps. If you
 find yourself exploring the codebase to understand an item before starting it,
 the item is underwritten; fix the item.
 
-### 1. Escalate a repeatedly migrated item — design approved, ready to build
-
-BuJo treats an item that keeps moving as the signal to question it, and the
-carry bar says nothing about it: an item pushed five times looks identical to
-one pushed once, at the moment the user decides whether to push it again.
-
-**The design is `docs/superpowers/specs/2026-08-28-carry-escalation-design.md`.
-Read it before starting.** In short: `CarryForwardBar` sorts candidates oldest
-first and gives each a left rule that thickens with age, on the scale
-`WeeklyTodoSidebar` already uses, extracted to a new `src/lib/carry-age.ts` so
-the two cannot drift. Presentation only.
-
-**Traps:**
-
-- **The tick state is keyed by position.** `excluded` holds indices into
-  `candidates` and `chosen` filters by index. Sorting the array naively glues an
-  untick to a slot rather than an item, so unticking one row drops a different
-  task — silently, and only when ages differ, which no existing test creates.
-  Sort a `{ candidate, originalIndex, age }` view and keep every index reference
-  on `originalIndex`. Write that test first.
-- **Do not sort in `collectCarryForward`.** Its order is part of its contract
-  and is asserted by existing tests. This is presentation.
-- **Do not reset `origin` on a repeat carry.** Preserving it is what makes the
-  age keep counting and a repeated carry idempotent; `take()` says so.
-- **The sidebar's three-week cap is a layout constraint**, not a semantic one —
-  its comment says a long-slipped item must not crowd the text out of a 128px
-  column. The bar mirrors it for consistency, and that is the reason the two
-  could legitimately diverge later.
-- **Colour is never the only channel.** Order and thickness must carry the
-  signal on their own; the palette collapses under deuteranopia and a mono print
-  flattens every tint to the same grey.
-
-### 2. Mark the source row as migrated
+### 1. Mark the source row as migrated
 
 The `>` signifier: once an item has been carried, the week it came from should
 show it as moved on rather than still open. Today carry-forward copies and
@@ -197,7 +164,7 @@ and therefore contradicts the copies-never-moves rule, or is merely an
 annotation; and what happens when the carried copy is later struck out or
 deleted.
 
-### 3. Schedule a task to a chosen week
+### 2. Schedule a task to a chosen week
 
 The `<` bullet, and the closest thing to a Future Log this app needs: push a
 task to a specific later week rather than only the next one. `findCarrySource`
@@ -435,6 +402,15 @@ area.
   strike but offer no control, because those rows are 20px with 12px controls
   and have no room for a fifth. Striking is independent of `checked`: checked
   says the task was done, struck says it will not be, and a row may hold both.
+- **The carry bar leads with the oldest item, and its tick state is keyed by
+  position.** `excluded` holds indices into `candidates` and `chosen` filters by
+  index, so the bar sorts a `{ candidate, originalIndex, age }` *view* and never
+  the array — sorting in place glues an untick to a slot rather than an item and
+  drops the wrong task, silently, only when ages differ. Age is drawn as a
+  thickening left rule from `carryRuleClass`, shared with the sidebar so the two
+  cannot drift; thickness carries the signal because colour does not survive
+  deuteranopia or a mono print. The three-week cap is the sidebar's *layout*
+  limit, not a semantic one.
 - **Carry-forward copies; it never moves.** `findCarrySource` never writes
   planner data, the bar is mounted with `key={monday}`, and `bringForward` must
   keep the updater form — closing over `weekData` once wrote one week's contents
@@ -612,7 +588,7 @@ rather than dropping it.
 
 ## Baselines
 
-- `npm test` — 570 tests across 55 files. `vitest.config.ts` sets
+- `npm test` — 586 tests across 56 files. `vitest.config.ts` sets
   `testTimeout: 15000` against a 5s default, and that is load-bearing: several
   tests render the whole app and click through it, sitting at 3-4s alone. Under
   full-suite contention they cross 5s — `today.test.tsx` timed out at 5597ms on

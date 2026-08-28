@@ -1,6 +1,12 @@
 # Escalating a repeatedly migrated item
 
-Approved 2026-08-28. Not yet implemented.
+Approved 2026-08-28. Built 2026-08-28, as designed — no decision here was
+reversed in the building.
+
+One test that the plan called for turned out to exist already: `carry-marker`
+pins the sidebar's cap at three weeks and its colour change past two, so the
+extraction was guarded before a line of it was written. Both mutations were
+killed by those tests rather than by the new ones.
 
 ## Summary
 

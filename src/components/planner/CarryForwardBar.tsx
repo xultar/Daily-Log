@@ -1,5 +1,6 @@
 import React, { useId, useState } from "react";
 import { CarryCandidate, carriedWeeks } from "@/lib/planner-data";
+import { carryRuleClass } from "@/lib/carry-age";
 import { CornerDownRight } from "lucide-react";
 import AgeMarker from "./AgeMarker";
 
@@ -47,6 +48,27 @@ const CarryForwardBar: React.FC<CarryForwardBarProps> = ({
 
   const chosen = candidates.filter((_, i) => !excluded.has(i));
 
+  /**
+   * Oldest first, so the item the user has pushed most often is the one they
+   * read first — the Bullet Journal signal to question it.
+   *
+   * Sorted as a view carrying `originalIndex`, never in place. `excluded` holds
+   * indices into `candidates` and `chosen` filters by index, so sorting the
+   * array itself would glue an untick to a slot rather than an item: unticking
+   * the row on screen would drop whichever task had moved into that position.
+   * Silently, and only when ages differ.
+   *
+   * `sort` is stable, so items of equal age keep the order collectCarryForward
+   * produced — weekly actions, then daily rows in day order.
+   */
+  const ordered = candidates
+    .map((candidate, originalIndex) => ({
+      candidate,
+      originalIndex,
+      age: carriedWeeks(candidate.origin, mondayISO),
+    }))
+    .sort((a, b) => b.age - a.age);
+
   return (
     <div className="no-print border-b border-border bg-accent/20 px-3 py-1.5 shrink-0">
       {/* The id names the whole sentence, not just the count. On the <strong>
@@ -65,21 +87,21 @@ const CarryForwardBar: React.FC<CarryForwardBarProps> = ({
         aria-labelledby={headingId}
         className="flex flex-wrap gap-x-4 gap-y-0.5 mb-1.5 max-h-24 overflow-y-auto"
       >
-        {candidates.map((c, i) => {
-          const age = carriedWeeks(c.origin, mondayISO);
-          return (
-            <label key={i} className="flex items-center gap-1 text-[10px] cursor-pointer">
-              <input
-                type="checkbox"
-                checked={!excluded.has(i)}
-                onChange={() => toggle(i)}
-                className="h-3 w-3 shrink-0 accent-campus-blue-dark"
-              />
-              <span className="text-foreground">{c.text}</span>
-              <AgeMarker age={age} className="text-muted-foreground tabular-nums" />
-            </label>
-          );
-        })}
+        {ordered.map(({ candidate: c, originalIndex, age }) => (
+          <label
+            key={originalIndex}
+            className={`flex items-center gap-1 pl-1.5 text-[10px] cursor-pointer ${carryRuleClass(age)}`}
+          >
+            <input
+              type="checkbox"
+              checked={!excluded.has(originalIndex)}
+              onChange={() => toggle(originalIndex)}
+              className="h-3 w-3 shrink-0 accent-campus-blue-dark"
+            />
+            <span className="text-foreground">{c.text}</span>
+            <AgeMarker age={age} className="text-muted-foreground tabular-nums" />
+          </label>
+        ))}
       </div>
       <div className="flex gap-2">
         <button

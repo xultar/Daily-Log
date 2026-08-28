@@ -1,5 +1,6 @@
 import React from "react";
 import { TodoItem, carriedWeeks } from "@/lib/planner-data";
+import { carryRuleClass } from "@/lib/carry-age";
 import { Plus, Strikethrough } from "lucide-react";
 import AgeMarker from "./AgeMarker";
 
@@ -10,7 +11,7 @@ interface WeeklyTodoSidebarProps {
   onChange: (todos: TodoItem[]) => void;
 }
 
-const RULE_WIDTH = ["border-l-2", "border-l-2", "border-l-4", "border-l-[6px]"];
+
 
 const WeeklyTodoSidebar: React.FC<WeeklyTodoSidebarProps> = ({ todos, mondayISO, onChange }) => {
   const update = (idx: number, field: "text" | "checked", value: string | boolean) => {
@@ -47,10 +48,7 @@ const WeeklyTodoSidebar: React.FC<WeeklyTodoSidebarProps> = ({ todos, mondayISO,
           // 9px text. Thickness caps at three so a long-slipped item cannot
           // crowd the text out.
           const age = carriedWeeks(todo.origin, mondayISO);
-          const rule =
-            age === 0
-              ? "border-l-2 border-l-transparent"
-              : `${RULE_WIDTH[Math.min(age, 3)]} ${age > 2 ? "border-l-destructive/70" : "border-l-campus-blue-dark"}`;
+          const rule = carryRuleClass(age);
           return (
           <div key={idx} className={`flex items-center border-b border-campus-grid px-1 group ${rule}`}>
             <input

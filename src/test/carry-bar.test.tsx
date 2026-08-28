@@ -42,7 +42,10 @@ describe("CarryForwardBar", () => {
   it("brings only the ticked items", () => {
     const onBring = vi.fn();
     setup({ onBring });
-    fireEvent.click(screen.getAllByRole("checkbox")[1]); // untick "Draft methods"
+    // By name, not by index: the bar sorts oldest first from 2026-08-28, so
+    // "Draft methods" is no longer the second row and an index would quietly
+    // untick a different item than the one this test names.
+    fireEvent.click(screen.getByRole("checkbox", { name: "Draft methods carried 3 weeks" }));
     fireEvent.click(screen.getByRole("button", { name: /bring/i }));
     expect(onBring).toHaveBeenCalledTimes(1);
     expect(onBring.mock.calls[0][0].map((c: CarryCandidate) => c.text)).toEqual([
